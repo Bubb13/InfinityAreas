@@ -1,0 +1,36 @@
+
+plugins {
+    id "application"
+    id "com.github.johnrengelman.shadow" version "8.1.1"
+}
+
+group "com.github.bubb13"
+version "1.0-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+def javaFXVersion = "22.0.1"
+
+dependencies {
+    implementation "org.openjfx:javafx-base:${javaFXVersion}:win"
+    implementation "org.openjfx:javafx-controls:${javaFXVersion}:win"
+    implementation "org.openjfx:javafx-graphics:${javaFXVersion}:win"
+
+    implementation "org.openjfx:javafx-base:${javaFXVersion}:linux"
+    implementation "org.openjfx:javafx-controls:${javaFXVersion}:linux"
+    implementation "org.openjfx:javafx-graphics:${javaFXVersion}:linux"
+
+    implementation "org.openjfx:javafx-base:${javaFXVersion}:mac"
+    implementation "org.openjfx:javafx-controls:${javaFXVersion}:mac"
+    implementation "org.openjfx:javafx-graphics:${javaFXVersion}:mac"
+}
+
+application {
+    mainClass.set("com.github.bubb13.infinityareas.Main")
+}
+
+shadowJar {
+    archiveFileName = "InfinityAreas.jar"
+}
