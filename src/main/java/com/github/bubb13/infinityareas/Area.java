@@ -2,9 +2,7 @@
 package com.github.bubb13.infinityareas;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public class Area
 {
@@ -57,7 +55,6 @@ public class Area
         {
             buffer = source.demandFileData();
             parse();
-            System.out.println("LoadAreaTask done");
             return null;
         }
 

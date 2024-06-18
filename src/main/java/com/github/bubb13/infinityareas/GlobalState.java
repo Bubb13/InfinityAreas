@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas;
 
+import javafx.application.Application;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -12,6 +13,7 @@ public class GlobalState
     private static Path infinityAreasRoot;
     private static SettingsFile settingsFile;
     private static Game game;
+    private static Application application;
     private static Stage primaryStage;
 
     public static void init() throws URISyntaxException, IOException
@@ -43,6 +45,16 @@ public class GlobalState
     public static void setPrimaryStage(Stage primaryStage)
     {
         GlobalState.primaryStage = primaryStage;
+    }
+
+    public static Application getApplication()
+    {
+        return application;
+    }
+
+    public static void setApplication(Application application)
+    {
+        GlobalState.application = application;
     }
 
     public static JavaFXUtil.TaskManager.ManagedTask<Void> loadGameTask(final KeyFile keyFile)

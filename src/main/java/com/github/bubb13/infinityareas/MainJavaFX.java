@@ -4,6 +4,7 @@ package com.github.bubb13.infinityareas;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.stage.Stage;
 
 import java.nio.file.Files;
@@ -17,6 +18,7 @@ public class MainJavaFX extends Application
 
     public static void main(final String[] args)
     {
+        Platform.setImplicitExit(false);
         launch(args);
     }
 
@@ -27,6 +29,7 @@ public class MainJavaFX extends Application
     @Override
     public void start(final Stage primaryStage)
     {
+        GlobalState.setApplication(this);
         GlobalState.setPrimaryStage(primaryStage);
         attemptLoadGame(resumeOrAskForGame());
     }
@@ -134,12 +137,16 @@ public class MainJavaFX extends Application
 
     private KeyFile showGamePicker()
     {
-        return new GamePickerStage().getPickedKeyFile();
+        final GamePickerStage gamePickerStage = new GamePickerStage();
+        gamePickerStage.setOnCloseRequest((ignored) -> Platform.exit());
+        gamePickerStage.showAndWait();
+        return gamePickerStage.getPickedKeyFile();
     }
 
     private void showPrimaryStage()
     {
         final Stage primaryStage = GlobalState.getPrimaryStage();
+        primaryStage.setOnCloseRequest((ignored) -> Platform.exit());
 
         final PrimaryScene primaryScene = new PrimaryScene(primaryStage);
         primaryScene.initMainScene();

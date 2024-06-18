@@ -134,7 +134,6 @@ public class GamePickerStage extends Stage
         });
 
         this.setTitle("Infinity Areas");
-        showAndWait();
     }
 
     private void tryLoadKeyFile(final Path path) throws IOException

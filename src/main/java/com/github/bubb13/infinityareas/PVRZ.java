@@ -1,11 +1,8 @@
 
 package com.github.bubb13.infinityareas;
 
-import javafx.scene.image.Image;
-
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
 import java.io.ByteArrayInputStream;

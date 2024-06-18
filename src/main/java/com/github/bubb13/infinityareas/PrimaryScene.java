@@ -9,8 +9,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
-import java.nio.ByteBuffer;
-
 public final class PrimaryScene extends Stage
 {
     /////////////////////
@@ -126,7 +124,6 @@ public final class PrimaryScene extends Stage
 
     private void onSelectAreaSource(final Game.ResourceSource areaSource)
     {
-        System.out.println("------------------------------------");
         final Area area = new Area(areaSource);
         new JavaFXUtil.TaskManager(area.loadAreaTask()
             .onFailed((e) ->
