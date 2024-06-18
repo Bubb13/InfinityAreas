@@ -5,7 +5,20 @@ public class Main
 {
     public static void main(final String[] args)
     {
-        // Blocks until the JavaFX application is closed
-        MainWindow.main(new String[]{});
+        try
+        {
+            // Last chance shutdown hook
+            Runtime.getRuntime().addShutdownHook(new InfinityAreasShutdownHook());
+
+            // Init global state
+            GlobalState.init();
+
+            // Start JavaFX application; blocks until the primary stage is closed
+            MainJavaFX.main(new String[]{});
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 }

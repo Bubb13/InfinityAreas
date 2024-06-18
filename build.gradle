@@ -12,6 +12,7 @@ repositories {
 }
 
 def javaFXVersion = "22.0.1"
+def gsonVersion = "2.11.0"
 
 dependencies {
     implementation "org.openjfx:javafx-base:${javaFXVersion}:win"
@@ -25,6 +26,8 @@ dependencies {
     implementation "org.openjfx:javafx-base:${javaFXVersion}:mac"
     implementation "org.openjfx:javafx-controls:${javaFXVersion}:mac"
     implementation "org.openjfx:javafx-graphics:${javaFXVersion}:mac"
+
+    implementation "com.google.code.gson:gson:${gsonVersion}"
 }
 
 application {
