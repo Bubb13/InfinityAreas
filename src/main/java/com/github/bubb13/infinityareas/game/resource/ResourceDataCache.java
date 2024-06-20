@@ -1,5 +1,7 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.game.resource;
+
+import com.github.bubb13.infinityareas.game.Game;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;

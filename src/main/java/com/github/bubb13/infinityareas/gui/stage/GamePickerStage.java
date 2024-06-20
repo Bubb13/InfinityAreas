@@ -1,6 +1,9 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.gui.stage;
 
+import com.github.bubb13.infinityareas.gui.control.DynamicListView;
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;

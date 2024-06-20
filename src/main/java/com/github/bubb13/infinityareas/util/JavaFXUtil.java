@@ -1,6 +1,7 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.util;
 
+import com.github.bubb13.infinityareas.gui.stage.LoadingStage;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -15,14 +16,8 @@ import java.util.ArrayList;
 import java.util.Stack;
 import java.util.function.Consumer;
 
-public class JavaFXUtil
+public final class JavaFXUtil
 {
-    //////////////////////////
-    // Private Constructors //
-    //////////////////////////
-
-    private JavaFXUtil() {}
-
     ///////////////////////////
     // Public Static Methods //
     ///////////////////////////
@@ -51,6 +46,12 @@ public class JavaFXUtil
 
         return new WidthHeight(bounds.getWidth(), bounds.getHeight());
     }
+
+    //////////////////////////
+    // Private Constructors //
+    //////////////////////////
+
+    private JavaFXUtil() {}
 
     ////////////////////
     // Public Classes //
@@ -316,7 +317,13 @@ public class JavaFXUtil
                     {
                         // Task failed, run callbacks and rethrow the exception
                         subTask.doOnFailed();
-                        throw new Exception(subTask.exceptionNow());
+
+                        final Throwable throwable = subTask.exceptionNow();
+                        if (throwable instanceof final Exception exception)
+                        {
+                            throw exception;
+                        }
+                        throw new Exception(throwable);
                     }
                     case CANCELLED ->
                     {

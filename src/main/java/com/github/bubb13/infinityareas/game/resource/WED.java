@@ -1,5 +1,9 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.game.resource;
+
+import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.util.BufferUtil;
+import com.github.bubb13.infinityareas.util.JavaFXUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas;
 
+import com.github.bubb13.infinityareas.util.FileUtil;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -21,7 +22,7 @@ public class SettingsFile
     public SettingsFile(final Path path) throws IOException
     {
         this.path = path;
-        FileUtils.checkCreateFile(path);
+        FileUtil.checkCreateFile(path);
 
         JsonElement element = null;
         try

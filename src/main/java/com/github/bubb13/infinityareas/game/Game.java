@@ -1,5 +1,14 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.game;
+
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
+import com.github.bubb13.infinityareas.game.resource.BifFile;
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
+import com.github.bubb13.infinityareas.util.FileUtil;
+import com.github.bubb13.infinityareas.misc.IteratorToIterable;
+import com.github.bubb13.infinityareas.util.JavaFXUtil;
+import com.github.bubb13.infinityareas.util.MiscUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -178,7 +187,7 @@ public class Game
             this.bifIndex = bifIndex;
             this.resourceLocator = resourceLocator;
             this.relativePathStr = rootString + File.separator
-                + FileUtils.getRelativePath(rootPath.toAbsolutePath(), bifFiles[bifIndex].getPath());
+                + FileUtil.getRelativePath(rootPath.toAbsolutePath(), bifFiles[bifIndex].getPath());
         }
 
         public short getBifIndex()
@@ -229,7 +238,7 @@ public class Game
             super(resourceIdentifier, ResourceSourceType.LOOSE_FILE);
             this.path = path.toAbsolutePath();
             this.relativePathStr = rootString + File.separator
-                + FileUtils.getRelativePath(rootPath.toAbsolutePath(), path);
+                + FileUtil.getRelativePath(rootPath.toAbsolutePath(), path);
         }
 
         public Path getPath()
@@ -300,7 +309,7 @@ public class Game
             {
                 ++i;
 
-                final Path bifPath = FileUtils.resolvePathSafe(rootPath, bifEntry.getName());
+                final Path bifPath = FileUtil.resolvePathSafe(rootPath, bifEntry.getName());
                 if (bifPath == null)
                 {
                     new ErrorAlert("Attempted to access malformed bif path: \""
@@ -342,7 +351,7 @@ public class Game
 
             updateMessage("Processing " + path.getFileName().toString() + " folder ...");
 
-            final ArrayList<Path> paths = FileUtils.getAllInPath(path);
+            final ArrayList<Path> paths = FileUtil.getAllInPath(path);
             final int limit = paths.size();
             updateProgress(0, limit);
 
@@ -356,7 +365,7 @@ public class Game
                     continue;
                 }
 
-                final var fileNameAndExtension = FileUtils.getFileNameAndExtension(subpath);
+                final var fileNameAndExtension = FileUtil.getFileNameAndExtension(subpath);
                 final String fileName = fileNameAndExtension.name();
                 final String extension = fileNameAndExtension.extension();
                 final KeyFile.NumericResourceType resourceType = KeyFile.NumericResourceType.fromExtension(extension);

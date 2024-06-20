@@ -1,6 +1,11 @@
 
 package com.github.bubb13.infinityareas;
 
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
+import com.github.bubb13.infinityareas.gui.scene.PrimaryScene;
+import com.github.bubb13.infinityareas.gui.stage.GamePickerStage;
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import javafx.application.Application;

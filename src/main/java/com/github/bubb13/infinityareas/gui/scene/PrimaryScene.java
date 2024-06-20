@@ -1,6 +1,13 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.gui.scene;
 
+import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.GlobalState;
+import com.github.bubb13.infinityareas.gui.control.SimpleTreeView;
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
+import com.github.bubb13.infinityareas.game.resource.Area;
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.Scene;
 import javafx.scene.control.SplitPane;

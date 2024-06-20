@@ -1,5 +1,8 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.util;
+
+import com.github.bubb13.infinityareas.misc.IteratorToIterable;
+import com.github.bubb13.infinityareas.misc.ReadOnlyIterator;
 
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -8,7 +11,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.stream.Collectors;
 
-public class MiscUtil
+public final class MiscUtil
 {
     public static Path findInfinityAreasRoot() throws URISyntaxException
     {

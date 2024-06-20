@@ -1,6 +1,10 @@
 
 package com.github.bubb13.infinityareas;
 
+import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.util.JavaFXUtil;
+import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.application.Application;
 import javafx.stage.Stage;
 

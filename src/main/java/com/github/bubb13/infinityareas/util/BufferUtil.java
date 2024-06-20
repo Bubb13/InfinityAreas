@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.util;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

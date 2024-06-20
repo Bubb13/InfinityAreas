@@ -1,5 +1,7 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.game.resource;
+
+import com.github.bubb13.infinityareas.util.BufferUtil;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

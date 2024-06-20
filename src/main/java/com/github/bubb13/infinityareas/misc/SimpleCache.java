@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.misc;
 
 import java.util.HashMap;
 

@@ -1,6 +1,7 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.gui.dialog;
 
+import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -37,18 +38,20 @@ public class ErrorAlert extends Alert
         final VBox vbox = new VBox();
         final ObservableList<Node> vboxChildren = vbox.getChildren();
 
-        final Label errorMessageLabel = new Label("Error message:");
+        final Label errorMessageLabel = new Label("Error Message:");
         errorMessageLabel.setFont(Font.font(16));
         errorMessageLabel.setPadding(new Insets(10, 10, 10, 0));
 
         final TextArea messageArea = new TextArea(errorMessage);
         messageArea.setPrefHeight(0);
+        messageArea.setWrapText(false);
+        messageArea.setEditable(false);
 
         vboxChildren.addAll(errorMessageLabel, messageArea);
 
         if (traceMessage != null)
         {
-            final Label traceMessageLabel = new Label("Stack traceback:");
+            final Label traceMessageLabel = new Label("Stack Trace:");
             traceMessageLabel.setFont(Font.font(16));
             traceMessageLabel.setPadding(new Insets(10, 10, 10, 0));
 

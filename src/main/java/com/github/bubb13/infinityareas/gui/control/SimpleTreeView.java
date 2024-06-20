@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.gui.control;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;

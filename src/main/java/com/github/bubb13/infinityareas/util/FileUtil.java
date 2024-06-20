@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
-public class FileUtils
+public final class FileUtil
 {
     public static void checkCreateFile(final Path path) throws IOException
     {
@@ -85,7 +85,7 @@ public class FileUtils
         return childPath;
     }
 
-    private FileUtils() {}
+    private FileUtil() {}
 
     /////////////
     // Classes //

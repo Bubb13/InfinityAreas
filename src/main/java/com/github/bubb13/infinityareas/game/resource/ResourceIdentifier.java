@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas;
+package com.github.bubb13.infinityareas.game.resource;
 
 public record ResourceIdentifier(String resref, short numericType) implements Comparable<ResourceIdentifier>
 {
