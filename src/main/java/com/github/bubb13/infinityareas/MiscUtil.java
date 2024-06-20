@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.stream.Collectors;
 
 public class MiscUtil
 {
@@ -37,10 +38,18 @@ public class MiscUtil
 
     public static String formatStackTrace(final Throwable e)
     {
-        final StringBuilder builder = new StringBuilder(e.toString()).append("\n\n");
-        final String stackTrace = Arrays.toString(e.getStackTrace());
-        builder.append(stackTrace, 1, stackTrace.length() - 1);
-        return builder.toString();
+        final StringBuilder builder = new StringBuilder();
+
+        final Throwable cause = e.getCause();
+        builder.append(cause == null ? e : cause).append("\n");
+
+        final StackTraceElement[] stackTraceElements = cause == null ? e.getStackTrace() : cause.getStackTrace();
+
+        final String stackTrace = Arrays.stream(stackTraceElements)
+            .map((element) -> "    " + element.toString())
+            .collect(Collectors.joining("\n"));
+
+        return builder.append(stackTrace).toString();
     }
 
     public static int packBytesIntoInt(final byte b3, final byte b2, final byte b1, final byte b0)

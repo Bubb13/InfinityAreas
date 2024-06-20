@@ -1,7 +1,11 @@
 
 package com.github.bubb13.infinityareas;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.util.ArrayList;
 
 public class TIS
 {
@@ -15,7 +19,8 @@ public class TIS
     // Private Static Fields //
     ///////////////////////////
 
-    public static final int PVRZ_TILE_DATA_ENTRY_SIZE = 0xC;
+    private static final int PVRZ_TILE_DATA_ENTRY_SIZE = 0xC;
+    private static final int NUM_PALETTE_COLORS = 256;
 
     ////////////////////
     // Private Fields //
@@ -23,16 +28,26 @@ public class TIS
 
     private final String wedNumeric;
     private final Game.ResourceSource source;
+    private final ResourceDataCache resourceDataCache;
+    private final SimpleCache<String, PVRZ> pvrzCache;
+
     private ByteBuffer buffer;
+    private int tileSideLength;
+    private IntBuffer blackTile;
+    private ArrayList<IntBuffer> tiles;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public TIS(final String wedNumeric, final Game.ResourceSource source)
+    public TIS(
+        final String wedNumeric, final Game.ResourceSource source,
+        final ResourceDataCache resourceDataCache, final SimpleCache<String, PVRZ> pvrzCache)
     {
         this.wedNumeric = wedNumeric;
         this.source = source;
+        this.resourceDataCache = resourceDataCache;
+        this.pvrzCache = pvrzCache;
     }
 
     ////////////////////
@@ -44,6 +59,28 @@ public class TIS
         return new LoadTISTask();
     }
 
+    public IntBuffer getTileData(final int index)
+    {
+        if (index < tiles.size())
+        {
+            return tiles.get(index);
+        }
+        else
+        {
+            System.out.println("Unable to fetch tile " + index);
+
+            // TODO: Temp panic code
+            final int numPixels = tileSideLength * tileSideLength;
+            final IntBuffer magenta = IntBuffer.allocate(numPixels);
+            for (int i = 0; i < numPixels; ++i)
+            {
+                magenta.put(0xFFFF00FF);
+            }
+            magenta.flip();
+            return magenta;
+        }
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -51,24 +88,6 @@ public class TIS
     private void position(final int pos)
     {
         buffer.position(pos);
-    }
-
-    ////////////////////
-    // Public Classes //
-    ////////////////////
-
-    public static class PVRZPage
-    {
-        private int page;
-        private int texCoordX;
-        private int texCoordY;
-
-        public PVRZPage(int page, int texCoordX, int texCoordY)
-        {
-            this.page = page;
-            this.texCoordX = texCoordX;
-            this.texCoordY = texCoordY;
-        }
     }
 
     /////////////////////
@@ -84,7 +103,7 @@ public class TIS
         @Override
         protected Void call() throws Exception
         {
-            buffer = source.demandFileData();
+            buffer = resourceDataCache.demand(source);
             parse();
             return null;
         }
@@ -113,31 +132,46 @@ public class TIS
             position(0x8); final int numTiles = buffer.getInt();
             position(0xC); final int lengthOfTileBlockData = buffer.getInt();
             position(0x10); final int sizeOfHeader = buffer.getInt();
-            position(0x14); final int tileSideLength = buffer.getInt();
+            position(0x14); tileSideLength = buffer.getInt();
 
-            System.out.printf("numTiles: %d\n", numTiles);
-            System.out.printf("lengthOfTileBlockData: %d\n", lengthOfTileBlockData);
-            System.out.printf("sizeOfHeader: %d\n", sizeOfHeader);
-            System.out.printf("tileSideLength: %d\n", tileSideLength);
+            blackTile = allocateSingleColorTile(0xFF000000);
 
             if (lengthOfTileBlockData == 0xC)
             {
-                parsePVRZTileData(sizeOfHeader, numTiles);
+                // PVRZ-based
+                tiles = parsePVRZTileData(sizeOfHeader, numTiles);
+            }
+            else if (lengthOfTileBlockData == 0x1400)
+            {
+                // Palette-based
+                tiles = parsePaletteTileData(sizeOfHeader, numTiles);
             }
             else
             {
-                throw new IllegalStateException("Unimplemented");
+                throw new IllegalStateException("Unexpected TIS lengthOfTileBlockData: " + lengthOfTileBlockData);
             }
         }
 
-        private void parsePVRZTileData(final int offset, final int count) throws Exception
+        private IntBuffer allocateSingleColorTile(final int color)
         {
-            final Game game = GlobalState.getGame();
+            final int numPixels = tileSideLength * tileSideLength;
+            final IntBuffer tile = IntBuffer.allocate(numPixels);
+            for (int i = 0; i < numPixels; ++i)
+            {
+                tile.put(color);
+            }
+            tile.flip();
+            return tile;
+        }
+
+        private ArrayList<IntBuffer> parsePVRZTileData(final int offset, final int count) throws Exception
+        {
             final char firstChar = source.getIdentifier().resref().charAt(0);
             final String pvrzPrefix = firstChar + wedNumeric;
-            System.out.printf("pvrzPrefix: \"%s\"\n", pvrzPrefix);
 
+            final ArrayList<IntBuffer> tiles = new ArrayList<>();
             int curBase = offset;
+
             for (int i = 0; i < count; ++i, curBase += PVRZ_TILE_DATA_ENTRY_SIZE)
             {
                 position(curBase); final int pvrzPage = buffer.getInt();
@@ -145,19 +179,30 @@ public class TIS
                 if (pvrzPage == -1)
                 {
                     // Special: Completely black
+                    tiles.add(blackTile);
                     continue;
                 }
 
                 position(curBase + 0x4); final int coordinateX = buffer.getInt();
                 position(curBase + 0x8); final int coordinateY = buffer.getInt();
 
-                final String formattedPage = String.format("%02d", pvrzPage);
-                System.out.println("formattedPage: " + formattedPage);
-
                 final String pvrzResref = pvrzPrefix + String.format("%02d", pvrzPage);
-                System.out.println("pvrzResref: " + pvrzResref);
+                final PVRZ pvrz = loadPVRZ(pvrzResref);
 
-                final Game.Resource pvrzResource = game.getResource(new ResourceIdentifier(
+                final IntBuffer tile = pvrz.cutout(coordinateX, coordinateY, tileSideLength, tileSideLength);
+                tiles.add(tile);
+            }
+
+            return tiles;
+        }
+
+        private PVRZ loadPVRZ(final String pvrzResref) throws Exception
+        {
+            PVRZ pvrz = pvrzCache.get(pvrzResref);
+
+            if (pvrz == null)
+            {
+                final Game.Resource pvrzResource = GlobalState.getGame().getResource(new ResourceIdentifier(
                     pvrzResref, KeyFile.NumericResourceType.PVRZ));
 
                 if (pvrzResource == null)
@@ -165,15 +210,90 @@ public class TIS
                     throw new IllegalStateException("Unable to find source for PVRZ resource \"" + pvrzResref + "\"");
                 }
 
-                final PVRZ pvrz = new PVRZ(pvrzResource.getPrimarySource());
-                this.subtask(pvrz.loadPVRZTask());
+                pvrz = new PVRZ(pvrzResource.getPrimarySource(), resourceDataCache);
+                subtask(pvrz.loadPVRZTask());
+                pvrzCache.add(pvrzResref, pvrz);
+            }
 
-                // TODO
-                if (true)
+            return pvrz;
+        }
+
+        private ArrayList<IntBuffer> parsePaletteTileData(final int offset, final int count)
+        {
+            position(offset);
+
+            final int numPixelsInTile = tileSideLength * tileSideLength;
+            final ArrayList<IntBuffer> tiles = new ArrayList<>();
+
+            for (int tileI = 0; tileI < count; ++tileI)
+            {
+                // Read palette
+                final int[] palette = new int[NUM_PALETTE_COLORS];
+                for (int i = 0; i < NUM_PALETTE_COLORS; ++i)
                 {
-                    break;
+                    final int argbColor = buffer.getInt() | 0xFF000000; // Automatically set alpha to 255
+                    palette[i] = argbColor;
+                }
+
+                final int[] tileData = new int[numPixelsInTile];
+
+                // Read tile data
+                for (int i = 0; i < numPixelsInTile; ++i)
+                {
+                    final short paletteIndex = MiscUtil.toUnsignedByte(buffer.get());
+                    tileData[i] = palette[paletteIndex];
+                }
+
+                tiles.add(IntBuffer.wrap(tileData));
+            }
+
+            return tiles;
+        }
+
+        private void debugWritePaletteTilesetToImage(final int offset, final int count) throws Exception
+        {
+            position(offset);
+
+            final int numPixelsInTile = tileSideLength * tileSideLength;
+            final int numPixelsInTIS = count * numPixelsInTile;
+
+            final int[] result = new int[numPixelsInTIS];
+            final int resultLineOffset = count * tileSideLength;
+
+            for (int tileI = 0; tileI < count; ++tileI)
+            {
+                // Read palette
+                final int[] palette = new int[NUM_PALETTE_COLORS];
+                for (int i = 0; i < NUM_PALETTE_COLORS; ++i)
+                {
+                    int argbColor = buffer.getInt();
+                    argbColor |= 0xFF000000;
+                    palette[i] = argbColor;
+                }
+
+                // Read tile data
+                for (int y = 0; y < tileSideLength; ++y)
+                {
+                    for (int x = 0; x < tileSideLength; ++x)
+                    {
+                        final short paletteIndex = MiscUtil.toUnsignedByte(buffer.get());
+
+                        final int resultXOffset = tileI * tileSideLength + x;
+                        final int resultYOffset = y * resultLineOffset;
+
+                        result[resultXOffset + resultYOffset] = palette[paletteIndex];
+                    }
                 }
             }
+
+            final int finalW = count * tileSideLength;
+            final int finalH = tileSideLength;
+
+            final BufferedImage image = new BufferedImage(finalW, finalH, BufferedImage.TYPE_INT_ARGB);
+            image.getRaster().setDataElements(0, 0, finalW, finalH, result);
+
+            ImageIO.write(image, "png", GlobalState.getGame()
+                .getRoot().resolve("PALETTE_TILE.PNG").toFile());
         }
     }
 }

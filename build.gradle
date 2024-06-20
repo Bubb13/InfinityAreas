@@ -18,14 +18,17 @@ dependencies {
     implementation "org.openjfx:javafx-base:${javaFXVersion}:win"
     implementation "org.openjfx:javafx-controls:${javaFXVersion}:win"
     implementation "org.openjfx:javafx-graphics:${javaFXVersion}:win"
+    implementation "org.openjfx:javafx-swing:${javaFXVersion}:win"
 
     implementation "org.openjfx:javafx-base:${javaFXVersion}:linux"
     implementation "org.openjfx:javafx-controls:${javaFXVersion}:linux"
     implementation "org.openjfx:javafx-graphics:${javaFXVersion}:linux"
+    implementation "org.openjfx:javafx-swing:${javaFXVersion}:linux"
 
     implementation "org.openjfx:javafx-base:${javaFXVersion}:mac"
     implementation "org.openjfx:javafx-controls:${javaFXVersion}:mac"
     implementation "org.openjfx:javafx-graphics:${javaFXVersion}:mac"
+    implementation "org.openjfx:javafx-swing:${javaFXVersion}:mac"
 
     implementation "com.google.code.gson:gson:${gsonVersion}"
 }

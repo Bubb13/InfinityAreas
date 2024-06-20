@@ -36,6 +36,11 @@ public class WED
     // Public Methods //
     ////////////////////
 
+    public Game.ResourceSource getSource()
+    {
+        return source;
+    }
+
     public JavaFXUtil.TaskManager.ManagedTask<Void> loadWEDTask()
     {
         return new LoadWEDTask();
@@ -43,7 +48,7 @@ public class WED
 
     public List<Overlay> getOverlays()
     {
-        return this.overlays;
+        return overlays;
     }
 
     /////////////////////

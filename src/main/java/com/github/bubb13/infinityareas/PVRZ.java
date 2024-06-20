@@ -1,10 +1,6 @@
 
 package com.github.bubb13.infinityareas;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
-import java.awt.image.WritableRaster;
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -19,14 +15,16 @@ public class PVRZ
     // Private Static Fields //
     ///////////////////////////
 
-    private static int HEADER_SIZE = 0x34;
+    private static final int HEADER_SIZE = 0x34;
 
     ////////////////////
     // Private Fields //
     ////////////////////
 
     private final Game.ResourceSource source;
+    private final ResourceDataCache resourceDataCache;
     private ByteBuffer buffer;
+
     private int mipMapCount;
     private int numSurfaces;
     private int numFaces;
@@ -42,13 +40,16 @@ public class PVRZ
     private int surfaceBlockSize;
     private int mipMapBlockSize;
 
+    private IntBuffer decompressedData;
+
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public PVRZ(final Game.ResourceSource source)
+    public PVRZ(final Game.ResourceSource source, final ResourceDataCache resourceDataCache)
     {
         this.source = source;
+        this.resourceDataCache = resourceDataCache;
     }
 
     ////////////////////
@@ -60,6 +61,26 @@ public class PVRZ
         return new LoadPVRZTask();
     }
 
+    public IntBuffer cutout(
+        final int[] dst, int dstOffset,
+        final int cutoutX, final int cutoutY, final int cutoutW, final int cutoutH)
+    {
+        final int dstSize = cutoutW * cutoutH;
+        for (
+            int srcOffset = cutoutY * this.width + cutoutX;
+            dstOffset < dstSize;
+            srcOffset += this.width, dstOffset += cutoutW)
+        {
+            decompressedData.get(srcOffset, dst, dstOffset, cutoutW);
+        }
+        return IntBuffer.wrap(dst);
+    }
+
+    public IntBuffer cutout(final int cutoutX, final int cutoutY, final int cutoutW, final int cutoutH)
+    {
+        return cutout(new int[cutoutW * cutoutH], 0, cutoutX, cutoutY, cutoutW, cutoutH);
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -68,10 +89,6 @@ public class PVRZ
     {
         buffer.position(pos);
     }
-
-    ////////////////////
-    // Public Classes //
-    ////////////////////
 
     /////////////////////
     // Private Classes //
@@ -86,7 +103,7 @@ public class PVRZ
         @Override
         protected Void call() throws Exception
         {
-            buffer = source.demandFileData();
+            buffer = resourceDataCache.demand(source);
             buffer.order(ByteOrder.LITTLE_ENDIAN);
             parse();
             return null;
@@ -102,19 +119,8 @@ public class PVRZ
             updateMessage("Processing PVRZ ...");
 
             buffer = decompressPVR();
-            //Files.write(GlobalState.getGame().getRoot().resolve("DECOMPRESSED.PVRZ"), buffer.array());
-
             parsePVRHeader();
-            final IntBuffer imageData = parseTextureData(0, 0, 0, 0);
-
-            final BufferedImage image = new BufferedImage(PVRZ.this.width, PVRZ.this.height, BufferedImage.TYPE_INT_BGR);
-            final WritableRaster raster = image.getRaster();
-            final DataBufferInt buffer = new DataBufferInt(
-                imageData.array(), imageData.arrayOffset() + imageData.position(), imageData.limit()
-            );
-            raster.setDataElements(0, 0, PVRZ.this.width, PVRZ.this.height, buffer.getData());
-
-            ImageIO.write(image, "png", GlobalState.getGame().getRoot().resolve("TILE.PNG").toFile());
+            decompressedData = parseTextureData(0, 0, 0, 0);
         }
 
         private void parsePVR_v2_Header()
@@ -221,18 +227,22 @@ public class PVRZ
             PVRZ.this.depth = depth;
             PVRZ.this.width = width;
             PVRZ.this.height = height;
-            PVRZ.this.textureDataOffset = PVRZ.HEADER_SIZE + metaDataSize;
+            textureDataOffset = PVRZ.HEADER_SIZE + metaDataSize;
 
             if (pixelFormat == 7)
             {
-                PVRZ.this.pixelDataDecompressor = this::decompressBC1;
+                pixelDataDecompressor = this::decompressBC1;
+                pixelDataBlockSize = width * height / 2;
+            }
+            else
+            {
+                throw new IllegalStateException("Unimplemented");
             }
 
-            PVRZ.this.pixelDataBlockSize = PVRZ.this.width * PVRZ.this.height;
-            PVRZ.this.sliceBlockSize = PVRZ.this.pixelDataBlockSize * depth;
-            PVRZ.this.faceBlockSize = PVRZ.this.sliceBlockSize * numFaces;
-            PVRZ.this.surfaceBlockSize = PVRZ.this.faceBlockSize * numSurfaces;
-            PVRZ.this.mipMapBlockSize = PVRZ.this.surfaceBlockSize * mipMapCount;
+            sliceBlockSize = pixelDataBlockSize * depth;
+            faceBlockSize = sliceBlockSize * numFaces;
+            surfaceBlockSize = faceBlockSize * numSurfaces;
+            mipMapBlockSize = surfaceBlockSize * mipMapCount;
 
 //            System.out.printf("version: 0x%X\n", version);
 //            System.out.printf("flags: 0x%X\n", flags);
@@ -279,57 +289,57 @@ public class PVRZ
             //     end
             // end
 
-            if (mipMapIndex >= PVRZ.this.mipMapCount)
+            if (mipMapIndex >= mipMapCount)
             {
                 throw new IllegalArgumentException(String.format(
                     "Attempted to access invalid mipMapIndex: %d", mipMapIndex));
             }
 
-            if (surfaceIndex >= PVRZ.this.numSurfaces)
+            if (surfaceIndex >= numSurfaces)
             {
                 throw new IllegalArgumentException(String.format(
                     "Attempted to access invalid surfaceIndex: %d", surfaceIndex));
             }
 
-            if (faceIndex >= PVRZ.this.numFaces)
+            if (faceIndex >= numFaces)
             {
                 throw new IllegalArgumentException(String.format(
                     "Attempted to access invalid faceIndex: %d", faceIndex));
             }
 
-            if (sliceIndex >= PVRZ.this.depth)
+            if (sliceIndex >= depth)
             {
                 throw new IllegalArgumentException(String.format(
                     "Attempted to access invalid sliceIndex: %d", sliceIndex));
             }
 
             final int pixelDataOffset =
-                PVRZ.this.textureDataOffset
-                + mipMapIndex * PVRZ.this.mipMapBlockSize
-                + surfaceIndex * PVRZ.this.surfaceBlockSize
-                + faceIndex * PVRZ.this.faceBlockSize
-                + sliceIndex * PVRZ.this.sliceBlockSize;
+                textureDataOffset
+                + mipMapIndex * mipMapBlockSize
+                + surfaceIndex * surfaceBlockSize
+                + faceIndex * faceBlockSize
+                + sliceIndex * sliceBlockSize;
 
-            return PVRZ.this.pixelDataDecompressor.apply(pixelDataOffset);
+            return pixelDataDecompressor.apply(pixelDataOffset);
         }
 
         private IntBuffer decompressBC1(final int pixelDataOffset)
         {
-            final int numBlocksHorizontal = PVRZ.this.width / 4;
-            if (PVRZ.this.width % 4 != 0)
+            final int numBlocksHorizontal = width / 4;
+            if (width % 4 != 0)
             {
                 throw new IllegalStateException(String.format(
-                    "BC1 expects width to be a multiple of 4; got: %d", PVRZ.this.width));
+                    "BC1 expects width to be a multiple of 4; got: %d", width));
             }
 
-            final int numBlocksVertical = PVRZ.this.height / 4;
-            if (PVRZ.this.height % 4 != 0)
+            final int numBlocksVertical = height / 4;
+            if (height % 4 != 0)
             {
                 throw new IllegalStateException(String.format(
-                    "BC1 expects height to be a multiple of 4; got: %d", PVRZ.this.height));
+                    "BC1 expects height to be a multiple of 4; got: %d", height));
             }
 
-            final int[] result = new int[pixelDataBlockSize];
+            final int[] result = new int[width * height];
 
             int curTexelBlockOffset = pixelDataOffset;
 
@@ -341,9 +351,6 @@ public class PVRZ
                     position(curTexelBlockOffset + 0x2); final int color1 = unpackBC1Color(buffer.getShort());
                     final int color2 = bc1Interpolate(1, 3, color0, color1);
                     final int color3 = bc1Interpolate(2, 3, color0, color1);
-
-                    //final int color2 = bc1Interpolate(1, 2, color0, color1);
-                    //final int color3 = 0;
 
                     final int[] colorTable = new int[]{color0, color1, color2, color3};
 
@@ -373,13 +380,14 @@ public class PVRZ
 
         private int unpackBC1Color(final short packedColor)
         {
-            final byte blue = (byte)((packedColor & 0x1F) * 255 / 0x1F);
-            final byte green = (byte)(((packedColor >>> 5) & 0x3F) * 255 / 0x3F);
-            final byte red = (byte)(((packedColor >>> 11) & 0x1F) * 255 / 0x1F);
-            final byte alpha = (byte)255;
-            final int result = MiscUtil.packBytesIntoInt(alpha, blue, green, red);
-
-            return result;
+            // BC1 pixel data is in the format:
+            //     MSB               LSB
+            //     r[15-11]g[10-5]b[4-0]
+            final byte b = (byte)((packedColor & 0x1F) * 255 / 0x1F);
+            final byte g = (byte)(((packedColor >>> 5) & 0x3F) * 255 / 0x3F);
+            final byte r = (byte)(((packedColor >>> 11) & 0x1F) * 255 / 0x1F);
+            final byte a = (byte)255;
+            return MiscUtil.packBytesIntoInt(a, r, g, b);
         }
 
         private int bc1Interpolate(
@@ -387,44 +395,21 @@ public class PVRZ
         {
             final int fracColor1Upper = fracColorLower - fracColor2Upper;
 
-            final byte r1 = (byte)((color1 & 0xFF) * fracColor1Upper / fracColorLower);
+            final byte b1 = (byte)((color1 & 0xFF) * fracColor1Upper / fracColorLower);
             final byte g1 = (byte)(((color1 >>> 8) & 0xFF) * fracColor1Upper / fracColorLower);
-            final byte b1 = (byte)(((color1 >>> 16) & 0xFF) * fracColor1Upper / fracColorLower);
+            final byte r1 = (byte)(((color1 >>> 16) & 0xFF) * fracColor1Upper / fracColorLower);
             final byte a1 = (byte)(((color1 >>> 24) & 0xFF) * fracColor1Upper / fracColorLower);
 
-            final byte r2 = (byte)((color2 & 0xF) * fracColor2Upper / fracColorLower);
+            final byte b2 = (byte)((color2 & 0xF) * fracColor2Upper / fracColorLower);
             final byte g2 = (byte)(((color2 >>> 8) & 0xFF) * fracColor2Upper / fracColorLower);
-            final byte b2 = (byte)(((color2 >>> 16) & 0xFF) * fracColor2Upper / fracColorLower);
+            final byte r2 = (byte)(((color2 >>> 16) & 0xFF) * fracColor2Upper / fracColorLower);
             final byte a2 = (byte)(((color2 >>> 24) & 0xFF) * fracColor2Upper / fracColorLower);
 
-//            final byte r1 = (byte)(color1 & 0xFF);
-//            final byte g1 = (byte)((color1 >>> 8) & 0xFF);
-//            final byte b1 = (byte)((color1 >>> 16) & 0xFF);
-//            final byte a1 = (byte)((color1 >>> 24) & 0xFF);
-//
-//            final byte r2 = (byte)(color2 & 0xF);
-//            final byte g2 = (byte)((color2 >>> 8) & 0xFF);
-//            final byte b2 = (byte)((color2 >>> 16) & 0xFF);
-//            final byte a2 = (byte)((color2 >>> 24) & 0xFF);
-//
-//            final byte rFinal = (byte)((r2 - r1) * fracColor2Upper / fracColorLower + r1);
-//            final byte gFinal = (byte)((g2 - g1) * fracColor2Upper / fracColorLower + g1);
-//            final byte bFinal = (byte)((b2 - b1) * fracColor2Upper / fracColorLower + b1);
-//            //final byte aFinal = (byte)(a1 + a2);
-//            final byte aFinal = (byte)255;
-
-//            final byte rFinal = (byte)255;
-//            final byte gFinal = (byte)0;
-//            final byte bFinal = (byte)255;
-//            final byte aFinal = (byte)255;
-
-
+            final byte aFinal = (byte)(a1 + a2);
             final byte rFinal = (byte)(r1 + r2);
             final byte gFinal = (byte)(g1 + g2);
             final byte bFinal = (byte)(b1 + b2);
-            final byte aFinal = (byte)(a1 + a2);
-
-            return MiscUtil.packBytesIntoInt(aFinal, bFinal, gFinal, rFinal);
+            return MiscUtil.packBytesIntoInt(aFinal, rFinal, gFinal, bFinal);
         }
     }
 }

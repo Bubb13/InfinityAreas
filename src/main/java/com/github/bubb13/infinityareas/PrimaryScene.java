@@ -1,13 +1,16 @@
 
 package com.github.bubb13.infinityareas;
 
+import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.Scene;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TreeItem;
-import javafx.scene.layout.Background;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+
+import java.awt.image.BufferedImage;
 
 public final class PrimaryScene extends Stage
 {
@@ -16,6 +19,7 @@ public final class PrimaryScene extends Stage
     /////////////////////
 
     private final Stage stage;
+    private ImageView imageView;
 
     //////////////////
     // Constructors //
@@ -65,7 +69,27 @@ public final class PrimaryScene extends Stage
             ////////////////
 
             final StackPane rightPane = new StackPane();
-            rightPane.setBackground(Background.fill(Color.LIGHTCORAL));
+
+            imageView = new ImageView()
+            {
+                @Override
+                public double minHeight(final double width)
+                {
+                    return 80;
+                };
+
+                @Override
+                public double minWidth(final double height)
+                {
+                    return 80;
+                };
+            };
+
+            imageView.fitWidthProperty().bind(rightPane.widthProperty());
+            imageView.fitHeightProperty().bind(rightPane.heightProperty());
+            imageView.setPreserveRatio(true);
+
+            rightPane.getChildren().add(imageView);
 
 
         splitPane.getItems().addAll(leftPane, rightPane);
@@ -126,12 +150,35 @@ public final class PrimaryScene extends Stage
     {
         final Area area = new Area(areaSource);
         new JavaFXUtil.TaskManager(area.loadAreaTask()
+            .onSucceeded(() -> renderPrimaryOverlay(area))
             .onFailed((e) ->
             {
-                new ErrorAlert("An exception occurred while loading the area.\n\n"
-                    + MiscUtil.formatStackTrace(e)).showAndWait();
+                new ErrorAlert("An exception occurred while loading the area.", e).showAndWait();
             })
         ).run();
+    }
+
+    private void renderPrimaryOverlay(final Area area)
+    {
+        if (area.getOverlayCount() <= 0)
+        {
+            return;
+        }
+
+        new JavaFXUtil.TaskManager(area.renderOverlayTask(0)
+            .onSucceeded(this::saveRenderedOverlay)
+            .onFailed((e) ->
+            {
+                new ErrorAlert("An exception occurred while rendering " +
+                    "the primary area overlay.", e).showAndWait();
+            })
+        ).run();
+    }
+
+    private void saveRenderedOverlay(final BufferedImage overlay)
+    {
+        final Image image = SwingFXUtils.toFXImage(overlay, null);
+        imageView.setImage(image);
     }
 
     private record ResourceSourceHolder(Game.ResourceSource source, String text)

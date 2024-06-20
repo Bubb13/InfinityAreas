@@ -80,7 +80,7 @@ public class MainJavaFX extends Application
                 catch (final Exception e)
                 {
                     new ErrorAlert("An exception occurred while loading the previously opened key file. " +
-                        "You will be asked to select a new game install.\n\n" + MiscUtil.formatStackTrace(e)
+                        "You will be asked to select a new game install.", e
                     ).showAndWait();
 
                     // chitin.key was invalid, fallback
@@ -121,7 +121,7 @@ public class MainJavaFX extends Application
             .onFailed((final Throwable exception) ->
             {
                 new ErrorAlert("An exception occurred while loading game resources. You will " +
-                    "be asked to select a new game install.\n\n" + MiscUtil.formatStackTrace(exception)
+                    "be asked to select a new game install.", exception
                 ).showAndWait();
 
                 attemptLoadGame(onInvalidAskForGame(GlobalState.getSettingsFile().getRoot()));
