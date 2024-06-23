@@ -3,6 +3,7 @@ package com.github.bubb13.infinityareas.gui.scene;
 
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.GlobalState;
+import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
 import com.github.bubb13.infinityareas.gui.control.SimpleTreeView;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.game.resource.Area;
@@ -17,7 +18,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public final class PrimaryScene extends Stage
 {
@@ -109,6 +113,8 @@ public final class PrimaryScene extends Stage
 
         stage.setTitle("Infinity Areas");
         stage.setScene(scene);
+
+        //debugStepThroughAllAreas();
     }
 
     private TreeItem<ResourceSourceHolder> createAreaTreeViewNodes()
@@ -160,7 +166,7 @@ public final class PrimaryScene extends Stage
             .onSucceeded(() -> renderPrimaryOverlay(area))
             .onFailed((e) ->
             {
-                new ErrorAlert("An exception occurred while loading the area.", e).showAndWait();
+                ErrorAlert.openAndWait("An exception occurred while loading the area.", e);
             })
         ).run();
     }
@@ -172,21 +178,79 @@ public final class PrimaryScene extends Stage
             return;
         }
 
-        new JavaFXUtil.TaskManager(area.renderOverlayTask(0)
-            .onSucceeded(this::saveRenderedOverlay)
+        new JavaFXUtil.TaskManager(area.renderOverlaysTask(0, 1, 2, 3, 4)
+            .onSucceeded(this::showRenderedOverlay)
             .onFailed((e) ->
             {
-                new ErrorAlert("An exception occurred while rendering " +
-                    "the primary area overlay.", e).showAndWait();
+                ErrorAlert.openAndWait("An exception occurred while rendering " +
+                    "the primary area overlay.", e);
             })
         ).run();
     }
 
-    private void saveRenderedOverlay(final BufferedImage overlay)
+    private void showRenderedOverlay(final BufferedImage overlay)
     {
         final Image image = SwingFXUtils.toFXImage(overlay, null);
         imageView.setImage(image);
     }
+
+    private void debugStepThroughAllAreas()
+    {
+        new JavaFXUtil.TaskManager(new JavaFXUtil.TaskManager.ManagedTask<>()
+        {
+            @Override
+            protected Void call() throws Exception
+            {
+                for (final Game.Resource resource : GlobalState.getGame()
+                    .getResourcesOfType(KeyFile.NumericResourceType.ARE))
+                {
+                    final Area area = new Area(resource.getPrimarySource());
+                    subtask(area.loadAreaTask());
+
+                    final BufferedImage overlay = subtask(area.renderOverlayTask(0));
+                    waitForGuiThreadToExecute(() -> showRenderedOverlay(overlay));
+
+                    Thread.sleep(1000);
+                }
+
+                return null;
+            }
+        }).run();
+    }
+
+    private void debugSaveOverlays()
+    {
+        new JavaFXUtil.TaskManager(new JavaFXUtil.TaskManager.ManagedTask<>()
+        {
+            @Override
+            protected Void call() throws Exception
+            {
+                final Game game = GlobalState.getGame();
+                final Path debugPath = game.getRoot().resolve("debug");
+                Files.createDirectories(debugPath);
+
+                final Game.Resource resource = GlobalState.getGame().getResource(
+                    new ResourceIdentifier("AR0011", KeyFile.NumericResourceType.ARE));
+
+                final Area area = new Area(resource.getPrimarySource());
+                subtask(area.loadAreaTask());
+
+                for (int i = 0; i < area.getOverlayCount(); ++i)
+                {
+                    final BufferedImage overlay = subtask(area.renderOverlayTask(i));
+
+                    ImageIO.write(overlay, "png", debugPath.resolve(
+                        String.format("OVERLAY_%d.PNG", i)).toFile());
+                }
+
+                return null;
+            }
+        }).run();
+    }
+
+    /////////////////////
+    // Private Classes //
+    /////////////////////
 
     private record ResourceSourceHolder(Game.ResourceSource source, String text)
     {

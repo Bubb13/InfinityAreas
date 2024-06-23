@@ -175,24 +175,38 @@ public class KeyFile
 
     public static class BifEntry
     {
+        // In file structure
         private final String name;
-        private final int locationBitfield;
+        private final short locationBitfield;
         private final int fileLength;
+
+        // Derived
+        private final ArrayList<Location> possibleLocations;
         private final ArrayList<FileEntry> fileEntries = new ArrayList<>();
 
-        public BifEntry(final String name, final int locationBitfield, final int fileLength)
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public BifEntry(final String name, final short locationBitfield, final int fileLength)
         {
             this.name = name;
             this.locationBitfield = locationBitfield;
             this.fileLength = fileLength;
+
+            this.possibleLocations = Location.fromBitfield(locationBitfield);
         }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
 
         public String getName()
         {
             return name;
         }
 
-        public int getLocationBitfield()
+        public short getLocationBitfield()
         {
             return locationBitfield;
         }
@@ -202,9 +216,63 @@ public class KeyFile
             return fileLength;
         }
 
+        public Iterable<Location> getPossibleLocations()
+        {
+            return MiscUtil.readOnlyIterable(possibleLocations);
+        }
+
         public Iterable<FileEntry> fileEntries()
         {
             return MiscUtil.readOnlyIterable(fileEntries.iterator());
+        }
+
+        ////////////////////
+        // Public Classes //
+        ////////////////////
+
+        public enum Location
+        {
+            HD0,
+            CACHE,
+            CD1,
+            CD2,
+            CD3,
+            CD4,
+            CD5,
+            CD6,
+            UNKNOWN;
+
+            public static ArrayList<Location> fromBitfield(final short bitfield)
+            {
+                final ArrayList<Location> result = new ArrayList<>();
+
+                if ((bitfield & 0x1) != 0) result.add(Location.HD0);
+                if ((bitfield & 0x2) != 0) result.add(Location.CACHE);
+                if ((bitfield & 0x4) != 0) result.add(Location.CD1);
+                if ((bitfield & 0x8) != 0) result.add(Location.CD2);
+                if ((bitfield & 0x10) != 0) result.add(Location.CD3);
+                if ((bitfield & 0x20) != 0) result.add(Location.CD4);
+                if ((bitfield & 0x40) != 0) result.add(Location.CD5);
+                if ((bitfield & 0x80) != 0) result.add(Location.CD6);
+                if ((bitfield & 0x100) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x100");
+                if ((bitfield & 0x200) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x200");
+                if ((bitfield & 0x400) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x400");
+                if ((bitfield & 0x800) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x800");
+                if ((bitfield & 0x1000) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x1000");
+                if ((bitfield & 0x2000) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x2000");
+                if ((bitfield & 0x4000) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x4000");
+                if ((bitfield & 0x8000) != 0)
+                    throw new IllegalStateException("Unknown bif locator bit set: 0x8000");
+
+                return result;
+            }
         }
     }
 

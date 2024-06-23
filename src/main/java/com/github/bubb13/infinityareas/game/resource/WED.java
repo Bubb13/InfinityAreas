@@ -150,13 +150,18 @@ public class WED
     {
         private final short tisIndexOfAlternateTile;
         private final short drawFlags;
+        private final byte animationSpeed;
+        private final short extraFlags;
         final short[] tileIndexLookupArray;
 
         public TilemapEntry(
-            final short tisIndexOfAlternateTile, final short drawFlags, final short[] tileIndexLookupArray)
+            final short tisIndexOfAlternateTile, final short drawFlags, final byte animationSpeed,
+            final short extraFlags, final short[] tileIndexLookupArray)
         {
             this.tisIndexOfAlternateTile = tisIndexOfAlternateTile;
             this.drawFlags = drawFlags;
+            this.animationSpeed = animationSpeed;
+            this.extraFlags = extraFlags;
             this.tileIndexLookupArray = tileIndexLookupArray;
         }
 
@@ -168,6 +173,21 @@ public class WED
         public short getDrawFlags()
         {
             return drawFlags;
+        }
+
+        public byte getAnimationSpeed()
+        {
+            return animationSpeed;
+        }
+
+        public short getExtraFlags()
+        {
+            return extraFlags;
+        }
+
+        public short[] getTileIndexLookupArray()
+        {
+            return tileIndexLookupArray;
         }
     }
 
@@ -262,7 +282,9 @@ public class WED
                 position(curBase);       final short tileIndexLookupTableBaseIndex = buffer.getShort();
                 position(curBase + 0x2); final short numTileIndexLookupTableEntries = buffer.getShort();
                 position(curBase + 0x4); final short tisIndexOfAlternateTile = buffer.getShort();
-                position(curBase + 0x6); final short drawFlags = buffer.get();
+                position(curBase + 0x6); final byte drawFlags = buffer.get();
+                position(curBase + 0x7); final byte animationSpeed = buffer.get();
+                position(curBase + 0x8); final short extraFlags = buffer.get();
 
                 final short[] tileIndexLookupArray = new short[numTileIndexLookupTableEntries];
 
@@ -274,7 +296,8 @@ public class WED
                     curTileIndexLookupTableOffset += 2;
                 }
 
-                tilemapEntries.add(new TilemapEntry(tisIndexOfAlternateTile, drawFlags, tileIndexLookupArray));
+                tilemapEntries.add(new TilemapEntry(
+                    tisIndexOfAlternateTile, drawFlags, animationSpeed, extraFlags, tileIndexLookupArray));
 
                 curBase += WED_TILEMAP_ENTRY_SIZE;
             }

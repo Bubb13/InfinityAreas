@@ -6,11 +6,13 @@ import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
+import com.github.bubb13.infinityareas.util.TileUtil;
 
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Area
 {
@@ -52,6 +54,11 @@ public class Area
     public JavaFXUtil.TaskManager.ManagedTask<BufferedImage> renderOverlayTask(final int overlayIndex)
     {
         return new RenderOverlayTask(overlayIndex);
+    }
+
+    public JavaFXUtil.TaskManager.ManagedTask<BufferedImage> renderOverlaysTask(final int... overlayIndexes)
+    {
+        return new RenderOverlaysTask(overlayIndexes);
     }
 
     /////////////////////
@@ -143,7 +150,7 @@ public class Area
                 return null;
             }
 
-            final TIS tis = subtask(new LoadTISTask(wed.getSource().getIdentifier().resref(), tisResref));
+            final TIS tis = subtask(new LoadTISTask(tisResref));
             final ArrayList<WED.TilemapEntry> tilemapEntries = overlay.getTilemapEntries();
             int tilemapEntryI = 0;
 
@@ -162,7 +169,7 @@ public class Area
                 {
                     final WED.TilemapEntry tilemapEntry = tilemapEntries.get(tilemapEntryI++);
                     final short primaryTileIndex = tilemapEntry.tileIndexLookupArray[0];
-                    final IntBuffer tileData = tis.getTileData(primaryTileIndex);
+                    final IntBuffer tileData = tis.getPreRenderedTileData(primaryTileIndex);
 
                     final int dstBaseXOffset = tileX * 64;
 
@@ -185,18 +192,200 @@ public class Area
         }
     }
 
+    private class RenderOverlaysTask extends JavaFXUtil.TaskManager.ManagedTask<BufferedImage>
+    {
+        private final int[] overlayIndexes;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public RenderOverlaysTask(final int... overlayIndexes)
+        {
+            this.overlayIndexes = overlayIndexes;
+        }
+
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected BufferedImage call() throws Exception
+        {
+            buffer = source.demandFileData();
+            return renderOverlays();
+        }
+
+        private BufferedImage renderOverlays() throws Exception
+        {
+            final List<WED.Overlay> overlays = wed.getOverlays();
+            final WED.Overlay baseOverlay = overlays.get(0);
+            final String baseOverlayTISResref = baseOverlay.getTilesetResref();
+
+            if (baseOverlayTISResref.isEmpty())
+            {
+                // Weirdly happens on real overlays(?)
+                return null;
+            }
+
+            final int baseOverlayWidth = baseOverlay.getWidthInTiles();
+            final int baseOverlayHeight = baseOverlay.getHeightInTiles();
+            final int baseOverlayWidthInPixels = baseOverlayWidth * 64;
+            final int baseOverlayHeightInPixels = baseOverlayHeight * 64;
+            final int numPixels = baseOverlayWidthInPixels * baseOverlayHeightInPixels;
+            final int[] result = new int[numPixels];
+
+            final ArrayList<WED.TilemapEntry> baseOverlayTilemapEntries = baseOverlay.getTilemapEntries();
+            final int nGameTime = 0; // TODO - animate
+
+            for (int overlayIndex = 4; overlayIndex > 0; --overlayIndex)
+            {
+                if (!renderRequested(overlayIndex))
+                {
+                    continue;
+                }
+
+                final WED.Overlay overlay = overlays.get(overlayIndex);
+                if (overlay == null || overlay.getWidthInTiles() == 0 || overlay.getHeightInTiles() == 0)
+                {
+                    continue;
+                }
+
+                if ((overlay.getMovementType() & 1) != 0)
+                {
+                    continue;
+                }
+
+                final ArrayList<WED.TilemapEntry> overlayTilemapEntries = baseOverlay.getTilemapEntries();
+
+                if (overlayTilemapEntries.isEmpty())
+                {
+                    continue;
+                }
+
+                final int overlayRenderFlag = 1 << overlayIndex;
+                final WED.TilemapEntry overlayTilemapEntry = overlayTilemapEntries.get(0);
+                final TIS overlayTIS = subtask(new LoadTISTask(overlay.getTilesetResref())
+                );
+
+                TileUtil.iterateOverlayTileOffsets(64, baseOverlayWidth, baseOverlayHeight,
+                    (final int tileSideLength, final int dstPitch, final int dstOffset, final int i) ->
+                {
+                    final WED.TilemapEntry baseOverlayTilemapEntry = baseOverlayTilemapEntries.get(i);
+
+                    if ((baseOverlayTilemapEntry.getDrawFlags() & overlayRenderFlag) == 0)
+                    {
+                        return;
+                    }
+
+                    final int overlayTileLookupIndex = ((nGameTime / 2)
+                        % overlayTilemapEntry.tileIndexLookupArray.length
+                    );
+                    final int overlayTileIndex = overlayTilemapEntry.tileIndexLookupArray[overlayTileLookupIndex];
+                    final IntBuffer tileData = overlayTIS.getPreRenderedTileData(overlayTileIndex);
+
+                    TileUtil.copyTo(tileSideLength, dstPitch, dstOffset, tileData, result);
+                });
+            }
+
+            if (renderRequested(0))
+            {
+                final TIS baseOverlayTIS = subtask(new LoadTISTask(baseOverlayTISResref));
+
+                TileUtil.iterateOverlayTileOffsets(64, baseOverlayWidth, baseOverlayHeight,
+                    (final int tileSideLength, final int dstPitch, final int dstOffset, final int i) ->
+                {
+                    final WED.TilemapEntry tilemapEntry = baseOverlayTilemapEntries.get(i);
+
+                    if ((tilemapEntry.getDrawFlags() & 1) == 0)
+                    {
+                        int nTile;
+
+                        if ((tilemapEntry.getExtraFlags() & 2) == 0 || tilemapEntry.getTisIndexOfAlternateTile() == -1)
+                        {
+                            // Not using secondary tile
+                            final byte nAnimSpeed = (byte)Math.max(1, tilemapEntry.getAnimationSpeed());
+                            final int nTileLookupIndex = ((nGameTime / nAnimSpeed)
+                                % tilemapEntry.tileIndexLookupArray.length);
+
+                            nTile = tilemapEntry.tileIndexLookupArray[nTileLookupIndex];
+                        }
+                        else
+                        {
+                            // Using secondary tile
+                            nTile = tilemapEntry.getTisIndexOfAlternateTile();
+                        }
+
+                        // if ((baseOverlay.getMovementType() & 2) != 0)
+                        // {
+                        //     // dwRenderFlags |= 0x4000000;
+                        // }
+
+                        final int nStencilTile = (tilemapEntry.getDrawFlags() & 0x1E) != 0
+                            ? tilemapEntry.getTisIndexOfAlternateTile()
+                            : -1;
+
+                        if (nStencilTile != -1 && baseOverlayTIS.getType() == TIS.Type.PALETTED)
+                        {
+                            final TIS.PalettedTileData tileData = baseOverlayTIS
+                                .getPalettedTileData(nTile);
+
+                            final TIS.PalettedTileData stencilTileData = baseOverlayTIS
+                                .getPalettedTileData(nStencilTile);
+
+                            TileUtil.copyStenciledTo(
+                                tileSideLength, dstPitch,
+                                255, 0x0,
+                                tileData.getPaletteData(),
+                                tileData.getPalettedData(),
+                                stencilTileData.getPalettedData(),
+                                result
+                            );
+                        }
+                        else
+                        {
+                            final IntBuffer tileData = baseOverlayTIS.getPreRenderedTileData(nTile);
+                            TileUtil.copyTo(tileSideLength, dstPitch, dstOffset, tileData, result);
+                        }
+                    }
+                    else
+                    {
+                        // TODO: All black
+                    }
+                });
+            }
+
+            final BufferedImage image = new BufferedImage(
+                baseOverlayWidthInPixels, baseOverlayHeightInPixels, BufferedImage.TYPE_INT_ARGB
+            );
+            image.getRaster().setDataElements(0, 0, baseOverlayWidthInPixels, baseOverlayHeightInPixels, result);
+
+            return image;
+        }
+
+        private boolean renderRequested(final int overlayIndex)
+        {
+            for (int requestedOverlayIndex : overlayIndexes)
+            {
+                if (requestedOverlayIndex == overlayIndex)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     private class LoadTISTask extends JavaFXUtil.TaskManager.ManagedTask<TIS>
     {
-        final String wedResref;
         final String tisResref;
 
         /////////////////////////
         // Public Constructors //
         /////////////////////////
 
-        public LoadTISTask(final String wedResref, final String tisResref)
+        public LoadTISTask(final String tisResref)
         {
-            this.wedResref = wedResref;
             this.tisResref = tisResref;
         }
 
@@ -207,10 +396,10 @@ public class Area
         @Override
         protected TIS call() throws Exception
         {
-            return loadTIS(wedResref, tisResref);
+            return loadTIS(tisResref);
         }
 
-        private TIS loadTIS(final String wedResref, final String tisResref) throws Exception
+        private TIS loadTIS(final String tisResref) throws Exception
         {
             TIS tis = tisCache.get(tisResref);
 
@@ -221,11 +410,10 @@ public class Area
 
                 if (tisResource == null)
                 {
-                    throw new IllegalStateException("Unable to find source for TIS resource \"" + wedResref + "\"");
+                    throw new IllegalStateException("Unable to find source for TIS resource \"" + tisResref + "\"");
                 }
 
-                final String wedNumeric = wedResref.substring(2);
-                tis = new TIS(wedNumeric, tisResource.getPrimarySource(), resourceDataCache, pvrzCache);
+                tis = new TIS(tisResource.getPrimarySource(), resourceDataCache, pvrzCache);
                 subtask(tis.loadTISTask());
 
                 tisCache.add(tisResref, tis);

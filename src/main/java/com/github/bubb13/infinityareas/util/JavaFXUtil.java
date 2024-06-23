@@ -14,6 +14,8 @@ import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.Stack;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Phaser;
 import java.util.function.Consumer;
 
 public final class JavaFXUtil
@@ -45,6 +47,19 @@ public final class JavaFXUtil
         }
 
         return new WidthHeight(bounds.getWidth(), bounds.getHeight());
+    }
+
+    public static void waitForGuiThreadToExecute(final Runnable runnable)
+    {
+        final Phaser waitLatch = new Phaser(1);
+
+        Platform.runLater(() ->
+        {
+            runnable.run();
+            waitLatch.arrive();
+        });
+
+        waitLatch.awaitAdvance(waitLatch.getPhase());
     }
 
     //////////////////////////
@@ -244,6 +259,7 @@ public final class JavaFXUtil
             private final ArrayList<Consumer<T>> customOnSucceeded = new ArrayList<>();
             private final ArrayList<Consumer<Throwable>> customOnFailed = new ArrayList<>();
             private final ArrayList<Runnable> customOnCancelled = new ArrayList<>();
+            private final Phaser waitLatch = new Phaser(1);
 
             ////////////////////
             // Public Methods //
@@ -334,6 +350,17 @@ public final class JavaFXUtil
 
                 // Cancelled
                 return null;
+            }
+
+            public void waitForGuiThreadToExecute(final Runnable runnable)
+            {
+                Platform.runLater(() ->
+                {
+                    runnable.run();
+                    waitLatch.arrive();
+                });
+
+                waitLatch.awaitAdvance(waitLatch.getPhase());
             }
 
             /////////////////////

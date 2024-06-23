@@ -3,6 +3,7 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.util.BufferUtil;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -11,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 public class BifFile
 {
@@ -52,7 +55,7 @@ public class BifFile
 
         if (!Files.isRegularFile(path))
         {
-            throw new FileNotFoundException("Key file does not exist: \"" + path + "\"");
+            throw new FileNotFoundException("Bif file does not exist: \"" + path + "\"");
         }
 
         parse();
@@ -121,7 +124,12 @@ public class BifFile
         headerBuffer.order(ByteOrder.LITTLE_ENDIAN);
 
         headerBuffer.position(0x0); final String signature = BufferUtil.readUTF8(headerBuffer, 4);
-        if (!signature.equals("BIFF"))
+        if (signature.equals("BIFC"))
+        {
+            // TODO: Handle BIFC
+            throw new UnsupportedOperationException("BIFC file support currently unimplemented");
+        }
+        else if (!signature.equals("BIFF"))
         {
             throw new IllegalStateException("Invalid bif signature: \"" + signature + "\"");
         }
@@ -140,6 +148,24 @@ public class BifFile
 
         final int tilesetEntriesOffset = fileEntriesOffset + FILE_ENTRY_SIZE * numFileEntries;
         parseTilesetEntries(tilesetEntriesOffset, numTilesetEntries);
+    }
+
+    private ByteBuffer decompress() throws Exception
+    {
+        // TODO: Handle BIFC
+
+//        try (
+//            final ByteArrayInputStream inputStream = new ByteArrayInputStream(
+//                buffer.array(), 4, buffer.limit() - 4
+//            );
+//            final InflaterInputStream inflaterInputStream = new InflaterInputStream(inputStream, new Inflater()))
+//        {
+//            final ByteBuffer decompressedBuffer = ByteBuffer.wrap(inflaterInputStream.readAllBytes());
+//            decompressedBuffer.order(ByteOrder.LITTLE_ENDIAN);
+//            return decompressedBuffer;
+//        }
+
+        return null;
     }
 
     private void parseFileEntries(final int offset, final int count) throws IOException

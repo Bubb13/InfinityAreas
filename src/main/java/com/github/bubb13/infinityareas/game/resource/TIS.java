@@ -33,25 +33,24 @@ public class TIS
     // Private Fields //
     ////////////////////
 
-    private final String wedNumeric;
     private final Game.ResourceSource source;
     private final ResourceDataCache resourceDataCache;
     private final SimpleCache<String, PVRZ> pvrzCache;
 
     private ByteBuffer buffer;
+    private Type type;
     private int tileSideLength;
-    private IntBuffer blackTile;
-    private ArrayList<IntBuffer> tiles;
+    private TileData blackTile;
+    private ArrayList<TileData> tiles;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
     public TIS(
-        final String wedNumeric, final Game.ResourceSource source,
+        final Game.ResourceSource source,
         final ResourceDataCache resourceDataCache, final SimpleCache<String, PVRZ> pvrzCache)
     {
-        this.wedNumeric = wedNumeric;
         this.source = source;
         this.resourceDataCache = resourceDataCache;
         this.pvrzCache = pvrzCache;
@@ -66,11 +65,29 @@ public class TIS
         return new LoadTISTask();
     }
 
-    public IntBuffer getTileData(final int index)
+    public Type getType()
+    {
+        return type;
+    }
+
+    public IntBuffer getPreRenderedTileData(final int index)
     {
         if (index < tiles.size())
         {
-            return tiles.get(index);
+            final TileData tileData = tiles.get(index);
+
+            if (type == Type.PVRZ)
+            {
+                return ((PVRZTileData)tileData).getData();
+            }
+            else if (type == Type.PALETTED)
+            {
+                return ((PalettedTileData)tileData).getPreRenderedData();
+            }
+            else
+            {
+                throw new IllegalStateException("Unknown TIS type");
+            }
         }
         else
         {
@@ -88,6 +105,11 @@ public class TIS
         }
     }
 
+    public PalettedTileData getPalettedTileData(final int index)
+    {
+        return (PalettedTileData)tiles.get(index);
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -97,9 +119,65 @@ public class TIS
         buffer.position(pos);
     }
 
+    ////////////////////
+    // Public Classes //
+    ////////////////////
+
+    public enum Type
+    {
+        PALETTED,
+        PVRZ
+    }
+
+    public static class PVRZTileData extends TileData
+    {
+        private final IntBuffer data;
+
+        public PVRZTileData(final IntBuffer data)
+        {
+            this.data = data;
+        }
+
+        public IntBuffer getData()
+        {
+            return data;
+        }
+    }
+
+    public static class PalettedTileData extends TileData
+    {
+        private final int[] paletteData;
+        private final byte[] palettedData;
+        private final IntBuffer preRenderedData;
+
+        public PalettedTileData(final int[] paletteData, final byte[] palettedData, final IntBuffer preRenderedData)
+        {
+            this.paletteData = paletteData;
+            this.palettedData = palettedData;
+            this.preRenderedData = preRenderedData;
+        }
+
+        public int[] getPaletteData()
+        {
+            return paletteData;
+        }
+
+        public byte[] getPalettedData()
+        {
+            return palettedData;
+        }
+
+        public IntBuffer getPreRenderedData()
+        {
+            return preRenderedData;
+        }
+    }
+
     /////////////////////
     // Private Classes //
     /////////////////////
+
+    private static abstract class TileData {}
 
     private class LoadTISTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
     {
@@ -141,16 +219,16 @@ public class TIS
             position(0x10); final int sizeOfHeader = buffer.getInt();
             position(0x14); tileSideLength = buffer.getInt();
 
-            blackTile = allocateSingleColorTile(0xFF000000);
+            blackTile = new PVRZTileData(allocateSingleColorTile(0xFF000000));
 
             if (lengthOfTileBlockData == 0xC)
             {
-                // PVRZ-based
+                type = Type.PVRZ;
                 tiles = parsePVRZTileData(sizeOfHeader, numTiles);
             }
             else if (lengthOfTileBlockData == 0x1400)
             {
-                // Palette-based
+                type = Type.PALETTED;
                 tiles = parsePaletteTileData(sizeOfHeader, numTiles);
             }
             else
@@ -171,12 +249,14 @@ public class TIS
             return tile;
         }
 
-        private ArrayList<IntBuffer> parsePVRZTileData(final int offset, final int count) throws Exception
+        private ArrayList<TileData> parsePVRZTileData(final int offset, final int count) throws Exception
         {
-            final char firstChar = source.getIdentifier().resref().charAt(0);
-            final String pvrzPrefix = firstChar + wedNumeric;
+            final String tisResref = source.getIdentifier().resref();
+            final char tisFirstChar = tisResref.charAt(0);
+            final String tisNumeric = tisResref.substring(2);
+            final String pvrzPrefix = tisFirstChar + tisNumeric;
 
-            final ArrayList<IntBuffer> tiles = new ArrayList<>();
+            final ArrayList<TileData> tiles = new ArrayList<>();
             int curBase = offset;
 
             for (int i = 0; i < count; ++i, curBase += PVRZ_TILE_DATA_ENTRY_SIZE)
@@ -197,7 +277,7 @@ public class TIS
                 final PVRZ pvrz = loadPVRZ(pvrzResref);
 
                 final IntBuffer tile = pvrz.cutout(coordinateX, coordinateY, tileSideLength, tileSideLength);
-                tiles.add(tile);
+                tiles.add(new PVRZTileData(tile));
             }
 
             return tiles;
@@ -225,12 +305,12 @@ public class TIS
             return pvrz;
         }
 
-        private ArrayList<IntBuffer> parsePaletteTileData(final int offset, final int count)
+        private ArrayList<TileData> parsePaletteTileData(final int offset, final int count)
         {
             position(offset);
 
             final int numPixelsInTile = tileSideLength * tileSideLength;
-            final ArrayList<IntBuffer> tiles = new ArrayList<>();
+            final ArrayList<TileData> tiles = new ArrayList<>();
 
             for (int tileI = 0; tileI < count; ++tileI)
             {
@@ -238,20 +318,24 @@ public class TIS
                 final int[] palette = new int[NUM_PALETTE_COLORS];
                 for (int i = 0; i < NUM_PALETTE_COLORS; ++i)
                 {
-                    final int argbColor = buffer.getInt() | 0xFF000000; // Automatically set alpha to 255
+                    //final int argbColor = buffer.getInt() | 0xFF000000; // Automatically set alpha to 255
+                    final int argbColor = buffer.getInt();
                     palette[i] = argbColor;
                 }
 
-                final int[] tileData = new int[numPixelsInTile];
+                // Read paletted data
+                final byte[] palettedData = new byte[numPixelsInTile];
+                buffer.get(palettedData, 0, numPixelsInTile);
 
                 // Read tile data
+                final int[] tileData = new int[numPixelsInTile];
                 for (int i = 0; i < numPixelsInTile; ++i)
                 {
-                    final short paletteIndex = MiscUtil.toUnsignedByte(buffer.get());
-                    tileData[i] = palette[paletteIndex];
+                    final short paletteIndex = MiscUtil.toUnsignedByte(palettedData[i]);
+                    tileData[i] = palette[paletteIndex] | 0xFF000000; // Automatically set alpha to 255
                 }
 
-                tiles.add(IntBuffer.wrap(tileData));
+                tiles.add(new PalettedTileData(palette, palettedData, IntBuffer.wrap(tileData)));
             }
 
             return tiles;

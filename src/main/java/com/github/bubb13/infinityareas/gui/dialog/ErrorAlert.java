@@ -1,7 +1,9 @@
 
 package com.github.bubb13.infinityareas.gui.dialog;
 
+import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
+import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -15,21 +17,51 @@ import javafx.scene.text.Font;
 
 public class ErrorAlert extends Alert
 {
-    public ErrorAlert(final String errorMessage)
+    ///////////////////////////
+    // Public Static Methods //
+    ///////////////////////////
+
+    public static void openAndWait(final String errorMessage, final Throwable throwable)
     {
-        super(AlertType.ERROR);
-        init(errorMessage, null);
+        if (Platform.isFxApplicationThread())
+        {
+            doShowAndWait(errorMessage, throwable);
+        }
+        else
+        {
+            JavaFXUtil.waitForGuiThreadToExecute(() -> doShowAndWait(errorMessage, throwable));
+        }
     }
 
-    public ErrorAlert(final String errorMessage, final Throwable throwable)
+    public static void openAndWait(final String errorMessage)
     {
-        super(AlertType.ERROR);
-        final String traceMessage = MiscUtil.formatStackTrace(throwable);
-        System.err.println(traceMessage);
-        init(errorMessage, traceMessage);
+        openAndWait(errorMessage, null);
     }
 
-    private void init(final String errorMessage, final String traceMessage)
+    ////////////////////////////
+    // Private Static Methods //
+    ////////////////////////////
+
+    private static void doShowAndWait(final String errorMessage, final Throwable throwable)
+    {
+        new ErrorAlert(errorMessage, throwable).showAndWait();
+    }
+
+    //////////////////////////
+    // Private Constructors //
+    //////////////////////////
+
+    private ErrorAlert(final String errorMessage, final Throwable throwable)
+    {
+        super(AlertType.ERROR);
+        init(errorMessage, throwable);
+    }
+
+    /////////////////////
+    // Private Methods //
+    /////////////////////
+
+    private void init(final String errorMessage, final Throwable throwable)
     {
         this.setTitle("Error");
         this.setHeaderText(null);
@@ -49,11 +81,14 @@ public class ErrorAlert extends Alert
 
         vboxChildren.addAll(errorMessageLabel, messageArea);
 
-        if (traceMessage != null)
+        if (throwable != null)
         {
             final Label traceMessageLabel = new Label("Stack Trace:");
             traceMessageLabel.setFont(Font.font(16));
             traceMessageLabel.setPadding(new Insets(10, 10, 10, 0));
+
+            final String traceMessage = MiscUtil.formatStackTrace(throwable);
+            System.err.println(traceMessage);
 
             final TextArea traceArea = new TextArea(traceMessage);
             traceArea.setEditable(false);

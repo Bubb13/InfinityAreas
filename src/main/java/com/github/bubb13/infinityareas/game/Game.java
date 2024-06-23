@@ -9,12 +9,17 @@ import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.misc.IteratorToIterable;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
+import org.apache.commons.configuration2.HierarchicalConfiguration;
+import org.apache.commons.configuration2.INIConfiguration;
+import org.apache.commons.configuration2.tree.ImmutableNode;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -30,6 +35,17 @@ public class Game
     private final KeyFile keyFile;
     private final GameResources resources = new GameResources();
     private final BifFile[] bifFiles;
+
+    private String[] classicIniNames = new String[] {
+        "baldur.ini", "icewind.ini", "icewind2.ini", "torment.ini"
+    };
+    private Path aliasHD0;
+    private Path aliasCD1;
+    private Path aliasCD2;
+    private Path aliasCD3;
+    private Path aliasCD4;
+    private Path aliasCD5;
+    private Path aliasCD6;
 
     /////////////////////////
     // Public Constructors //
@@ -287,7 +303,8 @@ public class Game
         @Override
         protected Void call() throws Exception
         {
-            scanBifs("<game>", gameRoot);
+            parseClassicINI();
+            scanBifs("<game>");
             scanFolder("<game>", gameRoot, gameRoot.resolve("override"));
             return null;
         }
@@ -296,9 +313,51 @@ public class Game
         // Private Methods //
         /////////////////////
 
+        private void parseClassicINI() throws Exception
+        {
+            Path iniPath = null;
+
+            for (final String iniName : classicIniNames)
+            {
+                final Path testIniPath = gameRoot.resolve(iniName);
+                if (Files.isRegularFile(testIniPath))
+                {
+                    iniPath = testIniPath;
+                    break;
+                }
+            }
+
+            if (iniPath == null)
+            {
+                return;
+            }
+
+            final INIConfiguration ini = new INIConfiguration();
+            ini.setSeparatorUsedInInput("=");
+
+            try (final FileReader reader = new FileReader(iniPath.toFile()))
+            {
+                ini.read(reader);
+                final var alias = ini.configurationAt("Alias");
+                aliasHD0 = parseINIPath(alias, "HD0:");
+                aliasCD1 = parseINIPath(alias, "CD1:");
+                aliasCD2 = parseINIPath(alias, "CD2:");
+                aliasCD3 = parseINIPath(alias, "CD3:");
+                aliasCD4 = parseINIPath(alias, "CD4:");
+                aliasCD5 = parseINIPath(alias, "CD5:");
+                aliasCD6 = parseINIPath(alias, "CD6:");
+            }
+        }
+
+        private Path parseINIPath(final HierarchicalConfiguration<ImmutableNode> node, final String key)
+        {
+            final String pathStr = node.getString(key);
+            return pathStr == null ? null : Paths.get(pathStr);
+        }
+
         // TODO: The root scheme here is temporary and doesn't make sense -- chitin.key's resourceLocator
         //       describes where a BIF's root is!
-        private void scanBifs(final String rootName, final Path rootPath)
+        private void scanBifs(final String rootName)
         {
             updateProgress(0, keyFile.getNumFileEntries());
             updateMessage("Processing BIFS ...");
@@ -309,13 +368,46 @@ public class Game
             {
                 ++i;
 
-                final Path bifPath = FileUtil.resolvePathSafe(rootPath, bifEntry.getName());
+                final String bifName = bifEntry.getName();
+                Path bifRoot = null;
+                Path bifPath = null;
+
+                for (final KeyFile.BifEntry.Location possibleLocation : bifEntry.getPossibleLocations())
+                {
+                    final Path testBifRoot = switch (possibleLocation)
+                    {
+                        case HD0 -> aliasHD0 == null ? gameRoot : aliasHD0;
+                        // TODO: Is this under HD0?
+                        case CACHE -> (aliasHD0 == null ? gameRoot : aliasHD0).resolve("cache");
+                        case CD1 -> aliasCD1;
+                        case CD2 -> aliasCD2;
+                        case CD3 -> aliasCD3;
+                        case CD4 -> aliasCD4;
+                        case CD5 -> aliasCD5;
+                        case CD6 -> aliasCD6;
+                        default -> throw new IllegalStateException(String.format(
+                            "Unknown bif location for \"%s\"", bifName));
+                    };
+                    final Path testBifPath = FileUtil.resolvePathSafe(testBifRoot, bifName);
+
+                    if (testBifPath == null)
+                    {
+                        throw new IllegalStateException(String.format(
+                            "Attempted to access malformed bif path: \"%s%s%s\"",
+                            testBifRoot, File.separator, bifName));
+                    }
+
+                    if (Files.isRegularFile(testBifPath))
+                    {
+                        bifRoot = testBifRoot;
+                        bifPath = testBifPath;
+                        break;
+                    }
+                }
+
                 if (bifPath == null)
                 {
-                    new ErrorAlert("Attempted to access malformed bif path: \""
-                        + rootPath.toAbsolutePath() + "\"" + bifEntry.getName() + "\"").showAndWait();
-
-                    continue;
+                    throw new IllegalStateException(String.format("Failed to find bif: \"%s\"", bifName));
                 }
 
                 BifFile bifFile;
@@ -326,7 +418,8 @@ public class Game
                 }
                 catch (final IOException e)
                 {
-                    new ErrorAlert("Exception accessing bif: \"" + bifPath + "\"").showAndWait();
+                    // TODO - Shouldn't open ErrorAlert directly
+                    ErrorAlert.openAndWait("Exception accessing bif: \"" + bifPath + "\"", e);
                     continue;
                 }
 
@@ -335,7 +428,7 @@ public class Game
                     final ResourceIdentifier identifier = new ResourceIdentifier(fileEntry);
                     resources.addSource(
                         identifier,
-                        new BifSource(identifier, i, fileEntry.getResourceLocator(), rootName, rootPath)
+                        new BifSource(identifier, i, fileEntry.getResourceLocator(), rootName, bifRoot)
                     );
                     updateProgress(++numFilesProcessed, keyFile.getNumFileEntries());
                 }

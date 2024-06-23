@@ -153,7 +153,7 @@ public class GamePickerStage extends Stage
         catch (final Exception e)
         {
             // Show error message
-            new ErrorAlert("Exception when reading key file: " + e.getMessage()).showAndWait();
+            ErrorAlert.openAndWait("Exception when reading key file: " + e.getMessage());
         }
 
         if (pickedKeyFile != null)
@@ -195,7 +195,7 @@ public class GamePickerStage extends Stage
         if (errorMessage != null)
         {
             // Show error message
-            new ErrorAlert(errorMessage).showAndWait();
+            ErrorAlert.openAndWait(errorMessage);
         }
 
         if (pickedKeyFile != null)

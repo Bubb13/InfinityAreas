@@ -13,6 +13,8 @@ repositories {
 
 def javaFXVersion = "22.0.1"
 def gsonVersion = "2.11.0"
+def apacheCommonsConfigurationVersion = "2.11.0"
+//def beanUtilsVersion = "1.9.4"
 
 dependencies {
     implementation "org.openjfx:javafx-base:${javaFXVersion}:win"
@@ -31,6 +33,8 @@ dependencies {
     implementation "org.openjfx:javafx-swing:${javaFXVersion}:mac"
 
     implementation "com.google.code.gson:gson:${gsonVersion}"
+    implementation "org.apache.commons:commons-configuration2:${apacheCommonsConfigurationVersion}"
+    //implementation "commons-beanutils:commons-beanutils:${beanUtilsVersion}"
 }
 
 application {
