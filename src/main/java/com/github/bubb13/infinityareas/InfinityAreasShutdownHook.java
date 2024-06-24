@@ -18,5 +18,11 @@ public class InfinityAreasShutdownHook extends Thread
             }
             catch (final IOException ignored) {}
         }
+
+        try
+        {
+            GlobalState.cleanTemp();
+        }
+        catch (Exception ignored) {}
     }
 }

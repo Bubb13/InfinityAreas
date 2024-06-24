@@ -50,6 +50,14 @@ public final class FileUtil
         return new FileNameAndExtension(name, extension);
     }
 
+    public static String getFileName(final Path path)
+    {
+        final String fileName = path.getFileName().toString();
+        final int dotIndex = fileName.lastIndexOf(".");
+        if (dotIndex == -1) return fileName;
+        return fileName.substring(0, dotIndex);
+    }
+
     public static String getExtension(final Path path)
     {
         final String fileName = path.getFileName().toString();

@@ -3,6 +3,7 @@ package com.github.bubb13.infinityareas.util;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -12,10 +13,15 @@ import java.util.stream.IntStream;
 
 public final class BufferUtil
 {
+    ///////////////////////////
+    // Public Static Methods //
+    ///////////////////////////
+
     public static String readUTF8(final ByteBuffer buffer, final int length)
     {
-        return new String(buffer.array(),buffer.arrayOffset() + buffer.position(),
-            length, StandardCharsets.UTF_8);
+        final String toReturn = readUTF8NoAdvance(buffer, length);
+        buffer.position(buffer.position() + length);
+        return toReturn;
     }
 
     public static String readLUTF8(final ByteBuffer buffer, final int length)
@@ -33,7 +39,9 @@ public final class BufferUtil
             }
         }
 
-        return readUTF8(buffer, actualLength);
+        final String toReturn = readUTF8NoAdvance(buffer, actualLength);
+        buffer.position(buffer.position() + length);
+        return toReturn;
     }
 
     public static ByteBuffer readAtOffset(final Path path, final long offset, final int readSize) throws IOException
@@ -46,6 +54,7 @@ public final class BufferUtil
             fileChannel.read(buffer);
 
             buffer.flip();
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
             return buffer;
         }
     }
@@ -85,6 +94,16 @@ public final class BufferUtil
         }
     }
 
+    public static int channelRead(
+        final FileChannel channel, final ByteBuffer buffer, final int limit) throws Exception
+    {
+        buffer.rewind();
+        buffer.limit(limit);
+        final int numRead = channel.read(buffer);
+        buffer.flip();
+        return numRead;
+    }
+
     public static String toHexString(final ByteBuffer buffer)
     {
         final byte[] array = buffer.array();
@@ -93,6 +112,20 @@ public final class BufferUtil
             .mapToObj(i -> String.format("%02X", array[i]))
             .collect(Collectors.joining(" "));
     }
+
+    ////////////////////////////
+    // Private Static Methods //
+    ////////////////////////////
+
+    private static String readUTF8NoAdvance(final ByteBuffer buffer, final int length)
+    {
+        return new String(buffer.array(), buffer.arrayOffset() + buffer.position(),
+            length, StandardCharsets.UTF_8);
+    }
+
+    //////////////////////////
+    // Private Constructors //
+    //////////////////////////
 
     private BufferUtil() {}
 }

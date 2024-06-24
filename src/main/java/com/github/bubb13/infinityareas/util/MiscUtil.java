@@ -1,10 +1,13 @@
 
 package com.github.bubb13.infinityareas.util;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.misc.IteratorToIterable;
 import com.github.bubb13.infinityareas.misc.ReadOnlyIterator;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;

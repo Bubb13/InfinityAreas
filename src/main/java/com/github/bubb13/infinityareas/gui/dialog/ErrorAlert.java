@@ -75,8 +75,8 @@ public class ErrorAlert extends Alert
         errorMessageLabel.setPadding(new Insets(10, 10, 10, 0));
 
         final TextArea messageArea = new TextArea(errorMessage);
-        messageArea.setPrefHeight(0);
-        messageArea.setWrapText(false);
+        messageArea.setPrefHeight(200);
+        messageArea.setWrapText(true);
         messageArea.setEditable(false);
 
         vboxChildren.addAll(errorMessageLabel, messageArea);

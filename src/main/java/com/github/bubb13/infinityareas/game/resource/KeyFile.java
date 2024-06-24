@@ -12,6 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class KeyFile
 {
@@ -184,17 +186,32 @@ public class KeyFile
         private final ArrayList<Location> possibleLocations;
         private final ArrayList<FileEntry> fileEntries = new ArrayList<>();
 
+        /**
+         * Some bif names start with '\' or '/', which can represent the root of the filesystem.
+         * It is important to sanitize these instances so that Infinity Areas doesn't accidentally
+         * resolve a bif path to the wrong location.
+         */
+        private final static Pattern badBifName = Pattern.compile("^[\\\\/]+(.*)$");
+
         /////////////////////////
         // Public Constructors //
         /////////////////////////
 
-        public BifEntry(final String name, final short locationBitfield, final int fileLength)
+        public BifEntry(String name, final short locationBitfield, final int fileLength)
         {
+            // Sanitize bad bif names
+            final Matcher badBifNameMatcher = badBifName.matcher(name);
+            if (badBifNameMatcher.matches())
+            {
+                name = badBifNameMatcher.group(1);
+            }
+
             this.name = name;
             this.locationBitfield = locationBitfield;
             this.fileLength = fileLength;
 
             this.possibleLocations = Location.fromBitfield(locationBitfield);
+            //System.out.printf("BIF: \"%s\", locationBitfield: 0x%X\n", name, locationBitfield);
         }
 
         ////////////////////
