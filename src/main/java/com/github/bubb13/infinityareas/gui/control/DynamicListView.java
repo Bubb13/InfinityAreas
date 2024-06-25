@@ -299,7 +299,8 @@ public class DynamicListView<T extends DynamicListView.Entry> extends ListView<T
                     {
                         if (isSelected())
                         {
-                            setBackground(Background.fill(Color.LIGHTCYAN));
+                            setBackground(Background.fill(Color.web("#0096C9")));
+                            setTextFill(Color.WHITE);
                         }
                         else
                         {

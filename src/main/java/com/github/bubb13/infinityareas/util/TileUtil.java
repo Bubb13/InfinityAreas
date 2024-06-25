@@ -36,7 +36,7 @@ public final class TileUtil
 
     public static void copyStenciledTo(
         // miscellaneous dimensions
-        final int tileSideLength, final int dstPitch,
+        final int tileSideLength, final int dstPitch, final int dstOffset,
         // render specifics
         final int dwAlpha, final int dwFlags,
         // tile and stencil tile data
@@ -45,17 +45,17 @@ public final class TileUtil
         final int[] dst)
     {
         final int dstLineAdvance = dstPitch - tileSideLength;
-        int curDataIndex = 0;
-        int curDstIndex = 0;
+        int curPalettedIndex = 0;
+        int curDstIndex = dstOffset;
 
         for (int yCounter = 0; yCounter < tileSideLength; ++yCounter, curDstIndex += dstLineAdvance)
         {
-            for (int xCounter = 0; xCounter < tileSideLength; ++xCounter, ++curDataIndex)
+            for (int xCounter = 0; xCounter < tileSideLength; ++xCounter, ++curPalettedIndex, ++curDstIndex)
             {
-                final byte paletteIndex = tilePalettedData[curDataIndex];
+                final short paletteIndex = MiscUtil.toUnsignedByte(tilePalettedData[curPalettedIndex]);
                 int color = tilePaletteData[paletteIndex];
 
-                if (stencilTilePalettedData[curDataIndex] == 0)
+                if (stencilTilePalettedData[curPalettedIndex] == 0)
                 {
                     // Incorporate alpha parameter if stencil palette is 0 at location
                     color &= (dwAlpha << 24) | 0xFFFFFF;
@@ -73,7 +73,33 @@ public final class TileUtil
                     color |= 0xFF000000;
                 }
 
-                dst[curDstIndex++] = color;
+                dst[curDstIndex] = color;
+            }
+        }
+    }
+
+    public static void classicCopyStenciledTo(
+        // miscellaneous dimensions
+        final int tileSideLength, final int dstPitch, final int dstOffset,
+        // tile and stencil tile data
+        final int[] tilePaletteData, final byte[] tilePalettedData, final byte[] stencilTilePalettedData,
+        // destination
+        final int[] dst)
+    {
+        final int dstLineAdvance = dstPitch - tileSideLength;
+        int curPalettedIndex = 0;
+        int curDstIndex = dstOffset;
+
+        for (int yCounter = 0; yCounter < tileSideLength; ++yCounter, curDstIndex += dstLineAdvance)
+        {
+            for (int xCounter = 0; xCounter < tileSideLength; ++xCounter, ++curPalettedIndex, ++curDstIndex)
+            {
+                final short paletteIndex = MiscUtil.toUnsignedByte(tilePalettedData[curPalettedIndex]);
+
+                if (stencilTilePalettedData[curPalettedIndex] != 0)
+                {
+                    dst[curDstIndex] = tilePaletteData[paletteIndex] |= 0xFF000000;
+                }
             }
         }
     }

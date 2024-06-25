@@ -30,25 +30,29 @@ public class BifFile
     // Private Static Fields //
     ///////////////////////////
 
-    // The size of a BIF file entry
+    /** The size of a BIF file entry */
     private static final int FILE_ENTRY_SIZE = 0x10;
-    // The number of file entries to read at once
+    /** The number of file entries to read at once */
     private static final int FILE_ENTRY_READ_GROUP = 512;
-    // The resulting read size. A `FILE_ENTRY_READ_GROUP` of 512 results in reads of 8192 bytes.
+    /** The resulting read size. A `FILE_ENTRY_READ_GROUP` of 512 results in reads of 8192 bytes. */
     private static final int FILE_ENTRY_READ_CHUNK = FILE_ENTRY_SIZE * FILE_ENTRY_READ_GROUP;
 
+    /** The size of a TIS entry */
     private static final int TILESET_ENTRY_SIZE = 0x14;
+    /** The number of TIS entries to read at once */
     private static final int TILESET_ENTRY_READ_GROUP = 512;
+    /** The resulting read size. A `TILESET_ENTRY_READ_GROUP` of 512 results in reads of 10240 bytes. */
     private static final int TILESET_ENTRY_READ_CHUNK = TILESET_ENTRY_SIZE * TILESET_ENTRY_READ_GROUP;
 
+    /** The buffer size used to store BIFC metadata / decompressed data. Must be at least 0x8 bytes. */
     private static final int BIFC_BUFFER_SIZE = 0x2000;
 
     ////////////////////
     // Private Fields //
     ////////////////////
 
-    private final String relativePathStr;
     private final Path originalPath;
+    private final String relativePathStr;
 
     private final HashMap<Short, FileEntry> fileEntriesByResourceIndex = new HashMap<>();
     private final HashMap<Byte, TilesetEntry> tilesetEntriesByTilesetIndex = new HashMap<>();
@@ -113,7 +117,9 @@ public class BifFile
             throw new IllegalStateException(path.toString() + " does not contain resource index " + resourceIndex);
         }
 
-        return BufferUtil.readAtOffset(path, fileEntry.dataOffset(), fileEntry.dataSize());
+        final ByteBuffer buffer = BufferUtil.readAtOffset(path, fileEntry.dataOffset(), fileEntry.dataSize());
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
+        return buffer;
     }
 
     public ByteBuffer demandResourceData(final KeyFile.ResourceLocator resourceLocator) throws Exception
@@ -132,9 +138,12 @@ public class BifFile
         }
 
         final ByteBuffer buffer = ByteBuffer.allocate(TIS.HEADER_SIZE + tilesetEntry.dataSize());
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+        // Read in-bif tileset data (missing header) to the correct offset
         BufferUtil.readAtOffset(path, buffer, TIS.HEADER_SIZE, tilesetEntry.dataOffset(), tilesetEntry.dataSize());
 
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
+        // Write a fake header as if this TIS was a loose file
         buffer.position(0x0); buffer.put("TIS ".getBytes(StandardCharsets.UTF_8));
         buffer.position(0x4); buffer.put("V1  ".getBytes(StandardCharsets.UTF_8));
         buffer.position(0x8); buffer.putInt(tilesetEntry.numTiles());
@@ -212,6 +221,35 @@ public class BifFile
             path = decompress(afterFileNameOffset + 0x8);
             parse();
         };
+    }
+
+    private Path decompress(final int fromOffset) throws Exception
+    {
+        final Path tempFolderPath = GlobalState.getInfinityAreasTemp();
+        final Path tempFilePath = Files.createTempFile(tempFolderPath, null, null);
+
+        try (
+            final InflaterInputStream inputStream = new InflaterInputStream(
+                inputStreamFromPathOffset(path, fromOffset),
+                new Inflater());
+            final BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(tempFilePath)))
+        {
+            byte[] buffer = new byte[1024];
+
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1)
+            {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+        }
+
+        return tempFilePath;
+    }
+
+    private static InputStream inputStreamFromPathOffset(
+        final Path path, final long fromOffset) throws IOException
+    {
+        return Channels.newInputStream(FileChannel.open(path, StandardOpenOption.READ).position(fromOffset));
     }
 
     private void parseCompressedBIFC(final String signature) throws Exception
@@ -308,58 +346,6 @@ public class BifFile
             throw new IllegalStateException(String.format(
                 "Invalid bif signature (\"%s\") + version (\"%s\") combination", signature, versionToMatch));
         }
-    }
-
-    private Path decompress(final int fromOffset) throws Exception
-    {
-        final Path tempFolderPath = GlobalState.getInfinityAreasTemp();
-        final Path tempFilePath = Files.createTempFile(tempFolderPath, null, null);
-
-        try (
-            final InflaterInputStream inputStream = new InflaterInputStream(
-                inputStreamFromPathOffset(path, fromOffset),
-                new Inflater());
-            final BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(tempFilePath)))
-        {
-            byte[] buffer = new byte[1024];
-
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1)
-            {
-                outputStream.write(buffer, 0, bytesRead);
-            }
-        }
-
-        return tempFilePath;
-    }
-
-//    private Path decompress(final int fromOffset, final int outputStream) throws Exception
-//    {
-//        final Path tempFolderPath = GlobalState.getInfinityAreasTemp();
-//        final Path tempFilePath = Files.createTempFile(tempFolderPath, null, null);
-//
-//        try (
-//            final InflaterInputStream inputStream = new InflaterInputStream(
-//                inputStreamFromPathOffset(path, fromOffset),
-//                new Inflater());
-//            final BufferedOutputStream outputStream2 = new BufferedOutputStream(Files.newOutputStream(tempFilePath)))
-//        {
-//            byte[] buffer = new byte[1024];
-//
-//            int bytesRead;
-//            while ((bytesRead = inputStream.read(buffer)) != -1)
-//            {
-//                outputStream.write(buffer, 0, bytesRead);
-//            }
-//        }
-//
-//        return tempFilePath;
-//    }
-
-    private static InputStream inputStreamFromPathOffset(
-        final Path path, final long fromOffset) throws IOException
-    {
-        return Channels.newInputStream(FileChannel.open(path, StandardOpenOption.READ).position(fromOffset));
     }
 
     private void parseFileEntries(final int offset, final int count) throws IOException

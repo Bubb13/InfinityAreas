@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 
 public class GamePickerStage extends Stage
 {
@@ -45,6 +46,11 @@ public class GamePickerStage extends Stage
         new SuggestedDirectory("Program Files (x86)/Steam/steamapps/common/Baldur's Gate II Enhanced Edition", SuggestMode.PER_DRIVE),
         new SuggestedDirectory("Program Files (x86)/Steam/steamapps/common/Icewind Dale Enhanced Edition", SuggestMode.PER_DRIVE),
         new SuggestedDirectory("Program Files (x86)/Steam/steamapps/common/Project P", SuggestMode.PER_DRIVE),
+        new SuggestedDirectory("Program Files (x86)/GOG Galaxy/Games/Baldurs Gate", SuggestMode.PER_DRIVE),
+        new SuggestedDirectory("Program Files (x86)/GOG Galaxy/Games/Baldurs Gate 2", SuggestMode.PER_DRIVE),
+        new SuggestedDirectory("Program Files (x86)/GOG Galaxy/Games/Icewind Dale Complete", SuggestMode.PER_DRIVE),
+        new SuggestedDirectory("Program Files (x86)/GOG Galaxy/Games/Icewind Dale 2", SuggestMode.PER_DRIVE),
+        new SuggestedDirectory("Program Files (x86)/GOG Galaxy/Games/Planescape Torment", SuggestMode.PER_DRIVE),
     };
 
     /////////////////////
@@ -250,6 +256,8 @@ public class GamePickerStage extends Stage
                 checkSuggestedGameDirectory(suggestedGameDirectory.path);
             }
         }
+
+        suggestedPaths.sort(Comparator.comparing(SuggestedPathEntry::getText));
     }
 
     /////////////////////

@@ -8,9 +8,13 @@ import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.TileUtil;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -218,6 +222,12 @@ public class Area
 
         private BufferedImage renderOverlays() throws Exception
         {
+            final Game game = GlobalState.getGame();
+            final Game.Type engineType = game.getEngineType();
+
+            final boolean eeStencil = engineType == Game.Type.BGEE || engineType == Game.Type.BG2EE
+                || engineType == Game.Type.IWDEE || engineType == Game.Type.PSTEE;
+
             final List<WED.Overlay> overlays = wed.getOverlays();
             final WED.Overlay baseOverlay = overlays.get(0);
             final String baseOverlayTISResref = baseOverlay.getTilesetResref();
@@ -265,8 +275,7 @@ public class Area
 
                 final int overlayRenderFlag = 1 << overlayIndex;
                 final WED.TilemapEntry overlayTilemapEntry = overlayTilemapEntries.get(0);
-                final TIS overlayTIS = subtask(new LoadTISTask(overlay.getTilesetResref())
-                );
+                final TIS overlayTIS = subtask(new LoadTISTask(overlay.getTilesetResref()));
 
                 TileUtil.iterateOverlayTileOffsets(64, baseOverlayWidth, baseOverlayHeight,
                     (final int tileSideLength, final int dstPitch, final int dstOffset, final int i) ->
@@ -290,6 +299,13 @@ public class Area
 
             if (renderRequested(0))
             {
+                final int dwRenderFlagsBase =
+                    (
+                        (baseOverlay.getMovementType() & 2) != 0
+                        || (engineType != Game.Type.BG1 && engineType != Game.Type.BGEE)
+                    )
+                    ? 0x4000000 : 0;
+
                 final TIS baseOverlayTIS = subtask(new LoadTISTask(baseOverlayTISResref));
 
                 TileUtil.iterateOverlayTileOffsets(64, baseOverlayWidth, baseOverlayHeight,
@@ -321,9 +337,14 @@ public class Area
                         //     // dwRenderFlags |= 0x4000000;
                         // }
 
-                        final int nStencilTile = (tilemapEntry.getDrawFlags() & 0x1E) != 0
-                            ? tilemapEntry.getTisIndexOfAlternateTile()
-                            : -1;
+                        int nStencilTile = -1;
+                        int dwRenderFlags = dwRenderFlagsBase;
+
+                        if ((tilemapEntry.getDrawFlags() & 0x1E) != 0)
+                        {
+                            nStencilTile = tilemapEntry.getTisIndexOfAlternateTile();
+                            dwRenderFlags |= 0x2;
+                        }
 
                         if (nStencilTile != -1 && baseOverlayTIS.getType() == TIS.Type.PALETTED)
                         {
@@ -333,14 +354,50 @@ public class Area
                             final TIS.PalettedTileData stencilTileData = baseOverlayTIS
                                 .getPalettedTileData(nStencilTile);
 
-                            TileUtil.copyStenciledTo(
-                                tileSideLength, dstPitch,
-                                255, 0x0,
-                                tileData.getPaletteData(),
-                                tileData.getPalettedData(),
-                                stencilTileData.getPalettedData(),
-                                result
-                            );
+//                            final BufferedImage image1 = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+//                            image1.getRaster().setDataElements(0, 0, 64, 64, tileData.getPreRenderedData().array());
+//
+//                            final BufferedImage image2 = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+//                            image2.getRaster().setDataElements(0, 0, 64, 64, stencilTileData.getPreRenderedData().array());
+//
+//                            try
+//                            {
+//                                ImageIO.write(image1, "png", game.getRoot().resolve("InfinityAreasTemp")
+//                                    .resolve(String.format("TILE_%d.PNG", nTile)).toFile());
+//
+//                                ImageIO.write(image2, "png", game.getRoot().resolve("InfinityAreasTemp")
+//                                    .resolve(String.format("TILE_%d_STENCIL_%d.PNG", nTile, nStencilTile)).toFile());
+//                            }
+//                            catch (IOException e)
+//                            {
+//                                throw new RuntimeException(e);
+//                            }
+
+                            if (eeStencil)
+                            {
+                                final int dwAlpha = (dwRenderFlags & 0x4000000) != 0
+                                    ? TIS.WATER_ALPHA
+                                    : 0xFF;
+
+                                TileUtil.copyStenciledTo(
+                                    tileSideLength, dstPitch, dstOffset,
+                                    dwAlpha, dwRenderFlags,
+                                    tileData.getPaletteData(),
+                                    tileData.getPalettedData(),
+                                    stencilTileData.getPalettedData(),
+                                    result
+                                );
+                            }
+                            else
+                            {
+                                TileUtil.classicCopyStenciledTo(
+                                    tileSideLength, dstPitch, dstOffset,
+                                    tileData.getPaletteData(),
+                                    tileData.getPalettedData(),
+                                    stencilTileData.getPalettedData(),
+                                    result
+                                );
+                            }
                         }
                         else
                         {

@@ -109,7 +109,6 @@ public class PVRZ
         protected Void call() throws Exception
         {
             buffer = resourceDataCache.demand(source);
-            buffer.order(ByteOrder.LITTLE_ENDIAN);
             parse();
             return null;
         }

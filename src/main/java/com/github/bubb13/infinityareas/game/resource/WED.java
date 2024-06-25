@@ -205,7 +205,6 @@ public class WED
         protected Void call() throws Exception
         {
             buffer = source.demandFileData();
-            buffer.order(ByteOrder.LITTLE_ENDIAN);
             parse();
 
 //            System.out.println("Dumping");

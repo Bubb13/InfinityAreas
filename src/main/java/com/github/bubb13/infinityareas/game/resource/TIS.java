@@ -11,7 +11,9 @@ import com.github.bubb13.infinityareas.util.MiscUtil;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.nio.file.Files;
 import java.util.ArrayList;
 
 public class TIS
@@ -21,6 +23,7 @@ public class TIS
     //////////////////////////
 
     public static final int HEADER_SIZE = 0x18;
+    public static final int WATER_ALPHA = 0x80;
 
     ///////////////////////////
     // Private Static Fields //

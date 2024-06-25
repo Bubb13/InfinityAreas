@@ -16,6 +16,7 @@ import org.apache.commons.configuration2.tree.ImmutableNode;
 import java.io.File;
 import java.io.FileReader;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -97,6 +98,11 @@ public class Game
     public Resource getResource(final ResourceIdentifier identifier)
     {
         return this.resources.getResource(identifier);
+    }
+
+    public Type getEngineType()
+    {
+        return engineType;
     }
 
     /////////////////////
@@ -276,7 +282,9 @@ public class Game
         @Override
         public ByteBuffer demandFileData() throws Exception
         {
-            return ByteBuffer.wrap(Files.readAllBytes(path));
+            final ByteBuffer buffer = ByteBuffer.wrap(Files.readAllBytes(path));
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
+            return buffer;
         }
 
         @Override

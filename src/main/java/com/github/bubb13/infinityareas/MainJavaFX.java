@@ -45,11 +45,19 @@ public class MainJavaFX extends Application
         super.stop();
     }
 
+    public static void closePrimaryStageAndAskForGame()
+    {
+        final Stage primaryStage = GlobalState.getPrimaryStage();
+        primaryStage.close();
+
+        attemptLoadGame(onInvalidAskForGame(GlobalState.getSettingsFile().getRoot()));
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
 
-    private KeyFile resumeOrAskForGame()
+    private static KeyFile resumeOrAskForGame()
     {
         final JsonObject settingsRoot = GlobalState.getSettingsFile().getRoot();
         final JsonElement lastGameDirectoryElement = settingsRoot.get("lastGameDirectory");
@@ -104,15 +112,10 @@ public class MainJavaFX extends Application
             }
         }
 
-        if (keyFile != null)
-        {
-            // valid chitin.key selected, save the game directory under 'lastGameDirectory'
-            settingsRoot.addProperty("lastGameDirectory", keyFile.getPath().getParent().toString());
-        }
         return keyFile;
     }
 
-    private void attemptLoadGame(final KeyFile keyFile)
+    private static void attemptLoadGame(final KeyFile keyFile)
     {
         if (keyFile == null)
         {
@@ -121,7 +124,7 @@ public class MainJavaFX extends Application
         }
 
         new JavaFXUtil.TaskManager(GlobalState.loadGameTask(keyFile)
-            .onSucceeded(this::showPrimaryStage)
+            .onSucceeded(MainJavaFX::showPrimaryStage)
             .onFailed((final Throwable exception) ->
             {
                 ErrorAlert.openAndWait("An exception occurred while loading game " +
@@ -132,13 +135,13 @@ public class MainJavaFX extends Application
         ).run();
     }
 
-    private KeyFile onInvalidAskForGame(final JsonObject settingsRoot)
+    private static KeyFile onInvalidAskForGame(final JsonObject settingsRoot)
     {
         settingsRoot.remove("lastGameDirectory");
         return showGamePicker();
     }
 
-    private KeyFile showGamePicker()
+    private static KeyFile showGamePicker()
     {
         final GamePickerStage gamePickerStage = new GamePickerStage();
         gamePickerStage.setOnCloseRequest((ignored) -> Platform.exit());
@@ -146,8 +149,12 @@ public class MainJavaFX extends Application
         return gamePickerStage.getPickedKeyFile();
     }
 
-    private void showPrimaryStage()
+    private static void showPrimaryStage()
     {
+        // valid game selected, save the game directory under 'lastGameDirectory'
+        final JsonObject settingsRoot = GlobalState.getSettingsFile().getRoot();
+        settingsRoot.addProperty("lastGameDirectory", GlobalState.getGame().getRoot().toString());
+
         final Stage primaryStage = GlobalState.getPrimaryStage();
         primaryStage.setOnCloseRequest((ignored) -> Platform.exit());
 
