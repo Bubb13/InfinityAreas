@@ -9,8 +9,6 @@ import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -82,18 +80,22 @@ public class GlobalState
         return game.loadResourcesTask().onSucceeded(() -> GlobalState.game = game);
     }
 
-    public static void cleanTemp() throws Exception
+    public static void cleanTemp()
     {
         if (Files.isDirectory(infinityAreasTemp))
         {
-            FileUtil.forAllInPath(infinityAreasTemp, (final Path path) ->
+            try
             {
-                try
+                FileUtil.forAllInPath(infinityAreasTemp, (final Path path) ->
                 {
-                    Files.delete(path);
-                }
-                catch (Exception ignored) {}
-            });
+                    try
+                    {
+                        Files.delete(path);
+                    }
+                    catch (final Exception ignored) {}
+                });
+            }
+            catch (final Exception ignored) {}
         }
     }
 

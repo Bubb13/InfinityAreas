@@ -29,7 +29,7 @@ public class LimitableInputStream extends InputStream
         limitEnabled = true;
     }
 
-    public void disableLimit()
+    public void removeLimit()
     {
         limitEnabled = false;
     }

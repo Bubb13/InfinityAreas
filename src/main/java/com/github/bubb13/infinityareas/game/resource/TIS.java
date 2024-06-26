@@ -1,8 +1,8 @@
 
 package com.github.bubb13.infinityareas.game.resource;
 
-import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.GlobalState;
+import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
@@ -11,9 +11,7 @@ import com.github.bubb13.infinityareas.util.MiscUtil;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.nio.file.Files;
 import java.util.ArrayList;
 
 public class TIS
@@ -44,6 +42,7 @@ public class TIS
     private Type type;
     private int tileSideLength;
     private TileData blackTile;
+    private IntBuffer magentaTile;
     private ArrayList<TileData> tiles;
 
     /////////////////////////
@@ -73,6 +72,16 @@ public class TIS
         return type;
     }
 
+    public int getNumTiles()
+    {
+        return tiles.size();
+    }
+
+    public int getTileSideLength()
+    {
+        return tileSideLength;
+    }
+
     public IntBuffer getPreRenderedTileData(final int index)
     {
         if (index < tiles.size())
@@ -94,17 +103,8 @@ public class TIS
         }
         else
         {
-            System.out.println("Unable to fetch tile " + index);
-
-            // TODO: Temp panic code
-            final int numPixels = tileSideLength * tileSideLength;
-            final IntBuffer magenta = IntBuffer.allocate(numPixels);
-            for (int i = 0; i < numPixels; ++i)
-            {
-                magenta.put(0xFFFF00FF);
-            }
-            magenta.flip();
-            return magenta;
+            // Panic code, return a magenta tile
+            return magentaTile;
         }
     }
 
@@ -222,6 +222,7 @@ public class TIS
             position(0x10); final int sizeOfHeader = buffer.getInt();
             position(0x14); tileSideLength = buffer.getInt();
 
+            magentaTile = allocateSingleColorTile(0xFFFF00FF);
             blackTile = new PVRZTileData(allocateSingleColorTile(0xFF000000));
 
             if (lengthOfTileBlockData == 0xC)

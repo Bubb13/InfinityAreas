@@ -1,12 +1,12 @@
 
 package com.github.bubb13.infinityareas.game;
 
-import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.game.resource.BifFile;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
-import com.github.bubb13.infinityareas.util.FileUtil;
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.misc.IteratorToIterable;
+import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import org.apache.commons.configuration2.HierarchicalConfiguration;
@@ -74,6 +74,11 @@ public class Game
     public Path getRoot()
     {
         return gameRoot;
+    }
+
+    public Iterable<Resource> getResources()
+    {
+        return MiscUtil.readOnlyIterable(resources.resources.values());
     }
 
     public Iterable<Resource> getResourcesOfType(final short numericType)
@@ -181,6 +186,11 @@ public class Game
         public ResourceSourceType getSourceType()
         {
             return sourceType;
+        }
+
+        public KeyFile.NumericResourceType getNumericType()
+        {
+            return KeyFile.NumericResourceType.fromNumericType(identifier.numericType());
         }
 
         @Override

@@ -59,7 +59,7 @@ public class LoadingStage extends Stage
     private void init()
     {
         initStyle(StageStyle.UNDECORATED);
-        initModality(Modality.WINDOW_MODAL);
+        initModality(Modality.APPLICATION_MODAL);
 
         final Label message;
         message = new Label("Infinity Areas is loading ...");

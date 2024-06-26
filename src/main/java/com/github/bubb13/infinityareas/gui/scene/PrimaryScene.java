@@ -1,24 +1,26 @@
 
 package com.github.bubb13.infinityareas.gui.scene;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.MainJavaFX;
 import com.github.bubb13.infinityareas.game.Game;
-import com.github.bubb13.infinityareas.GlobalState;
+import com.github.bubb13.infinityareas.game.resource.Area;
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
 import com.github.bubb13.infinityareas.gui.control.SimpleTreeView;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
-import com.github.bubb13.infinityareas.game.resource.Area;
-import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.gui.pane.AreaPane;
+import com.github.bubb13.infinityareas.gui.pane.TISPane;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
+import javafx.collections.ObservableList;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -32,16 +34,20 @@ import java.nio.file.Path;
 
 public final class PrimaryScene extends Stage
 {
-    /////////////////////
-    // Instance Fields //
-    /////////////////////
+    ////////////////////
+    // Private Fields //
+    ////////////////////
 
     private final Stage stage;
-    private ImageView imageView;
+    private final StackPane rightPane = new StackPane();
+    private AreaPane areaPane = new AreaPane();
+    private TISPane tisPane = new TISPane();
 
-    //////////////////
-    // Constructors //
-    //////////////////
+    private Node curRightNode = null;
+
+    /////////////////////////
+    // Public Constructors //
+    /////////////////////////
 
     public PrimaryScene(final Stage stage)
     {
@@ -51,10 +57,6 @@ public final class PrimaryScene extends Stage
     ////////////////////
     // Public Methods //
     ////////////////////
-
-    /////////////////////
-    // Private Methods //
-    /////////////////////
 
     public void initMainScene()
     {
@@ -98,40 +100,13 @@ public final class PrimaryScene extends Stage
                     // TreeView //
                     //////////////
 
-                    final TreeItem<ResourceSourceHolder> rootNode = createAreaTreeViewNodes();
-                    final SimpleTreeView<ResourceSourceHolder> treeView = new SimpleTreeView<>(rootNode);
+                    final TreeItem<Object> rootNode = createAreaTreeViewNodes();
+                    final SimpleTreeView<Object> treeView = new SimpleTreeView<>(rootNode);
                     treeView.setShowRoot(false);
-                    treeView.setOnActivate((selected) -> this.onSelectAreaSource(selected.source()));
+                    treeView.setOnActivate((selected) -> this.onSelectResourceSource(((ResourceSourceHolder)selected).source()));
 
 
                 leftPane.getChildren().add(treeView);
-
-                ////////////////
-                // Right Pane //
-                ////////////////
-
-                final StackPane rightPane = new StackPane();
-
-                imageView = new ImageView()
-                {
-                    @Override
-                    public double minHeight(final double width)
-                    {
-                        return 80;
-                    }
-
-                    @Override
-                    public double minWidth(final double height)
-                    {
-                        return 80;
-                    }
-                };
-
-                imageView.fitWidthProperty().bind(rightPane.widthProperty());
-                imageView.fitHeightProperty().bind(rightPane.heightProperty());
-                imageView.setPreserveRatio(true);
-
-                rightPane.getChildren().add(imageView);
 
 
             splitPane.getItems().addAll(leftPane, rightPane);
@@ -148,50 +123,73 @@ public final class PrimaryScene extends Stage
 
         stage.setTitle("Infinity Areas");
         stage.setScene(scene);
-
-        //debugStepThroughAllAreas();
     }
 
-    private TreeItem<ResourceSourceHolder> createAreaTreeViewNodes()
+    /////////////////////
+    // Private Methods //
+    /////////////////////
+
+    private TreeItem<Object> createAreaTreeViewNodes()
     {
-        final Game game = GlobalState.getGame();
-        final TreeItem<ResourceSourceHolder> rootNode = new TreeItem<>();
+        final TreeItem<Object> areNode = new TreeItem<>("ARE");
+        final TreeItem<Object> tisNode = new TreeItem<>("TIS");
+        final TreeItem<Object> wedNode = new TreeItem<>("WED");
 
-        for (final Game.Resource resource : game.getResourcesOfType(KeyFile.NumericResourceType.ARE))
+        for (final Game.Resource resource : GlobalState.getGame().getResources())
         {
-            final TreeItem<ResourceSourceHolder> resrefNode = new TreeItem<>(
-                new ResourceSourceHolder(null, resource.getIdentifier().resref()));
+            final ResourceIdentifier identifier = resource.getIdentifier();
 
-            for (final Game.ResourceSource source : resource.sources())
+            switch (KeyFile.NumericResourceType.fromNumericType(identifier.numericType()))
             {
-                switch (source.getSourceType())
+                case ARE -> addResourceTypeNode(areNode, resource);
+                case TIS -> addResourceTypeNode(tisNode, resource);
+                case WED -> addResourceTypeNode(wedNode, resource);
+            }
+        }
+
+        final TreeItem<Object> rootNode = new TreeItem<>();
+        //noinspection unchecked
+        rootNode.getChildren().addAll(areNode, tisNode, wedNode);
+        return rootNode;
+    }
+
+    private void addResourceTypeNode(final TreeItem<Object> parentNode, final Game.Resource resource)
+    {
+        final TreeItem<Object> resrefNode = new TreeItem<>(
+            new ResourceSourceHolder(null, resource.getIdentifier().resref())
+        );
+        addSourceNodes(resrefNode, resource);
+        parentNode.getChildren().add(resrefNode);
+    }
+
+    private void addSourceNodes(final TreeItem<Object> parentNode, final Game.Resource resource)
+    {
+        for (final Game.ResourceSource source : resource.sources())
+        {
+            switch (source.getSourceType())
+            {
+                case BIF ->
                 {
-                    case BIF ->
-                    {
-                        final Game.BifSource bifSource = (Game.BifSource)source;
-                        final String pathStr = bifSource.getRelativePathStr();
+                    final Game.BifSource bifSource = (Game.BifSource)source;
+                    final String pathStr = bifSource.getRelativePathStr();
 
-                        final TreeItem<ResourceSourceHolder> sourceNode = new TreeItem<>(
-                            new ResourceSourceHolder(source, "bif: " + pathStr)
-                        );
-                        resrefNode.getChildren().add(sourceNode);
-                    }
-                    case LOOSE_FILE ->
-                    {
-                        final Game.LooseFileSource looseFileSource = (Game.LooseFileSource) source;
-                        final String pathStr = looseFileSource.getRelativePathStr();
+                    final TreeItem<Object> sourceNode = new TreeItem<>(
+                        new ResourceSourceHolder(source, "bif: " + pathStr)
+                    );
+                    parentNode.getChildren().add(sourceNode);
+                }
+                case LOOSE_FILE ->
+                {
+                    final Game.LooseFileSource looseFileSource = (Game.LooseFileSource)source;
+                    final String pathStr = looseFileSource.getRelativePathStr();
 
-                        final TreeItem<ResourceSourceHolder> sourceNode = new TreeItem<>(
-                            new ResourceSourceHolder(source, "file: " + pathStr)
-                        );
-                        resrefNode.getChildren().add(sourceNode);
-                    }
+                    final TreeItem<Object> sourceNode = new TreeItem<>(
+                        new ResourceSourceHolder(source, "file: " + pathStr)
+                    );
+                    parentNode.getChildren().add(sourceNode);
                 }
             }
-
-            rootNode.getChildren().add(resrefNode);
         }
-        return rootNode;
     }
 
     private void onSelectChangeGame()
@@ -199,16 +197,48 @@ public final class PrimaryScene extends Stage
         MainJavaFX.closePrimaryStageAndAskForGame();
     }
 
-    private void onSelectAreaSource(final Game.ResourceSource areaSource)
+    private void onSelectResourceSource(final Game.ResourceSource source)
     {
-        final Area area = new Area(areaSource);
-        new JavaFXUtil.TaskManager(area.loadAreaTask()
-            .onSucceeded(() -> renderPrimaryOverlay(area))
-            .onFailed((e) ->
+        final ResourceIdentifier identifier = source.getIdentifier();
+        switch (source.getNumericType())
+        {
+            case ARE ->
             {
-                ErrorAlert.openAndWait("An exception occurred while loading the area.", e);
-            })
-        ).run();
+                final Area area = new Area(source);
+                new JavaFXUtil.TaskManager(area.loadAreaTask()
+                    .onSucceeded(() -> renderPrimaryOverlay(area))
+                    .onFailed((e) ->
+                    {
+                        ErrorAlert.openAndWait("An exception occurred while loading the area.", e);
+                    })
+                ).run();
+            }
+            case TIS ->
+            {
+                new JavaFXUtil.TaskManager(tisPane.setSourceTask(source)
+                    .onSucceeded(() -> changeRightNode(tisPane))
+                    .onFailed((e) ->
+                    {
+                        ErrorAlert.openAndWait("An exception occurred while loading the tileset.", e);
+                    })
+                ).run();
+            }
+            case WED ->
+            {
+                System.out.printf("WED \"%s\" selected\n", identifier.resref());
+            }
+        }
+    }
+
+    private void changeRightNode(final Node newNode)
+    {
+        if (newNode != curRightNode)
+        {
+            curRightNode = newNode;
+            final ObservableList<Node> children = rightPane.getChildren();
+            children.clear();
+            children.add(newNode);
+        }
     }
 
     private void renderPrimaryOverlay(final Area area)
@@ -231,7 +261,8 @@ public final class PrimaryScene extends Stage
     private void showRenderedOverlay(final BufferedImage overlay)
     {
         final Image image = SwingFXUtils.toFXImage(overlay, null);
-        imageView.setImage(image);
+        areaPane.setImage(image);
+        changeRightNode(areaPane);
     }
 
     private void debugStepThroughAllAreas()

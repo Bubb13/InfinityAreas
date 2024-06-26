@@ -1,20 +1,16 @@
 
 package com.github.bubb13.infinityareas.game.resource;
 
-import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.GlobalState;
+import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.TileUtil;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 

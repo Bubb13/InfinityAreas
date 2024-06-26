@@ -14,7 +14,6 @@ import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.Stack;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Phaser;
 import java.util.function.Consumer;
 
@@ -51,15 +50,22 @@ public final class JavaFXUtil
 
     public static void waitForGuiThreadToExecute(final Runnable runnable)
     {
-        final Phaser waitLatch = new Phaser(1);
-
-        Platform.runLater(() ->
+        if (Platform.isFxApplicationThread())
         {
             runnable.run();
-            waitLatch.arrive();
-        });
+        }
+        else
+        {
+            final Phaser waitLatch = new Phaser(1);
 
-        waitLatch.awaitAdvance(waitLatch.getPhase());
+            Platform.runLater(() ->
+            {
+                runnable.run();
+                waitLatch.arrive();
+            });
+
+            waitLatch.awaitAdvance(waitLatch.getPhase());
+        }
     }
 
     //////////////////////////
