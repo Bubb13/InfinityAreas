@@ -248,7 +248,7 @@ public final class PrimaryScene extends Stage
             return;
         }
 
-        new JavaFXUtil.TaskManager(area.renderOverlaysTask(0, 1, 2, 3, 4)
+        new JavaFXUtil.TaskManager(area.renderOverlaysNewTask(0, 1, 2, 3, 4)
             .onSucceeded(this::showRenderedOverlay)
             .onFailed((e) ->
             {
@@ -280,7 +280,7 @@ public final class PrimaryScene extends Stage
                         final Area area = new Area(resource.getPrimarySource());
                         subtask(area.loadAreaTask());
 
-                        final BufferedImage overlay = subtask(area.renderOverlaysTask(0));
+                        final BufferedImage overlay = subtask(area.renderOverlaysNewTask(0, 1, 2, 3, 4));
                         waitForGuiThreadToExecute(() -> showRenderedOverlay(overlay));
                     }
                     catch (final Exception e)
@@ -288,7 +288,7 @@ public final class PrimaryScene extends Stage
                         ErrorAlert.openAndWait(String.format(
                             "Failed to render area \"%s\"", resource.getIdentifier().resref()), e);
                     }
-                    //Thread.sleep(50);
+                    Thread.sleep(200);
                 }
                 return null;
             }

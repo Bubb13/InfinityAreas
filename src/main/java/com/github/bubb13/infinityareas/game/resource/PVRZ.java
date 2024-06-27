@@ -353,8 +353,21 @@ public class PVRZ
                 {
                     position(curTexelBlockOffset);       final int color0 = unpackBC1Color(buffer.getShort());
                     position(curTexelBlockOffset + 0x2); final int color1 = unpackBC1Color(buffer.getShort());
-                    final int color2 = bc1Interpolate(1, 3, color0, color1);
-                    final int color3 = bc1Interpolate(2, 3, color0, color1);
+
+                    // See: https://learn.microsoft.com/en-us/windows/uwp/graphics-concepts/opaque-and-1-bit-alpha-textures
+                    //  and https://learn.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1
+                    final int color2;
+                    final int color3;
+                    if (color0 > color1)
+                    {
+                        color2 = bc1Interpolate(1, 3, color0, color1);
+                        color3 = bc1Interpolate(2, 3, color0, color1);
+                    }
+                    else
+                    {
+                        color2 = bc1Interpolate(1, 2, color0, color1);
+                        color3 = 0x00000000;
+                    }
 
                     final int[] colorTable = new int[]{color0, color1, color2, color3};
 

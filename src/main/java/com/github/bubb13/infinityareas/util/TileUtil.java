@@ -1,6 +1,8 @@
 
 package com.github.bubb13.infinityareas.util;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.nio.IntBuffer;
 
 public final class TileUtil
@@ -76,6 +78,148 @@ public final class TileUtil
                 dst[curDstIndex] = color;
             }
         }
+    }
+
+    public static void drawStenciledTo(
+        // miscellaneous dimensions
+        final int tileSideLength, final int x, final int y,
+        // render specifics
+        final int dwAlpha, final int dwFlags,
+        // tile and stencil tile data
+        final int[] tilePaletteData, final byte[] tilePalettedData, final byte[] stencilTilePalettedData,
+        // destination
+        final Graphics graphics)
+    {
+        final int[] realized = new int[tileSideLength * tileSideLength];
+
+        copyStenciledTo(tileSideLength, tileSideLength, 0, dwAlpha, dwFlags,
+            tilePaletteData, tilePalettedData, stencilTilePalettedData, realized);
+
+        drawTileData(graphics, tileSideLength, realized, x, y);
+    }
+
+    public static void drawTileData(
+        final Graphics graphics, final int tileSideLength,
+        final int[] tileData, final int x, final int y)
+    {
+        final BufferedImage image = new BufferedImage(tileSideLength, tileSideLength, BufferedImage.TYPE_INT_ARGB);
+        image.getRaster().setDataElements(0, 0, tileSideLength, tileSideLength, tileData);
+        graphics.drawImage(image, x, y, null);
+    }
+
+    public static void drawTileData(
+        final Graphics graphics, final int tileSideLength,
+        final IntBuffer tileData, final int x, final int y)
+    {
+        drawTileData(graphics, tileSideLength, tileData.array(), x, y);
+    }
+
+    public static void drawClassicStenciledTo(
+        // miscellaneous dimensions
+        final int tileSideLength, final int x, final int y,
+        // tile and stencil tile data
+        final int[] tilePaletteData, final byte[] tilePalettedData, final byte[] stencilTilePalettedData,
+        // destination
+        final Graphics graphics)
+    {
+        final int[] realized = new int[tileSideLength * tileSideLength];
+
+        classicCopyStenciledTo(tileSideLength, tileSideLength, 0,
+            tilePaletteData, tilePalettedData, stencilTilePalettedData, realized);
+
+        drawTileData(graphics, tileSideLength, realized, x, y);
+    }
+
+    public static void copyAlphaTo(
+        // miscellaneous dimensions
+        final int tileSideLength, final int dstPitch, final int dstOffset,
+        // render specifics
+        final int dwAlpha,
+        // tile and stencil tile data
+        final int[] tileData,
+        // destination
+        final int[] dst)
+    {
+        final int dstLineAdvance = dstPitch - tileSideLength;
+        int curPalettedIndex = 0;
+        int curDstIndex = dstOffset;
+
+        for (int yCounter = 0; yCounter < tileSideLength; ++yCounter, curDstIndex += dstLineAdvance)
+        {
+            for (int xCounter = 0; xCounter < tileSideLength; ++xCounter, ++curPalettedIndex, ++curDstIndex)
+            {
+                int color = multAlpha(tileData[curPalettedIndex], dwAlpha);
+                color = blend_srcAlpha_OneMinusSrcAlpha(color, dst[curDstIndex]);
+                dst[curDstIndex] = color;
+            }
+        }
+    }
+
+    public static void drawAlphaTo(
+        // miscellaneous dimensions
+        final int tileSideLength, final int x, final int y,
+        // render specifics
+        final int dwAlpha,
+        // tile and stencil tile data
+        final int[] tileData,
+        // destination
+        final BufferedImage image)
+    {
+        final int[] realized = new int[tileSideLength * tileSideLength];
+        image.getRaster().getDataElements(x, y, tileSideLength, tileSideLength, realized);
+        copyAlphaTo(tileSideLength, tileSideLength, 0, dwAlpha, tileData, realized);
+        drawTileData(image.getGraphics(), tileSideLength, realized, x, y);
+    }
+
+    private static int blend_srcAlpha_OneMinusSrcAlpha(final int src, final int dst)
+    {
+        final short srcA = (short)((src >>> 24) & 0xFF);
+        final short srcR = (short)((src >>> 16) & 0xFF);
+        final short srcG = (short)((src >>> 8) & 0xFF);
+        final short srcB = (short)(src & 0xFF);
+
+        final short dstA = (short)((dst >>> 24) & 0xFF);
+        final short dstR = (short)((dst >>> 16) & 0xFF);
+        final short dstG = (short)((dst >>> 8) & 0xFF);
+        final short dstB = (short)(dst & 0xFF);
+
+        final double srcFactor = (double)srcA / 255;
+        final double dstFactor = 1 - (double)srcA / 255;
+        final byte finA = (byte)(srcFactor * srcA + dstFactor * dstA);
+        final byte finR = (byte)(srcFactor * srcR + dstFactor * dstR);
+        final byte finG = (byte)(srcFactor * srcG + dstFactor * dstG);
+        final byte finB = (byte)(srcFactor * srcB + dstFactor * dstB);
+
+        return MiscUtil.packBytesIntoInt(finA, finR, finG, finB);
+    }
+
+    private static int multAlpha(final int src, final int alpha)
+    {
+        final short srcA = (short)((src >>> 24) & 0xFF);
+        final short srcR = (short)((src >>> 16) & 0xFF);
+        final short srcG = (short)((src >>> 8) & 0xFF);
+        final short srcB = (short)(src & 0xFF);
+
+        final double srcFactor = (double)((alpha >>> 24) & 0xFF) / 255;
+        final byte finA = (byte)(srcFactor * srcA);
+        final byte finR = (byte)(srcFactor * srcR);
+        final byte finG = (byte)(srcFactor * srcG);
+        final byte finB = (byte)(srcFactor * srcB);
+
+        return MiscUtil.packBytesIntoInt(finA, finR, finG, finB);
+    }
+
+    public static void drawAlphaTo(
+        // miscellaneous dimensions
+        final int tileSideLength, final int x, final int y,
+        // render specifics
+        final int dwAlpha,
+        // tile and stencil tile data
+        final IntBuffer tileData,
+        // destination
+        final BufferedImage image)
+    {
+        drawAlphaTo(tileSideLength, x, y, dwAlpha, tileData.array(), image);
     }
 
     public static void classicCopyStenciledTo(
