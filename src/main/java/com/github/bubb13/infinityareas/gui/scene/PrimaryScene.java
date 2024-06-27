@@ -280,7 +280,7 @@ public final class PrimaryScene extends Stage
                         final Area area = new Area(resource.getPrimarySource());
                         subtask(area.loadAreaTask());
 
-                        final BufferedImage overlay = subtask(area.renderOverlayTask(0));
+                        final BufferedImage overlay = subtask(area.renderOverlaysTask(0));
                         waitForGuiThreadToExecute(() -> showRenderedOverlay(overlay));
                     }
                     catch (final Exception e)
@@ -314,7 +314,7 @@ public final class PrimaryScene extends Stage
 
                 for (int i = 0; i < area.getOverlayCount(); ++i)
                 {
-                    final BufferedImage overlay = subtask(area.renderOverlayTask(i));
+                    final BufferedImage overlay = subtask(area.renderOverlaysTask(i));
 
                     ImageIO.write(overlay, "png", debugPath.resolve(
                         String.format("OVERLAY_%d.PNG", i)).toFile());

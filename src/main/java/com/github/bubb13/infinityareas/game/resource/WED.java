@@ -1,11 +1,16 @@
 
 package com.github.bubb13.infinityareas.game.resource;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
+import com.github.bubb13.infinityareas.util.TileUtil;
 
+import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +30,10 @@ public class WED
     private final Game.ResourceSource source;
     private ByteBuffer buffer;
     private ArrayList<Overlay> overlays = new ArrayList<>();
+
+    private final ResourceDataCache resourceDataCache = new ResourceDataCache();
+    private final SimpleCache<String, PVRZ> pvrzCache = new SimpleCache<>();
+    private final SimpleCache<String, TIS> tisCache = new SimpleCache<>();
 
     /////////////////////////
     // Public Constructors //
@@ -47,6 +56,11 @@ public class WED
     public JavaFXUtil.TaskManager.ManagedTask<Void> loadWEDTask()
     {
         return new LoadWEDTask();
+    }
+
+    public JavaFXUtil.TaskManager.ManagedTask<BufferedImage> renderOverlaysTask(final int... overlayIndexes)
+    {
+        return new RenderOverlaysTask(overlayIndexes);
     }
 
     public List<Overlay> getOverlays()
@@ -301,6 +315,290 @@ public class WED
             }
 
             return tilemapEntries;
+        }
+    }
+
+    private class LoadTISTask extends JavaFXUtil.TaskManager.ManagedTask<TIS>
+    {
+        final String tisResref;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public LoadTISTask(final String tisResref)
+        {
+            this.tisResref = tisResref;
+        }
+
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected TIS call() throws Exception
+        {
+            return loadTIS(tisResref);
+        }
+
+        private TIS loadTIS(final String tisResref) throws Exception
+        {
+            TIS tis = tisCache.get(tisResref);
+
+            if (tis == null)
+            {
+                final Game.Resource tisResource = GlobalState.getGame().getResource(new ResourceIdentifier(
+                    tisResref, KeyFile.NumericResourceType.TIS));
+
+                if (tisResource == null)
+                {
+                    throw new IllegalStateException("Unable to find source for TIS resource \"" + tisResref + "\"");
+                }
+
+                tis = new TIS(tisResource.getPrimarySource(), resourceDataCache, pvrzCache);
+                subtask(tis.loadTISTask());
+
+                tisCache.add(tisResref, tis);
+            }
+
+            return tis;
+        }
+    }
+
+    private class RenderOverlaysTask extends JavaFXUtil.TaskManager.ManagedTask<BufferedImage>
+    {
+        private final int[] overlayIndexes;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public RenderOverlaysTask(final int... overlayIndexes)
+        {
+            this.overlayIndexes = overlayIndexes;
+        }
+
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected BufferedImage call() throws Exception
+        {
+            buffer = source.demandFileData();
+            return renderOverlays();
+        }
+
+        private BufferedImage renderOverlays() throws Exception
+        {
+            final Game game = GlobalState.getGame();
+            final Game.Type engineType = game.getEngineType();
+
+            final boolean eeStencil = engineType == Game.Type.BGEE || engineType == Game.Type.BG2EE
+                || engineType == Game.Type.IWDEE || engineType == Game.Type.PSTEE;
+
+            final List<WED.Overlay> overlays = getOverlays();
+            final WED.Overlay baseOverlay = overlays.get(0);
+            final String baseOverlayTISResref = baseOverlay.getTilesetResref();
+
+            if (baseOverlayTISResref.isEmpty())
+            {
+                // Weirdly happens on real overlays(?)
+                return null;
+            }
+
+            final int baseOverlayWidth = baseOverlay.getWidthInTiles();
+            final int baseOverlayHeight = baseOverlay.getHeightInTiles();
+            final int baseOverlayWidthInPixels = baseOverlayWidth * 64;
+            final int baseOverlayHeightInPixels = baseOverlayHeight * 64;
+            final int numPixels = baseOverlayWidthInPixels * baseOverlayHeightInPixels;
+            final int[] result = new int[numPixels];
+
+            final ArrayList<WED.TilemapEntry> baseOverlayTilemapEntries = baseOverlay.getTilemapEntries();
+            final int nGameTime = 0; // TODO - animate
+
+            for (int overlayIndex = 4; overlayIndex > 0; --overlayIndex)
+            {
+                if (!renderRequested(overlayIndex))
+                {
+                    continue;
+                }
+
+                final WED.Overlay overlay = overlays.get(overlayIndex);
+                if (overlay == null || overlay.getWidthInTiles() == 0 || overlay.getHeightInTiles() == 0)
+                {
+                    continue;
+                }
+
+                if ((overlay.getMovementType() & 1) != 0)
+                {
+                    continue;
+                }
+
+                final ArrayList<WED.TilemapEntry> overlayTilemapEntries = baseOverlay.getTilemapEntries();
+
+                if (overlayTilemapEntries.isEmpty())
+                {
+                    continue;
+                }
+
+                final int overlayRenderFlag = 1 << overlayIndex;
+                final WED.TilemapEntry overlayTilemapEntry = overlayTilemapEntries.get(0);
+                final TIS overlayTIS = subtask(new LoadTISTask(overlay.getTilesetResref()));
+
+                TileUtil.iterateOverlayTileOffsets(64, baseOverlayWidth, baseOverlayHeight,
+                    (final int tileSideLength, final int dstPitch, final int dstOffset, final int i) ->
+                    {
+                        final WED.TilemapEntry baseOverlayTilemapEntry = baseOverlayTilemapEntries.get(i);
+
+                        if ((baseOverlayTilemapEntry.getDrawFlags() & overlayRenderFlag) == 0)
+                        {
+                            return;
+                        }
+
+                        final int overlayTileLookupIndex = ((nGameTime / 2)
+                            % overlayTilemapEntry.tileIndexLookupArray.length
+                        );
+                        final int overlayTileIndex = overlayTilemapEntry.tileIndexLookupArray[overlayTileLookupIndex];
+                        final IntBuffer tileData = overlayTIS.getPreRenderedTileData(overlayTileIndex);
+
+                        TileUtil.copyTo(tileSideLength, dstPitch, dstOffset, tileData, result);
+                    });
+            }
+
+            if (renderRequested(0))
+            {
+                final int dwRenderFlagsBase =
+                    (
+                        (baseOverlay.getMovementType() & 2) != 0
+                            || (engineType != Game.Type.BG1 && engineType != Game.Type.BGEE)
+                    )
+                        ? 0x4000000 : 0;
+
+                final TIS baseOverlayTIS = subtask(new LoadTISTask(baseOverlayTISResref));
+
+                TileUtil.iterateOverlayTileOffsets(64, baseOverlayWidth, baseOverlayHeight,
+                    (final int tileSideLength, final int dstPitch, final int dstOffset, final int i) ->
+                    {
+                        final WED.TilemapEntry tilemapEntry = baseOverlayTilemapEntries.get(i);
+
+                        if ((tilemapEntry.getDrawFlags() & 1) == 0)
+                        {
+                            int nTile;
+
+                            if ((tilemapEntry.getExtraFlags() & 2) == 0 || tilemapEntry.getTisIndexOfAlternateTile() == -1)
+                            {
+                                // Not using secondary tile
+                                final byte nAnimSpeed = (byte)Math.max(1, tilemapEntry.getAnimationSpeed());
+                                final int nTileLookupIndex = ((nGameTime / nAnimSpeed)
+                                    % tilemapEntry.tileIndexLookupArray.length);
+
+                                nTile = tilemapEntry.tileIndexLookupArray[nTileLookupIndex];
+                            }
+                            else
+                            {
+                                // Using secondary tile
+                                nTile = tilemapEntry.getTisIndexOfAlternateTile();
+                            }
+
+                            // if ((baseOverlay.getMovementType() & 2) != 0)
+                            // {
+                            //     // dwRenderFlags |= 0x4000000;
+                            // }
+
+                            int nStencilTile = -1;
+                            int dwRenderFlags = dwRenderFlagsBase;
+
+                            if ((tilemapEntry.getDrawFlags() & 0x1E) != 0)
+                            {
+                                nStencilTile = tilemapEntry.getTisIndexOfAlternateTile();
+                                dwRenderFlags |= 0x2;
+                            }
+
+                            if (nStencilTile != -1 && baseOverlayTIS.getType() == TIS.Type.PALETTED)
+                            {
+                                final TIS.PalettedTileData tileData = baseOverlayTIS
+                                    .getPalettedTileData(nTile);
+
+                                final TIS.PalettedTileData stencilTileData = baseOverlayTIS
+                                    .getPalettedTileData(nStencilTile);
+
+//                            final BufferedImage image1 = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+//                            image1.getRaster().setDataElements(0, 0, 64, 64, tileData.getPreRenderedData().array());
+//
+//                            final BufferedImage image2 = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+//                            image2.getRaster().setDataElements(0, 0, 64, 64, stencilTileData.getPreRenderedData().array());
+//
+//                            try
+//                            {
+//                                ImageIO.write(image1, "png", game.getRoot().resolve("InfinityAreasTemp")
+//                                    .resolve(String.format("TILE_%d.PNG", nTile)).toFile());
+//
+//                                ImageIO.write(image2, "png", game.getRoot().resolve("InfinityAreasTemp")
+//                                    .resolve(String.format("TILE_%d_STENCIL_%d.PNG", nTile, nStencilTile)).toFile());
+//                            }
+//                            catch (IOException e)
+//                            {
+//                                throw new RuntimeException(e);
+//                            }
+
+                                if (eeStencil)
+                                {
+                                    final int dwAlpha = (dwRenderFlags & 0x4000000) != 0
+                                        ? TIS.WATER_ALPHA
+                                        : 0xFF;
+
+                                    TileUtil.copyStenciledTo(
+                                        tileSideLength, dstPitch, dstOffset,
+                                        dwAlpha, dwRenderFlags,
+                                        tileData.getPaletteData(),
+                                        tileData.getPalettedData(),
+                                        stencilTileData.getPalettedData(),
+                                        result
+                                    );
+                                }
+                                else
+                                {
+                                    TileUtil.classicCopyStenciledTo(
+                                        tileSideLength, dstPitch, dstOffset,
+                                        tileData.getPaletteData(),
+                                        tileData.getPalettedData(),
+                                        stencilTileData.getPalettedData(),
+                                        result
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                final IntBuffer tileData = baseOverlayTIS.getPreRenderedTileData(nTile);
+                                TileUtil.copyTo(tileSideLength, dstPitch, dstOffset, tileData, result);
+                            }
+                        }
+                        else
+                        {
+                            // TODO: All black
+                        }
+                    });
+            }
+
+            final BufferedImage image = new BufferedImage(
+                baseOverlayWidthInPixels, baseOverlayHeightInPixels, BufferedImage.TYPE_INT_ARGB
+            );
+            image.getRaster().setDataElements(0, 0, baseOverlayWidthInPixels, baseOverlayHeightInPixels, result);
+
+            return image;
+        }
+
+        private boolean renderRequested(final int overlayIndex)
+        {
+            for (int requestedOverlayIndex : overlayIndexes)
+            {
+                if (requestedOverlayIndex == overlayIndex)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }
