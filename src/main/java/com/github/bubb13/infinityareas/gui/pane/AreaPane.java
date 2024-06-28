@@ -6,13 +6,15 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 
+import java.awt.image.BufferedImage;
+
 public class AreaPane extends StackPane
 {
     ////////////////////
     // Private Fields //
     ////////////////////
 
-    private final ImageView imageView;
+    private final ZoomPane zoomPane = new ZoomPane();
 
     /////////////////////////
     // Public Constructors //
@@ -21,7 +23,6 @@ public class AreaPane extends StackPane
     public AreaPane()
     {
         super();
-        imageView = new ShrinkableImageView();
         init();
     }
 
@@ -29,9 +30,9 @@ public class AreaPane extends StackPane
     // Public Methods //
     ////////////////////
 
-    public void setImage(final Image image)
+    public void setImage(final BufferedImage image)
     {
-        imageView.setImage(image);
+        zoomPane.setImage(image);
     }
 
     /////////////////////
@@ -40,9 +41,6 @@ public class AreaPane extends StackPane
 
     private void init()
     {
-        imageView.fitWidthProperty().bind(widthProperty());
-        imageView.fitHeightProperty().bind(heightProperty());
-        imageView.setPreserveRatio(true);
-        getChildren().add(imageView);
+        getChildren().add(zoomPane);
     }
 }

@@ -5,27 +5,20 @@ import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.PVRZ;
 import com.github.bubb13.infinityareas.game.resource.ResourceDataCache;
 import com.github.bubb13.infinityareas.game.resource.TIS;
-import com.github.bubb13.infinityareas.gui.control.ShrinkableImageView;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
-import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.image.PixelFormat;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.image.WritableImage;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 import java.nio.IntBuffer;
 
 public class TISPane extends StackPane
@@ -34,14 +27,15 @@ public class TISPane extends StackPane
     // Private Fields //
     ////////////////////
 
-    private final ImageView imageView;
-    private final ScrollPane scrollPane;
+    // Data
     private final ResourceDataCache resourceDataCache = new ResourceDataCache();
     private final SimpleCache<String, PVRZ> pvrzCache = new SimpleCache<>();
-    private final Slider slider;
-    private double zoomFactor = 1;
     private TIS tis;
-    private final Label previewTileWidthLabel;
+
+    // GUI
+    private final Label previewTileWidthLabel = new Label();
+    private final Slider slider = new Slider();
+    private final ZoomPane zoomPane = new ZoomPane();
 
     /////////////////////////
     // Public Constructors //
@@ -50,10 +44,6 @@ public class TISPane extends StackPane
     public TISPane()
     {
         super();
-        imageView = new ShrinkableImageView();
-        scrollPane = new ScrollPane();
-        slider = new Slider();
-        previewTileWidthLabel = new Label();
         init();
     }
 
@@ -72,9 +62,6 @@ public class TISPane extends StackPane
 
     private void init()
     {
-        imageView.setPreserveRatio(true);
-        imageView.setSmooth(false);
-
         //////////
         // VBox //
         //////////
@@ -118,27 +105,15 @@ public class TISPane extends StackPane
             HBox.setHgrow(sliderVBox, Priority.ALWAYS);
             hbox.getChildren().addAll(previewTileWidthLabel, sliderVBox);
 
-            ////////////////
-            // ScrollPane //
-            ////////////////
-
-            scrollPane.setContent(imageView);
-            scrollPane.setPannable(true);
-            scrollPane.setFocusTraversable(false);
-            scrollPane.setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
-
-            scrollPane.addEventFilter(ScrollEvent.SCROLL, event ->
-            {
-                if (event.isControlDown())
-                {
-                    event.consume();
-                    onZoom(event.getDeltaY());
-                }
-            });
+            //////////////
+            // ZoomPane //
+            //////////////
 
 
-        VBox.setVgrow(scrollPane, Priority.ALWAYS);
-        vbox.getChildren().addAll(hbox, scrollPane);
+
+
+        VBox.setVgrow(zoomPane, Priority.ALWAYS);
+        vbox.getChildren().addAll(hbox, zoomPane);
         getChildren().add(vbox);
     }
 
@@ -148,84 +123,6 @@ public class TISPane extends StackPane
         slider.setValue(newNumTilesX);
         renderPreview(newNumTilesX);
     }
-
-    private void onZoom(final double deltaY)
-    {
-        final Bounds viewportBounds = scrollPane.getViewportBounds();
-        final double viewportWidth = viewportBounds.getWidth();
-        final double viewportHeight = viewportBounds.getHeight();
-        final double viewportEffectiveWidth = viewportWidth / zoomFactor;
-        final double viewportEffectiveHeight = viewportHeight / zoomFactor;
-
-        final Bounds imageViewBounds = imageView.getBoundsInLocal();
-        final double imageViewWidth = imageViewBounds.getWidth();
-        final double imageViewHeight = imageViewBounds.getHeight();
-
-        final double hMax = scrollPane.getHmax();
-        final double vMax = scrollPane.getVmax();
-
-        final double hRel = scrollPane.getHvalue() / hMax;
-        final double vRel = scrollPane.getVvalue() / vMax;
-
-        final double xLeft = hRel * (imageViewWidth - viewportWidth) / zoomFactor;
-        final double yTop = vRel * (imageViewHeight - viewportHeight) / zoomFactor;
-
-        if (deltaY > 0)
-        {
-            zoomFactor *= 1.1;
-        }
-        else if (deltaY < 0)
-        {
-            zoomFactor *= 0.9;
-        }
-
-        final Image image = imageView.getImage();
-        final double newImageViewWidth = image.getWidth() * zoomFactor;
-        final double newImageViewHeight = image.getHeight() * zoomFactor;
-        final double newViewportEffectiveWidth = viewportWidth / zoomFactor;
-        final double newViewportEffectiveHeight = viewportHeight / zoomFactor;
-
-        imageView.setFitWidth(newImageViewWidth);
-        imageView.setFitHeight(newImageViewHeight);
-
-        final double targetCenterX = xLeft + (viewportEffectiveWidth / 2);
-        final double targetCenterY = yTop + (viewportEffectiveHeight / 2);
-
-        final double targetXLeft = targetCenterX - (newViewportEffectiveWidth / 2);
-        final double targetYLeft = targetCenterY - (newViewportEffectiveHeight / 2);
-
-        final double newHRel = targetXLeft * zoomFactor / (newImageViewWidth - viewportWidth);
-        final double newVRel = targetYLeft * zoomFactor / (newImageViewHeight - viewportHeight);
-
-        final double newHVal = newHRel * hMax;
-        final double newVVal = newVRel * vMax;
-
-        scrollPane.setHvalue(newHVal);
-        scrollPane.setVvalue(newVVal);
-    }
-
-//    private WritableImage scaleImage(final Image inputImage, final double scaleFactor)
-//    {
-//        final int width = (int)(inputImage.getWidth() * scaleFactor);
-//        final int height = (int)(inputImage.getHeight() * scaleFactor);
-//
-//        System.out.println("new width: " + width);
-//        System.out.println("new height: " + height);
-//
-//        final WritableImage outputImage = new WritableImage(width, height);
-//        final PixelWriter pixelWriter = outputImage.getPixelWriter();
-//
-//        for (int y = 0; y < height; ++y)
-//        {
-//            for (int x = 0; x < width; ++x)
-//            {
-//                final int argb = inputImage.getPixelReader().getArgb((int)(x / scaleFactor), (int)(y / scaleFactor));
-//                pixelWriter.setArgb(x, y, argb);
-//            }
-//        }
-//
-//        return outputImage;
-//    }
 
     private void renderPreview(final int previewNumTilesX)
     {
@@ -237,18 +134,15 @@ public class TISPane extends StackPane
         final int previewWidth = previewNumTilesX * tileSideLength;
         final int previewHeight = previewNumTilesY * tileSideLength;
 
-        final WritableImage writableImage = new WritableImage(previewWidth, previewHeight);
-        final PixelWriter pixelWriter = writableImage.getPixelWriter();
+        final BufferedImage image = new BufferedImage(previewWidth, previewHeight, BufferedImage.TYPE_INT_ARGB);
+        final WritableRaster raster = image.getRaster();
 
         for (int yPos = 0, i = 0; yPos < previewHeight; yPos += tileSideLength)
         {
             for (int xPos = 0; xPos < previewWidth; xPos += tileSideLength, ++i)
             {
                 final IntBuffer tileData = tis.getPreRenderedTileData(i);
-                pixelWriter.setPixels(xPos, yPos,
-                    tileSideLength, tileSideLength,
-                    PixelFormat.getIntArgbInstance(),
-                    tileData.array(), 0, tileSideLength);
+                raster.setDataElements(xPos, yPos, tileSideLength, tileSideLength, tileData.array());
             }
         }
 
@@ -256,7 +150,7 @@ public class TISPane extends StackPane
         {
             previewTileWidthLabel.setText("Preview Tile Width: " + previewNumTilesX);
             slider.setValue(previewNumTilesX);
-            imageView.setImage(writableImage);
+            zoomPane.setImage(image, false);
         });
     }
 

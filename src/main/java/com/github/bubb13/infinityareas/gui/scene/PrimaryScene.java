@@ -21,6 +21,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TreeItem;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -260,8 +261,7 @@ public final class PrimaryScene extends Stage
 
     private void showRenderedOverlay(final BufferedImage overlay)
     {
-        final Image image = SwingFXUtils.toFXImage(overlay, null);
-        areaPane.setImage(image);
+        areaPane.setImage(overlay);
         changeRightNode(areaPane);
     }
 

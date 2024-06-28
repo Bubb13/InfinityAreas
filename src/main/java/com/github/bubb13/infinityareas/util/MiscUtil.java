@@ -3,6 +3,9 @@ package com.github.bubb13.infinityareas.util;
 
 import com.github.bubb13.infinityareas.misc.IteratorToIterable;
 import com.github.bubb13.infinityareas.misc.ReadOnlyIterator;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.ScrollPane;
 
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -63,6 +66,40 @@ public final class MiscUtil
     public static short toUnsignedByte(final byte b)
     {
         return (short)(b & 0xFF);
+    }
+
+    public static void printHierarchy(final Parent parent, final String indent, final String special)
+    {
+        System.out.println(indent + special + parent.getClass().getName());
+        for (final Node child : parent.getChildrenUnmodifiable())
+        {
+            if (child instanceof Parent childParent)
+            {
+                printHierarchy(childParent, indent + "    ", "");
+            }
+            else
+            {
+                System.out.println(indent + "    " + child.getClass().getName());
+            }
+        }
+
+        if (parent instanceof ScrollPane scrollPane)
+        {
+            final Node content = scrollPane.getContent();
+            if (content instanceof Parent contentParent)
+            {
+                printHierarchy(contentParent, indent + "    ", "[CONTENT]: ");
+            }
+            else
+            {
+                System.out.println(indent + "    " + content.getClass().getName());
+            }
+        }
+    }
+
+    public static void printHierarchy(final Parent parent)
+    {
+        printHierarchy(parent, "", "");
     }
 
     private MiscUtil() {}
