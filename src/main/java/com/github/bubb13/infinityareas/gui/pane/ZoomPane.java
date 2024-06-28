@@ -32,7 +32,7 @@ public class ZoomPane extends NotifyingScrollPane
     // Public Methods //
     ////////////////////
 
-    public void setImage(final BufferedImage image, boolean resetZoomFactor)
+    public void setImage(final BufferedImage image, final boolean resetZoomFactor)
     {
         partialImage.setImage(image);
         if (resetZoomFactor)
@@ -40,8 +40,13 @@ public class ZoomPane extends NotifyingScrollPane
             zoomFactor = 1;
             partialImage.setZoomFactor(zoomFactor);
         }
-        setHvalue(0);
-        setVvalue(0);
+
+        if (partialImage.getImage().getWidth() != image.getWidth()
+            || partialImage.getImage().getHeight() != image.getHeight())
+        {
+            setHvalue(0);
+            setVvalue(0);
+        }
     }
 
     public void setImage(final BufferedImage image)

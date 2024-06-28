@@ -1,9 +1,6 @@
 
 package com.github.bubb13.infinityareas.gui.pane;
 
-import com.github.bubb13.infinityareas.gui.control.ShrinkableImageView;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 
 import java.awt.image.BufferedImage;

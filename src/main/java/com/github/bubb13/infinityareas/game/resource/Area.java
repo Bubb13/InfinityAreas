@@ -5,7 +5,6 @@ import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
-import javafx.scene.image.Image;
 
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
@@ -47,11 +46,6 @@ public class Area
     public JavaFXUtil.TaskManager.ManagedTask<BufferedImage> renderOverlaysTask(final int... overlayIndexes)
     {
         return wed.renderOverlaysTask(overlayIndexes);
-    }
-
-    public JavaFXUtil.TaskManager.ManagedTask<BufferedImage> renderOverlaysNewTask(final int... overlayIndexes)
-    {
-        return wed.renderOverlaysNewTask(overlayIndexes);
     }
 
     /////////////////////

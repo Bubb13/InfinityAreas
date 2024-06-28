@@ -7,6 +7,8 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.ScrollPane;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -100,6 +102,20 @@ public final class MiscUtil
     public static void printHierarchy(final Parent parent)
     {
         printHierarchy(parent, "", "");
+    }
+
+    public static int divideRoundUp(final int n, final int d)
+    {
+        final int temp = n / d;
+        return n % d == 0 ? temp : temp + 1;
+    }
+
+    public static int multiplyByRatioRoundUp(final int n, final int r1, final int r2)
+    {
+        return new BigDecimal(n)
+            .multiply(new BigDecimal(r1))
+            .divide(new BigDecimal(r2), RoundingMode.CEILING)
+            .intValueExact();
     }
 
     private MiscUtil() {}

@@ -38,11 +38,13 @@ public class DynamicListView<T extends DynamicListView.Entry> extends ListView<T
         //this.setSnapToPixel(true);
         this.setSkin(new DynamicListViewSkin(this));
         this.setCellFactory(new DynamicListViewCellFactory());
+        this.mouseOnlySelects = mouseOnlySelects;
     }
 
     public DynamicListView(final ObservableList<T> items)
     {
         this(items, false);
+        mouseOnlySelects = false;
     }
 
     /////////////
@@ -347,7 +349,7 @@ public class DynamicListView<T extends DynamicListView.Entry> extends ListView<T
             {
                 getSelectionModel().select(listCell.getIndex());
 
-                if (!DynamicListView.this.mouseOnlySelects)
+                if (!DynamicListView.this.mouseOnlySelects && chooseConsumer != null)
                 {
                     chooseConsumer.accept(listCell.getItem());
                 }

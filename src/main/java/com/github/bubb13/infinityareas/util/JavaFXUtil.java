@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas.util;
 
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.stage.LoadingStage;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -66,6 +67,11 @@ public final class JavaFXUtil
 
             waitLatch.awaitAdvance(waitLatch.getPhase());
         }
+    }
+
+    public static void runTask(final TaskManager.ManagedTask<?> task)
+    {
+        new JavaFXUtil.TaskManager(task).run();
     }
 
     //////////////////////////

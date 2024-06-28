@@ -11,17 +11,15 @@ import com.github.bubb13.infinityareas.gui.control.SimpleTreeView;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.pane.AreaPane;
 import com.github.bubb13.infinityareas.gui.pane.TISPane;
+import com.github.bubb13.infinityareas.gui.pane.WEDPane;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.collections.ObservableList;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TreeItem;
-import javafx.scene.image.Image;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -41,8 +39,9 @@ public final class PrimaryScene extends Stage
 
     private final Stage stage;
     private final StackPane rightPane = new StackPane();
-    private AreaPane areaPane = new AreaPane();
-    private TISPane tisPane = new TISPane();
+    private final AreaPane areaPane = new AreaPane();
+    private final TISPane tisPane = new TISPane();
+    private final WEDPane wedPane = new WEDPane();
 
     private Node curRightNode = null;
 
@@ -226,7 +225,13 @@ public final class PrimaryScene extends Stage
             }
             case WED ->
             {
-                System.out.printf("WED \"%s\" selected\n", identifier.resref());
+                new JavaFXUtil.TaskManager(wedPane.setSourceTask(source)
+                    .onSucceeded(() -> changeRightNode(wedPane))
+                    .onFailed((e) ->
+                    {
+                        ErrorAlert.openAndWait("An exception occurred while loading the WED.", e);
+                    })
+                ).run();
             }
         }
     }
@@ -249,7 +254,7 @@ public final class PrimaryScene extends Stage
             return;
         }
 
-        new JavaFXUtil.TaskManager(area.renderOverlaysNewTask(0, 1, 2, 3, 4)
+        new JavaFXUtil.TaskManager(area.renderOverlaysTask(0, 1, 2, 3, 4)
             .onSucceeded(this::showRenderedOverlay)
             .onFailed((e) ->
             {
@@ -280,7 +285,7 @@ public final class PrimaryScene extends Stage
                         final Area area = new Area(resource.getPrimarySource());
                         subtask(area.loadAreaTask());
 
-                        final BufferedImage overlay = subtask(area.renderOverlaysNewTask(0, 1, 2, 3, 4));
+                        final BufferedImage overlay = subtask(area.renderOverlaysTask(0, 1, 2, 3, 4));
                         waitForGuiThreadToExecute(() -> showRenderedOverlay(overlay));
                     }
                     catch (final Exception e)
