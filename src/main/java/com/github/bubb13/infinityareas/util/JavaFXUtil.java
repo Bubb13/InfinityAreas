@@ -1,7 +1,6 @@
 
 package com.github.bubb13.infinityareas.util;
 
-import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.stage.LoadingStage;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -72,6 +71,27 @@ public final class JavaFXUtil
     public static void runTask(final TaskManager.ManagedTask<?> task)
     {
         new JavaFXUtil.TaskManager(task).run();
+    }
+
+    public static void runTaskNoManager(final TaskManager.ManagedTask<?> task)
+    {
+        if (Platform.isFxApplicationThread())
+        {
+            // Currently on the JavaFX thread, run the task asynchronously
+
+            // Register callbacks for asynchronous handling [setOnSucceeded(), setOnFailed(), setOnCancelled()]
+            task.registerAsynchronousCallbacks();
+
+            // Start asynchronous thread
+            final Thread thread = new Thread(task);
+            thread.setDaemon(true);
+            thread.start();
+        }
+        else
+        {
+            // Not currently on the JavaFX thread, run the task synchronously
+            task.run();
+        }
     }
 
     //////////////////////////
@@ -308,12 +328,12 @@ public final class JavaFXUtil
             /**
              * Synchronous
              */
-            protected final <U> U subtask(final ManagedTask<U> subTask) throws Exception
+            public final <U> U subtask(final ManagedTask<U> subTask) throws Exception
             {
                 // Subtasks are synchronous; they cannot be run from the JavaFX thread (as that would block the GUI)
                 if (Platform.isFxApplicationThread())
                 {
-                    throw new IllegalStateException("Cannot run subtask on JavaFX application thread");
+                    //throw new IllegalStateException("Cannot run subtask on JavaFX application thread");
                 }
 
                 if (this.manager != null)

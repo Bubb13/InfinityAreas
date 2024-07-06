@@ -3,18 +3,27 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.misc.AppendOnlyOrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.InstanceHashMap;
+import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import com.github.bubb13.infinityareas.util.TileUtil;
 
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Stack;
 
 public class WED
@@ -34,10 +43,12 @@ public class WED
     private final Stack<Integer> bufferMarks = new Stack<>();
     private ByteBuffer buffer;
 
-    private ArrayList<Overlay> overlays = new ArrayList<>();
-    private ArrayList<Polygon> polygons = new ArrayList<>();
-    private ArrayList<WallGroup> wallGroups = new ArrayList<>();
-    private ArrayList<Door> doors = new ArrayList<>();
+    private final ArrayList<Overlay> overlays = new ArrayList<>();
+
+    //private final ArrayList<WallGroup> wallGroups = new ArrayList<>();
+    private final ArrayList<TiledObject> tiledObjects = new ArrayList<>();
+    private final InstanceHashMap<Polygon, TiledObject> tiledObjectByReferencedPolygon = new InstanceHashMap<>();
+    private final ArrayList<Polygon> polygons = new ArrayList<>();
 
     private final ResourceDataCache resourceDataCache = new ResourceDataCache();
     private final SimpleCache<String, PVRZ> pvrzCache = new SimpleCache<>();
@@ -73,6 +84,11 @@ public class WED
         return new RenderOverlaysTask(overlayIndexes);
     }
 
+    public JavaFXUtil.TaskManager.ManagedTask<Void> saveWEDTask(final Path path)
+    {
+        return new SaveWEDTask(path);
+    }
+
     public List<Overlay> getOverlays()
     {
         return overlays;
@@ -83,6 +99,11 @@ public class WED
         final boolean temp = changed;
         changed = false;
         return temp;
+    }
+
+    public WEDGraphics newGraphics()
+    {
+        return new WEDGraphics();
     }
 
     /////////////////////
@@ -109,9 +130,29 @@ public class WED
         changed = true;
     }
 
+    private WallGroupDimensions calculateWallGroupDimensions()
+    {
+        final Overlay baseOverlay = overlays.get(0);
+        final short baseOverlayWidth = baseOverlay.getWidthInTiles();
+        final short baseOverlayHeight = baseOverlay.getHeightInTiles();
+        final short wallGroupCountX = (short)MiscUtil.divideRoundUp(baseOverlayWidth, 10);
+        final short wallGroupCountY = (short)MiscUtil.multiplyByRatioRoundUp(baseOverlayHeight, 2, 15);
+        return new WallGroupDimensions(wallGroupCountX, wallGroupCountY);
+    }
+
+    private int calculateNumberOfWallGroups()
+    {
+        final WallGroupDimensions wallGroupDimensions = calculateWallGroupDimensions();
+        return (int)wallGroupDimensions.widthInTiles() * wallGroupDimensions.heightInTiles();
+    }
+
     ////////////////////
     // Public Classes //
     ////////////////////
+
+    public record SecondaryHeaderInfo(
+        int polygonsOffset, short maxReferencedPolygonIndex, int verticesOffset
+    ) {}
 
     public class Overlay
     {
@@ -207,12 +248,12 @@ public class WED
             {
                 System.out.println("    [Tilemap " + i + "]");
                 final TilemapEntry tilemapEntry = tilemapEntries.get(i);
-                System.out.println("      Alternate Tile TIS Index: " + tilemapEntry.tisIndexOfAlternateTile);
+                System.out.println("      Alternate Tile TIS Index: " + tilemapEntry.secondaryTisTileIndex);
                 System.out.println("      Draw Flags: " + tilemapEntry.drawFlags);
 
                 System.out.println("      Tile Index Lookup Table:");
 
-                final short[] tileIndexLookupArray = tilemapEntry.tileIndexLookupArray;
+                final short[] tileIndexLookupArray = tilemapEntry.tisTileIndexArray;
                 for (final short value : tileIndexLookupArray)
                 {
                     System.out.println("        " + value);
@@ -223,40 +264,59 @@ public class WED
 
     public class TilemapEntry
     {
-        private short tisIndexOfAlternateTile;
-        private short drawFlags;
+        private short secondaryTisTileIndex;
+        private byte drawFlags;
         private byte animationSpeed;
+
+        /**
+         * <pre>
+         * A bitfield with a single meaningful flag. Only checked for the base overlay (0).
+         * 0x2
+         *   If secondary tile != -1, render secondary tile
+         *   If secondary tile == -1, behave as if !0x2
+         * !0x2
+         * {@code
+         *   byte nAnimSpeed = max(1, pBaseOverlayTileData->bAnimSpeed);
+         *   size_t nTileIndex = pBaseOverlayTileData->nStartingTile + ((nGameTime / nAnimSpeed) % pBaseOverlayTileData->nNumTiles);
+         * }
+         *
+         * If this TilemapEntry is linked to a TiledObject, the engine sets the field to 1 or 2 based on whether
+         * the TiledObject is in its primary (1) or secondary (2) state.
+         * <br><br>
+         * </pre>
+         */
         private short extraFlags;
-        private short[] tileIndexLookupArray;
+
+        private short[] tisTileIndexArray;
 
         public TilemapEntry(
-            final short tisIndexOfAlternateTile, final short drawFlags, final byte animationSpeed,
-            final short extraFlags, final short[] tileIndexLookupArray)
+            final short secondaryTisTileIndex, final byte drawFlags, final byte animationSpeed,
+            final short extraFlags, final short[] tisTileIndexArray)
         {
-            this.tisIndexOfAlternateTile = tisIndexOfAlternateTile;
+            this.secondaryTisTileIndex = secondaryTisTileIndex;
             this.drawFlags = drawFlags;
             this.animationSpeed = animationSpeed;
             this.extraFlags = extraFlags;
-            this.tileIndexLookupArray = tileIndexLookupArray;
+            this.tisTileIndexArray = tisTileIndexArray;
         }
 
-        public short getTisIndexOfAlternateTile()
+        public short getSecondaryTisTileIndex()
         {
-            return tisIndexOfAlternateTile;
+            return secondaryTisTileIndex;
         }
 
-        public void setTisIndexOfAlternateTile(final short tisIndexOfAlternateTile)
+        public void setSecondaryTisTileIndex(final short secondaryTisTileIndex)
         {
-            this.tisIndexOfAlternateTile = tisIndexOfAlternateTile;
+            this.secondaryTisTileIndex = secondaryTisTileIndex;
             changed();
         }
 
-        public short getDrawFlags()
+        public byte getDrawFlags()
         {
             return drawFlags;
         }
 
-        public void setDrawFlags(final short drawFlags)
+        public void setDrawFlags(final byte drawFlags)
         {
             this.drawFlags = drawFlags;
             changed();
@@ -284,14 +344,14 @@ public class WED
             changed();
         }
 
-        public short[] getTileIndexLookupArray()
+        public short[] getTisTileIndexArray()
         {
-            return tileIndexLookupArray;
+            return tisTileIndexArray;
         }
 
-        public void setTileIndexLookupArray(final short[] tileIndexLookupArray)
+        public void setTisTileIndexArray(final short[] tisTileIndexArray)
         {
-            this.tileIndexLookupArray = tileIndexLookupArray;
+            this.tisTileIndexArray = tisTileIndexArray;
             changed();
         }
     }
@@ -396,51 +456,70 @@ public class WED
         {
             return vertices;
         }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Polygon polygon = (Polygon) o;
+            return flags == polygon.flags && height == polygon.height
+                && boundingBoxLeft == polygon.boundingBoxLeft && boundingBoxRight == polygon.boundingBoxRight
+                && boundingBoxTop == polygon.boundingBoxTop && boundingBoxBottom == polygon.boundingBoxBottom
+                && Objects.equals(vertices, polygon.vertices);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(flags, height, boundingBoxLeft, boundingBoxRight,
+                boundingBoxTop, boundingBoxBottom, vertices);
+        }
     }
 
     public static class WallGroup
     {
-        private final ArrayList<Short> polygonIndices;
+        private final OrderedInstanceSet<Polygon> polygons;
 
-        public WallGroup(final ArrayList<Short> polygonIndices)
+        public WallGroup(final OrderedInstanceSet<Polygon> polygons)
         {
-            this.polygonIndices = polygonIndices;
+            this.polygons = polygons;
         }
 
-        public ArrayList<Short> getPolygonIndices()
+        public OrderedInstanceSet<Polygon> getPolygons()
         {
-            return polygonIndices;
+            return polygons;
         }
     }
 
-    public class Door
+    public class TiledObject
     {
-        private String doorResref;
+        private String resref; // Unused
         private short openOrClosed; // open = 0, closed = 1
-        private final ArrayList<Short> doorTileCellIndices;
+        private final ArrayList<Short> tilemapIndices; // TODO
         private final ArrayList<Polygon> openPolygons;
         private final ArrayList<Polygon> closedPolygons;
 
-        public Door(
-            final String doorResref, final short openOrClosed,
-            final ArrayList<Short> doorTileCellIndices,
+        public TiledObject(
+            final String resref, final short openOrClosed,
+            final ArrayList<Short> tilemapIndices,
             final ArrayList<Polygon> openPolygons, final ArrayList<Polygon> closedPolygons)
         {
-            this.doorResref = doorResref;
+            this.resref = resref;
             this.openOrClosed = openOrClosed;
-            this.doorTileCellIndices = doorTileCellIndices;
+            this.tilemapIndices = tilemapIndices;
             this.openPolygons = openPolygons;
             this.closedPolygons = closedPolygons;
         }
 
-        public String getDoorResref()
+        public String getResref()
         {
-            return doorResref;
+            return resref;
         }
 
-        public void setDoorResref(final String doorResref)
+        public void setResref(final String resref)
         {
-            this.doorResref = doorResref;
+            this.resref = resref;
             changed();
         }
 
@@ -455,9 +534,9 @@ public class WED
             changed();
         }
 
-        public ArrayList<Short> getDoorTileCellIndices()
+        public ArrayList<Short> getTilemapIndices()
         {
-            return doorTileCellIndices;
+            return tilemapIndices;
         }
 
         public ArrayList<Polygon> getOpenPolygons()
@@ -474,6 +553,8 @@ public class WED
     /////////////////////
     // Private Classes //
     /////////////////////
+
+    private record WallGroupDimensions(short widthInTiles, short heightInTiles) {}
 
     private class LoadWEDTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
     {
@@ -513,15 +594,16 @@ public class WED
             }
 
             final int numOverlays = buffer.getInt();
-            final int numDoors = buffer.getInt();
+            final int numTiledObjects = buffer.getInt();
             final int overlaysOffset = buffer.getInt();
             final int secondaryHeaderOffset = buffer.getInt();
-            final int doorsOffset = buffer.getInt();
-            final int doorTileCellIndicesOffset = buffer.getInt();
+            final int tiledObjectsOffset = buffer.getInt();
+            final int tiledObjectsTilemapIndicesOffset = buffer.getInt();
 
             parseOverlays(overlaysOffset, numOverlays);
-            final int verticesOffset = parseSecondaryHeader(secondaryHeaderOffset);
-            parseDoors(doorsOffset, numDoors, doorTileCellIndicesOffset, verticesOffset);
+            final SecondaryHeaderInfo secondaryHeaderInfo = parseSecondaryHeader(secondaryHeaderOffset);
+            parseTiledObjects(tiledObjectsOffset, numTiledObjects,
+                tiledObjectsTilemapIndicesOffset, secondaryHeaderInfo);
         }
 
         private void parseOverlays(final int offset, final int count) throws Exception
@@ -549,53 +631,68 @@ public class WED
             }
         }
 
+        /**
+         * Parses the per-overlay tilemap table.
+         */
         private ArrayList<TilemapEntry> parseTilemapEntries(
-            final int offset, final int count, final int tileIndexLookupTableOffset)
+            final int offset, final int count, final int tisTileIndexLookupTableOffset)
         {
             final ArrayList<TilemapEntry> tilemapEntries = new ArrayList<>();
 
-            int curBase = offset;
+            position(offset);
             for (int i = 0; i < count; ++i)
             {
-                position(curBase);       final short tileIndexLookupTableBaseIndex = buffer.getShort();
-                position(curBase + 0x2); final short numTileIndexLookupTableEntries = buffer.getShort();
-                position(curBase + 0x4); final short tisIndexOfAlternateTile = buffer.getShort();
-                position(curBase + 0x6); final byte drawFlags = buffer.get();
-                position(curBase + 0x7); final byte animationSpeed = buffer.get();
-                position(curBase + 0x8); final short extraFlags = buffer.get();
+                final short tisTileIndexLookupTableStartIndex = buffer.getShort();
+                final short numTisTileIndexLookupTableEntries = buffer.getShort();
+                final short secondaryTisTileIndex = buffer.getShort();
+                final byte drawFlags = buffer.get();
+                final byte animationSpeed = buffer.get();
+                final short extraFlags = buffer.getShort();
 
-                final short[] tileIndexLookupArray = new short[numTileIndexLookupTableEntries];
+                final short[] tisTileIndexArray = new short[numTisTileIndexLookupTableEntries];
 
-                // TODO: Suboptimal
-                int curTileIndexLookupTableOffset = tileIndexLookupTableOffset + 2 * tileIndexLookupTableBaseIndex;
-                for (int j = 0; j < numTileIndexLookupTableEntries; ++j)
+                ////////////////////////////
+                // Read tisTileIndexArray //
+                ////////////////////////////
+
+                mark();
+                position(tisTileIndexLookupTableOffset + 2 * tisTileIndexLookupTableStartIndex);
+                for (int j = 0; j < numTisTileIndexLookupTableEntries; ++j)
                 {
-                    position(curTileIndexLookupTableOffset); tileIndexLookupArray[j] = buffer.getShort();
-                    curTileIndexLookupTableOffset += 2;
+                    tisTileIndexArray[j] = buffer.getShort();
                 }
+                reset();
+
+                /////////////////////////
+                // Create TilemapEntry //
+                /////////////////////////
 
                 tilemapEntries.add(new TilemapEntry(
-                    tisIndexOfAlternateTile, drawFlags, animationSpeed, extraFlags, tileIndexLookupArray));
-
-                curBase += WED_TILEMAP_ENTRY_SIZE;
+                    secondaryTisTileIndex, drawFlags, animationSpeed, extraFlags, tisTileIndexArray));
             }
 
             return tilemapEntries;
         }
 
-        private int parseSecondaryHeader(final int offset)
+        private SecondaryHeaderInfo parseSecondaryHeader(final int offset)
         {
             position(offset);
 
+            // Important:
+            //   The engine doesn't care what this is set to, and outright ignores it.
+            //   Certain WED files even store (and index) wall polygons past this number.
+            //   Don't assume there are *only* this number of polygons!
             final int numPolygons = buffer.getInt();
             final int polygonsOffset = buffer.getInt();
             final int verticesOffset = buffer.getInt();
             final int wallGroupsOffset = buffer.getInt();
             final int polygonIndicesLookupTableOffset = buffer.getInt();
 
-            parseWallPolygons(polygonsOffset, numPolygons, verticesOffset);
-            parseWallGroups(wallGroupsOffset, polygonIndicesLookupTableOffset);
-            return verticesOffset;
+            // Wall group polygons used in CInfinity::FXRenderClippingPolys()
+            final WallGroupsInfo wallGroupsInfo = parseWallGroups(
+                wallGroupsOffset, polygonIndicesLookupTableOffset, polygonsOffset, verticesOffset
+            );
+            return new SecondaryHeaderInfo(polygonsOffset, wallGroupsInfo.maxReferencedPolygonIndex(), verticesOffset);
         }
 
         private Polygon readPolygon(final int verticesOffset)
@@ -630,97 +727,244 @@ public class WED
             );
         }
 
-        private void parseWallPolygons(final int offset, final int count, final int verticesOffset)
+        private WallGroupsInfo parseWallGroups(
+            final int offset, final int polygonIndicesLookupTableOffset,
+            final int polygonsOffset, final int verticesOffset)
         {
-            position(offset);
+            ////////////////////////////////////
+            // Find maxReferencedPolygonIndex //
+            ////////////////////////////////////
 
-            for (int i = 0; i < count; ++i)
-            {
-                polygons.add(readPolygon(verticesOffset));
-            }
-        }
-
-        private void parseWallGroups(final int offset, final int polygonIndicesLookupTableOffset)
-        {
-            final Overlay baseOverlay = overlays.get(0);
-            final short baseOverlayWidth = baseOverlay.getWidthInTiles();
-            final short baseOverlayHeight = baseOverlay.getHeightInTiles();
-
-            final short wallGroupCountX = (short)MiscUtil.divideRoundUp(baseOverlayWidth, 10);
-            final short wallGroupCountY = (short)MiscUtil.multiplyByRatioRoundUp(baseOverlayHeight, 2, 15);
-            final int numWallGroups = (int)wallGroupCountX * wallGroupCountY;
+            final int numWallGroups = calculateNumberOfWallGroups();
+            short maxReferencedPolygonIndex = Short.MIN_VALUE;
 
             position(offset);
-
             for (int i = 0; i < numWallGroups; ++i)
             {
                 final short startPolygonsIndexIndex = buffer.getShort();
                 final short polygonIndexCount = buffer.getShort();
 
-                final ArrayList<Short> polygonIndices = new ArrayList<>();
-
-                // Read polygon indices
+                // Read polygons indices
                 mark();
-                position(polygonIndicesLookupTableOffset + startPolygonsIndexIndex * 2);
+                position(polygonIndicesLookupTableOffset + startPolygonsIndexIndex * 0x2);
                 for (int j = 0; j < polygonIndexCount; ++j)
                 {
                     final short polygonIndex = buffer.getShort();
-                    polygonIndices.add(polygonIndex);
+                    if (polygonIndex > maxReferencedPolygonIndex)
+                    {
+                        maxReferencedPolygonIndex = polygonIndex;
+                    }
                 }
                 reset();
-
-                wallGroups.add(new WallGroup(polygonIndices));
             }
+
+            ///////////////////
+            // Read Polygons //
+            ///////////////////
+
+            position(polygonsOffset);
+            for (int i = 0; i <= maxReferencedPolygonIndex; ++i)
+            {
+                polygons.add(readPolygon(verticesOffset));
+            }
+
+            return new WallGroupsInfo(maxReferencedPolygonIndex);
         }
 
-        private void parseDoors(
-            final int offset, final int numDoors, final int doorTileCellIndicesOffset, final int verticesOffset)
+        private void parseTiledObjects(
+            final int offset, final int numTiledObjects, final int tiledObjectsTilemapIndicesOffset,
+            final SecondaryHeaderInfo secondaryHeaderInfo)
         {
             position(offset);
 
-            for (int i = 0; i < numDoors; ++i)
+            for (int i = 0; i < numTiledObjects; ++i)
             {
-                final String doorResref = BufferUtil.readLUTF8(buffer, 8);
+                final String resref = BufferUtil.readLUTF8(buffer, 8);
                 final short openOrClosed = buffer.getShort();
-                final short doorTileCellsStartIndex = buffer.getShort();
-                final short numDoorTileCells = buffer.getShort();
+                final short tiledObjectsTilemapStartIndex = buffer.getShort();
+                final short numTiledObjectsTilemaps = buffer.getShort();
                 final short numOpenPolygons = buffer.getShort();
                 final short numClosedPolygons = buffer.getShort();
                 final int openPolygonsOffset = buffer.getInt();
                 final int closedPolygonsOffset = buffer.getInt();
 
-                final ArrayList<Short> doorTileCellIndices = new ArrayList<>();
-                final ArrayList<Polygon> openPolygons = new ArrayList<>();
-                final ArrayList<Polygon> closedPolygons = new ArrayList<>();
+                //////////////////////////////////////
+                // Read tiledObjectsTilemapIndices //
+                //////////////////////////////////////
+
+                final ArrayList<Short> tiledObjectsTilemapIndices = new ArrayList<>();
 
                 mark();
-
-                // Read doorTileCellIndices
-                position(doorTileCellIndicesOffset + doorTileCellsStartIndex * 2);
-                for (int j = 0; j < numDoorTileCells; ++j)
+                position(tiledObjectsTilemapIndicesOffset + tiledObjectsTilemapStartIndex * 2);
+                for (int j = 0; j < numTiledObjectsTilemaps; ++j)
                 {
-                    final short doorTileCellIndex = buffer.getShort();
-                    doorTileCellIndices.add(doorTileCellIndex);
+                    final short tiledObjectsTilemapIndex = buffer.getShort();
+                    tiledObjectsTilemapIndices.add(tiledObjectsTilemapIndex);
                 }
-
-                // Read openPolygons
-                position(openPolygonsOffset);
-                for (int j = 0; j < numOpenPolygons; ++j)
-                {
-                    openPolygons.add(readPolygon(verticesOffset));
-                }
-
-                // Read closedPolygons
-                position(closedPolygonsOffset);
-                for (int j = 0; j < numClosedPolygons; ++j)
-                {
-                    closedPolygons.add(readPolygon(verticesOffset));
-                }
-
-                doors.add(new Door(doorResref, openOrClosed, doorTileCellIndices, openPolygons, closedPolygons));
                 reset();
+
+                ///////////////////////
+                // Read openPolygons //
+                ///////////////////////
+
+                final ArrayList<Polygon> openPolygons = handleTiledObjectReferencedPolygons(
+                    secondaryHeaderInfo, i, "open", openPolygonsOffset, numOpenPolygons);
+
+                /////////////////////////
+                // Read closedPolygons //
+                /////////////////////////
+
+                final ArrayList<Polygon> closedPolygons = handleTiledObjectReferencedPolygons(
+                    secondaryHeaderInfo, i, "closed", closedPolygonsOffset, numClosedPolygons);
+
+                ////////////////////////
+                // Create TiledObject //
+                ////////////////////////
+
+                final TiledObject tiledObject = new TiledObject(resref, openOrClosed,
+                    tiledObjectsTilemapIndices, openPolygons, closedPolygons);
+
+                for (final Polygon openPolygon : openPolygons)
+                {
+                    tiledObjectByReferencedPolygon.put(openPolygon, tiledObject);
+                }
+
+                for (final Polygon closedPolygon : closedPolygons)
+                {
+                    tiledObjectByReferencedPolygon.put(closedPolygon, tiledObject);
+                }
+
+                tiledObjects.add(tiledObject);
             }
         }
+
+        private ArrayList<Polygon> handleTiledObjectReferencedPolygons(
+            final SecondaryHeaderInfo secondaryHeaderInfo, final int tiledObjectI, final String polygonTypeName,
+            final int polygonsOffset, final short numPolygons)
+        {
+            validateTiledObjectPolygonsOffset(secondaryHeaderInfo, tiledObjectI,
+                polygonTypeName, polygonsOffset, numPolygons);
+
+            final int polygonsStartIndex = (polygonsOffset - secondaryHeaderInfo.polygonsOffset()) / 0x12;
+            final int polygonsStartIndexBounded = Math.max(0, polygonsStartIndex);
+            final int polygonsEndIndexBounded = Math.min(
+                polygonsStartIndex + numPolygons, secondaryHeaderInfo.maxReferencedPolygonIndex());
+
+            final ArrayList<Polygon> referencedPolygons = new ArrayList<>();
+
+            for (int i = polygonsStartIndexBounded; i < polygonsEndIndexBounded; ++i)
+            {
+                final Polygon referencedPolygon = polygons.get(i);
+                referencedPolygons.add(referencedPolygon);
+            }
+
+            return referencedPolygons;
+        }
+
+        private void validateTiledObjectPolygonsOffset(
+            final SecondaryHeaderInfo secondaryHeaderInfo, final int tiledObjectIndex, final String openCloseLabel,
+            final int startPolygonsOffset, final short numPolygons)
+        {
+            if (numPolygons == 0)
+            {
+                return;
+            }
+
+            final int startWallPolygonsOffset = secondaryHeaderInfo.polygonsOffset();
+            final int afterWallPolygonsOffset = startWallPolygonsOffset
+                + (secondaryHeaderInfo.maxReferencedPolygonIndex() + 1) * 0x12;
+
+            Integer specialNegativeInfringingPolygonIndex = null;
+            Integer firstInfringingPolygonIndex = null;
+            int lastInfringingPolygonIndex;
+
+            if (startPolygonsOffset < startWallPolygonsOffset || startPolygonsOffset >= afterWallPolygonsOffset)
+            {
+                firstInfringingPolygonIndex = (startPolygonsOffset - startWallPolygonsOffset) / 0x12;
+            }
+
+            final int afterPolygonsOffset = startPolygonsOffset + numPolygons * 0x12;
+
+            if (afterPolygonsOffset > afterWallPolygonsOffset)
+            {
+                if (firstInfringingPolygonIndex != null && firstInfringingPolygonIndex < 0)
+                {
+                    // Two invalid groups, one before the table, and one after
+                    specialNegativeInfringingPolygonIndex = firstInfringingPolygonIndex;
+                }
+
+                if (firstInfringingPolygonIndex == null || firstInfringingPolygonIndex < 0)
+                {
+                    // One invalid group, starts after the table
+                    firstInfringingPolygonIndex = (afterWallPolygonsOffset - startWallPolygonsOffset) / 0x12;
+                }
+
+                lastInfringingPolygonIndex = (afterPolygonsOffset - startWallPolygonsOffset) / 0x12 - 1;
+            }
+            else
+            {
+                if (firstInfringingPolygonIndex == null)
+                {
+                    // All polygons are valid
+                    return;
+                }
+                // One invalid group, starts before the table
+                lastInfringingPolygonIndex = -1;
+            }
+
+            int numInfringing = lastInfringingPolygonIndex - firstInfringingPolygonIndex + 1;
+            if (specialNegativeInfringingPolygonIndex != null)
+            {
+                numInfringing += -1 - specialNegativeInfringingPolygonIndex + 1;
+            }
+
+            if (numInfringing < numPolygons)
+            {
+                System.out.printf(
+                    "[%s.WED] Tiled object %d references %s polygons which are not part of the wall polygons table, " +
+                    "but has at least one valid polygon\n",
+                    source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel);
+            }
+            else
+            {
+                if (specialNegativeInfringingPolygonIndex != null)
+                {
+                    System.out.printf(
+                        "[%s.WED] Tiled object %d references %s polygons [%d-%d], " +
+                        "which are not part of the wall polygons table\n",
+                        source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel,
+                        firstInfringingPolygonIndex, -1);
+                }
+
+                System.out.printf(
+                    "[%s.WED] Tiled object %d references %s polygons [%d-%d], " +
+                    "which are not part of the wall polygons table\n",
+                    source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel,
+                    firstInfringingPolygonIndex, lastInfringingPolygonIndex);
+
+                if (firstInfringingPolygonIndex >= 0)
+                {
+                    mark();
+                    position(startWallPolygonsOffset + firstInfringingPolygonIndex * 0x12);
+                    for (int i = firstInfringingPolygonIndex; i <= lastInfringingPolygonIndex; ++i)
+                    {
+                        final Polygon polygon = readPolygon(secondaryHeaderInfo.verticesOffset());
+                        System.out.printf("  [%d, %d, %d, %d]\n",
+                            polygon.getBoundingBoxLeft(),
+                            polygon.getBoundingBoxRight(),
+                            polygon.getBoundingBoxTop(),
+                            polygon.getBoundingBoxBottom());
+                    }
+                    reset();
+                }
+            }
+        }
+
+        /////////////////////
+        // Private Classes //
+        /////////////////////
+
+        public record WallGroupsInfo(short maxReferencedPolygonIndex) {}
     }
 
     private class LoadTISTask extends JavaFXUtil.TaskManager.ManagedTask<TIS>
@@ -778,39 +1022,37 @@ public class WED
         }
     }
 
-    private class RenderOverlaysTask extends JavaFXUtil.TaskManager.ManagedTask<BufferedImage>
+    public class WEDGraphics
     {
-        ////////////////////
-        // Private Fields //
-        ////////////////////
+        private final BufferedImage image;
+        private final Graphics2D graphics;
 
-        private final int[] overlayIndexes;
-
-        /////////////////////////
-        // Public Constructors //
-        /////////////////////////
-
-        public RenderOverlaysTask(final int... overlayIndexes)
+        public WEDGraphics()
         {
-            this.overlayIndexes = overlayIndexes;
+            final WED.Overlay baseOverlay = getOverlays().get(0);
+
+            image = new BufferedImage(
+                baseOverlay.getWidthInTiles() * 64,
+                baseOverlay.getHeightInTiles() * 64,
+                BufferedImage.TYPE_INT_ARGB);
+
+            graphics = (Graphics2D)image.getGraphics();
         }
 
-        ///////////////////////
-        // Protected Methods //
-        ///////////////////////
-
-        @Override
-        protected BufferedImage call() throws Exception
+        public BufferedImage getImage()
         {
-            buffer = source.demandFileData();
-            return renderOverlays();
+            return image;
         }
 
-        /////////////////////
-        // Private Methods //
-        /////////////////////
+        public BufferedImage getSnapshot()
+        {
+            final BufferedImage copy = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
+            copy.getGraphics().drawImage(image, 0, 0, null);
+            return copy;
+        }
 
-        private BufferedImage renderOverlays() throws Exception
+        public WEDGraphics renderOverlays(
+            final JavaFXUtil.TaskManager.ManagedTask<?> task, final int... overlayIndexes) throws Exception
         {
             final Game game = GlobalState.getGame();
             final Game.Type engineType = game.getEngineType();
@@ -833,17 +1075,12 @@ public class WED
             final int baseOverlayWidthInPixels = baseOverlayWidth * 64;
             final int baseOverlayHeightInPixels = baseOverlayHeight * 64;
 
-            final BufferedImage combined = new BufferedImage(
-                baseOverlayWidthInPixels, baseOverlayHeightInPixels, BufferedImage.TYPE_INT_ARGB
-            );
-            final Graphics2D graphics = (Graphics2D)combined.getGraphics();
-
             final ArrayList<WED.TilemapEntry> baseOverlayTilemapEntries = baseOverlay.getTilemapEntries();
             final int nGameTime = 0; // TODO - animate
 
             for (int overlayIndex = 4; overlayIndex > 0; --overlayIndex)
             {
-                if (!renderRequested(overlayIndex))
+                if (!renderRequested(overlayIndexes, overlayIndex))
                 {
                     continue;
                 }
@@ -868,7 +1105,7 @@ public class WED
 
                 final int overlayRenderFlag = 1 << overlayIndex;
                 final WED.TilemapEntry overlayTilemapEntry = overlayTilemapEntries.get(0);
-                final TIS overlayTIS = subtask(new LoadTISTask(overlay.getTilesetResref()));
+                final TIS overlayTIS = task.subtask(new LoadTISTask(overlay.getTilesetResref()));
 
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
                 {
@@ -882,9 +1119,9 @@ public class WED
                         }
 
                         final int overlayTileLookupIndex = ((nGameTime / 2)
-                            % overlayTilemapEntry.tileIndexLookupArray.length
+                            % overlayTilemapEntry.tisTileIndexArray.length
                         );
-                        final int overlayTileIndex = overlayTilemapEntry.tileIndexLookupArray[overlayTileLookupIndex];
+                        final int overlayTileIndex = overlayTilemapEntry.tisTileIndexArray[overlayTileLookupIndex];
                         final IntBuffer tileData = overlayTIS.getPreRenderedTileData(overlayTileIndex);
 
                         TileUtil.drawTileData(graphics, 64, tileData, xPos, yPos);
@@ -892,16 +1129,16 @@ public class WED
                 }
             }
 
-            if (renderRequested(0))
+            if (renderRequested(overlayIndexes, 0))
             {
                 final int dwRenderFlagsBase =
                     (
                         (baseOverlay.getMovementType() & 2) != 0
-                        || (engineType != Game.Type.BG1 && engineType != Game.Type.BGEE)
+                            || (engineType != Game.Type.BG1 && engineType != Game.Type.BGEE)
                     )
-                    ? 0x4000000 : 0;
+                        ? 0x4000000 : 0;
 
-                final TIS baseOverlayTIS = subtask(new LoadTISTask(baseOverlayTISResref));
+                final TIS baseOverlayTIS = task.subtask(new LoadTISTask(baseOverlayTISResref));
                 assert baseOverlayTIS != null;
 
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
@@ -914,19 +1151,20 @@ public class WED
                         {
                             int nTile;
 
-                            if ((tilemapEntry.getExtraFlags() & 2) == 0 || tilemapEntry.getTisIndexOfAlternateTile() == -1)
+                            if ((tilemapEntry.getExtraFlags() & 2) == 0
+                                || tilemapEntry.getSecondaryTisTileIndex() == -1)
                             {
                                 // Not using secondary tile
                                 final byte nAnimSpeed = (byte)Math.max(1, tilemapEntry.getAnimationSpeed());
                                 final int nTileLookupIndex = ((nGameTime / nAnimSpeed)
-                                    % tilemapEntry.tileIndexLookupArray.length);
+                                    % tilemapEntry.tisTileIndexArray.length);
 
-                                nTile = tilemapEntry.tileIndexLookupArray[nTileLookupIndex];
+                                nTile = tilemapEntry.tisTileIndexArray[nTileLookupIndex];
                             }
                             else
                             {
                                 // Using secondary tile
-                                nTile = tilemapEntry.getTisIndexOfAlternateTile();
+                                nTile = tilemapEntry.getSecondaryTisTileIndex();
                             }
 
                             // if ((baseOverlay.getMovementType() & 2) != 0)
@@ -939,7 +1177,7 @@ public class WED
 
                             if ((tilemapEntry.getDrawFlags() & 0x1E) != 0)
                             {
-                                nStencilTile = tilemapEntry.getTisIndexOfAlternateTile();
+                                nStencilTile = tilemapEntry.getSecondaryTisTileIndex();
                                 dwRenderFlags |= 0x2;
                             }
 
@@ -1006,7 +1244,7 @@ public class WED
 
                                 final IntBuffer tileData = baseOverlayTIS.getPreRenderedTileData(nTile);
                                 TileUtil.drawAlphaTo(64, xPos, yPos,
-                                    dwAlpha, tileData, combined);
+                                    dwAlpha, tileData, image);
 
                                 if (nStencilTile != -1)
                                 {
@@ -1014,7 +1252,7 @@ public class WED
                                         .getPreRenderedTileData(nStencilTile);
 
                                     TileUtil.drawAlphaTo(64, xPos, yPos,
-                                        TIS.WATER_ALPHA << 24, stencilTileData, combined);
+                                        TIS.WATER_ALPHA << 24, stencilTileData, image);
                                 }
                             }
                         }
@@ -1026,10 +1264,44 @@ public class WED
                 }
             }
 
-            return combined;
+            return this;
         }
 
-        private boolean renderRequested(final int overlayIndex)
+        public WEDGraphics clear()
+        {
+            graphics.clearRect(0, 0, image.getWidth(), image.getHeight());
+            return this;
+        }
+
+        public WEDGraphics renderPolygons(final float width)
+        {
+            for (final Polygon polygon : polygons)
+            {
+                final ArrayList<Vertex> vertices = polygon.getVertices();
+                final int limit = vertices.size() - 1;
+
+                if (limit <= 1)
+                {
+                    continue;
+                }
+
+                graphics.setStroke(new BasicStroke(width));
+
+                for (int i = 0; i < limit; ++i)
+                {
+                    final Vertex v1 = vertices.get(i);
+                    final Vertex v2 = vertices.get(i + 1);
+                    graphics.drawLine(v1.x(), v1.y(), v2.x(), v2.y());
+                }
+
+                final Vertex vFirst = vertices.get(0);
+                final Vertex vLast = vertices.get(vertices.size() - 1);
+                graphics.drawLine(vFirst.x(), vFirst.y(), vLast.x(), vLast.y());
+            }
+            return this;
+        }
+
+        private boolean renderRequested(final int[] overlayIndexes, final int overlayIndex)
         {
             for (int requestedOverlayIndex : overlayIndexes)
             {
@@ -1040,5 +1312,693 @@ public class WED
             }
             return false;
         }
+    }
+
+    private class RenderOverlaysTask extends JavaFXUtil.TaskManager.ManagedTask<BufferedImage>
+    {
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        private final int[] overlayIndexes;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public RenderOverlaysTask(final int... overlayIndexes)
+        {
+            this.overlayIndexes = overlayIndexes;
+        }
+
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected BufferedImage call() throws Exception
+        {
+            final WEDGraphics wedGraphics = new WEDGraphics();
+            wedGraphics.renderOverlays(this, overlayIndexes);
+            return wedGraphics.getImage();
+        }
+    }
+
+    private class SaveWEDTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
+    {
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        private final Path path;
+        private AppendOnlyOrderedInstanceSet<Polygon> polygonsArray = null;
+        private ArrayList<Short>[] wallGroupPolygonIndicesArray = null;
+        private ByteBuffer buffer;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public SaveWEDTask(final Path path)
+        {
+            this.path = path;
+        }
+
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected Void call() throws Exception
+        {
+            save();
+            return null;
+        }
+
+        /////////////////////
+        // Private Methods //
+        /////////////////////
+
+        private void save() throws Exception
+        {
+            final WEDSectionSizes sectionSizes = calculateSectionSizes();
+            buffer = ByteBuffer.allocate(sectionSizes.total());
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+            final int headerOffset = 0x0;
+            final int overlaysArrayOffset = headerOffset + sectionSizes.header();
+            final int secondaryHeaderOffset = overlaysArrayOffset + sectionSizes.overlaysArray();
+            final int tiledObjectsArrayOffset = secondaryHeaderOffset + sectionSizes.secondaryHeader();
+            final int tilemapArraysOffset = tiledObjectsArrayOffset + sectionSizes.tiledObjectsArray();
+            final int tiledObjectTilemapIndicesOffset = tilemapArraysOffset + sectionSizes.tilemapArrays();
+
+            final int tisTileIndicesLookupArrayOffset = tiledObjectTilemapIndicesOffset
+                + sectionSizes.tiledObjectTilemapIndices();
+
+            final int wallGroupsArrayOffset = tisTileIndicesLookupArrayOffset
+                + sectionSizes.tisTileIndicesLookupTable();
+
+            final int polygonsArrayOffset = wallGroupsArrayOffset + sectionSizes.wallGroupsArray();
+            final int polygonsIndicesArrayOffset = polygonsArrayOffset + sectionSizes.polygonsArray();
+            final int verticesArrayOffset = polygonsIndicesArrayOffset + sectionSizes.polygonIndicesArray();
+
+            saveHeader(headerOffset, overlaysArrayOffset, secondaryHeaderOffset,
+                tiledObjectsArrayOffset, tiledObjectTilemapIndicesOffset);
+
+            saveOverlaysArray(overlaysArrayOffset, tilemapArraysOffset, tisTileIndicesLookupArrayOffset);
+
+            saveSecondaryHeader(secondaryHeaderOffset, polygonsArrayOffset, verticesArrayOffset,
+                wallGroupsArrayOffset, polygonsIndicesArrayOffset);
+
+            saveTiledObjectsArray(tiledObjectsArrayOffset, polygonsArrayOffset);
+            saveTilemapArrays(tilemapArraysOffset);
+            saveTiledObjectTilemapIndices(tiledObjectTilemapIndicesOffset);
+            saveTisTileIndicesLookupTable(tisTileIndicesLookupArrayOffset);
+            saveWallGroupsArray(wallGroupsArrayOffset);
+            savePolygonsArray(polygonsArrayOffset);
+            savePolygonIndicesArray(polygonsIndicesArrayOffset);
+            saveVerticesArray(verticesArrayOffset);
+
+            Files.write(path, buffer.array());
+        }
+
+        private void saveHeader(
+            final int offset,
+            final int overlaysArrayOffset,
+            final int secondaryHeaderOffset,
+            final int tiledObjectsArrayOffset,
+            final int tiledObjectTilemapIndicesOffset)
+        {
+            // 0x0000  4 (char array)  Signature ('WED ')
+            // 0x0004  4 (char array)  Version ('V1.3')
+            // 0x0008  4 (dword)       Number of overlays
+            // 0x000C  4 (dword)       Number of tiled objects
+            // 0x0010  4 (dword)       Offset to overlays array
+            // 0x0014  4 (dword)       Offset to secondary header
+            // 0x0018  4 (dword)       Offset to tiled objects array
+            // 0x001C  4 (dword)       Offset to tiled object tilemap indices
+
+            ////////////////////////
+            // Write Header Array //
+            ////////////////////////
+
+            position(offset);
+            buffer.put("WED ".getBytes(StandardCharsets.UTF_8));
+            buffer.put("V1.3".getBytes(StandardCharsets.UTF_8));
+            buffer.putInt(overlays.size());
+            buffer.putInt(tiledObjects.size());
+            buffer.putInt(overlaysArrayOffset);
+            buffer.putInt(secondaryHeaderOffset);
+            buffer.putInt(tiledObjectsArrayOffset);
+            buffer.putInt(tiledObjectTilemapIndicesOffset);
+        }
+
+        private void saveOverlaysArray(
+            final int offset, final int tilemapArraysOffset, final int tisTileIndicesLookupArraysOffset)
+        {
+            // 0x0000  2 (word)    Width (in tiles)
+            // 0x0002  2 (word)    Height (in tiles)
+            // 0x0004  8 (resref)  TIS Resref
+            // 0x000C  2 (word)    Unique tile count
+            // 0x000E  2 (word)    Movement type
+            // 0x0010  4 (dword)   Offset to tilemap array
+            // 0x0014  4 (dword)   Offset to TIS tile indices lookup array
+
+            position(offset);
+            int curTilemapArrayOffset = tilemapArraysOffset;
+            int curTisTileIndicesLookupArrayOffset = tisTileIndicesLookupArraysOffset;
+
+            //////////////////////////
+            // Write Overlays Array //
+            //////////////////////////
+
+            for (final Overlay overlay : overlays)
+            {
+                ///////////////////
+                // Write Overlay //
+                ///////////////////
+
+                buffer.putShort(overlay.getWidthInTiles());
+                buffer.putShort(overlay.getHeightInTiles());
+                BufferUtil.writeLUTF8(buffer, 8, overlay.getTilesetResref());
+                buffer.putShort(overlay.getUniqueTileCount());
+                buffer.putShort(overlay.getMovementType());
+                buffer.putInt(curTilemapArrayOffset);
+                buffer.putInt(curTisTileIndicesLookupArrayOffset);
+
+                /////////////////////
+                // Advance Offsets //
+                /////////////////////
+
+                curTilemapArrayOffset += overlay.getTilemapEntries().size() * 0xA;
+
+                for (final TilemapEntry tilemapEntry : overlay.getTilemapEntries())
+                {
+                    curTisTileIndicesLookupArrayOffset += tilemapEntry.getTisTileIndexArray().length * 0x2;
+                }
+            }
+        }
+
+        private void saveSecondaryHeader(
+            final int offset,
+            final int polygonsArrayOffset,
+            final int verticesArrayOffset,
+            final int wallGroupsArrayOffset,
+            final int wallGroupPolygonIndicesLookupArrayOffset
+        )
+        {
+            // 0x0000  4 (dword)  Number of polygons (unused and inaccurate)
+            // 0x0004  4 (dword)  Offset to polygons array
+            // 0x0008  4 (dword)  Offset to vertices array
+            // 0x000C  4 (dword)  Offset to wall groups array
+            // 0x0010  4 (dword)  Offset to wall group polygon indices lookup table
+
+            position(offset);
+            buffer.putInt(polygonsArray.size());
+            buffer.putInt(polygonsArrayOffset);
+            buffer.putInt(verticesArrayOffset);
+            buffer.putInt(wallGroupsArrayOffset);
+            buffer.putInt(wallGroupPolygonIndicesLookupArrayOffset);
+        }
+
+        private void saveTiledObjectsArray(final int offset, final int polygonsArrayOffset)
+        {
+            // 0x0000  8 (char array)  Name of tiled object in ARE (unused)
+            // 0x0008  2 (word)        Open (0) / Closed (1)
+            // 0x000A  2 (word)        First tilemap lookup array index
+            // 0x000C  2 (word)        Number of tilemap lookup array indices
+            // 0x000E  2 (word)        Number of primary polygons
+            // 0x0010  2 (word)        Number of secondary polygons
+            // 0x0012  4 (dword)       Offset to primary polygons
+            // 0x0016  4 (dword)       Offset to secondary polygons
+
+            position(offset);
+            short curFirstTilemapLookupArrayIndex = 0;
+
+            ///////////////////////////////
+            // Write Tiled Objects Array //
+            ///////////////////////////////
+
+            for (final TiledObject tiledObject : tiledObjects)
+            {
+                final short numTilemapIndices = (short)tiledObject.getTilemapIndices().size();
+                final ArrayList<Polygon> primaryPolygons = tiledObject.getOpenPolygons();
+                final ArrayList<Polygon> secondaryPolygons = tiledObject.getClosedPolygons();
+                final short numPrimaryPolygons = (short)primaryPolygons.size();
+                final short numSecondaryPolygons = (short)secondaryPolygons.size();
+
+                ////////////////////////
+                // Write Tiled Object //
+                ////////////////////////
+
+                BufferUtil.writeLUTF8(buffer, 8, tiledObject.getResref());
+                buffer.putShort(tiledObject.getOpenOrClosed());
+                buffer.putShort(curFirstTilemapLookupArrayIndex);
+                buffer.putShort(numTilemapIndices);
+                buffer.putShort(numPrimaryPolygons);
+                buffer.putShort(numSecondaryPolygons);
+                buffer.putInt(polygonsArrayOffset
+                    + (numPrimaryPolygons > 0 ? polygonsArray.indexOf(primaryPolygons.get(0)) : 0) * 0x12);
+                buffer.putInt(polygonsArrayOffset
+                    + (numSecondaryPolygons > 0 ? polygonsArray.indexOf(secondaryPolygons.get(0)) : 0) * 0x12);
+
+                /////////////////////
+                // Advance Indices //
+                /////////////////////
+
+                curFirstTilemapLookupArrayIndex += numTilemapIndices;
+            }
+        }
+
+        private void saveTilemapArrays(final int offset)
+        {
+            // 0x0000  2 (word)  First TIS tile lookup array index
+            // 0x0002  2 (word)  Number of TIS tile lookup array indices
+            // 0x0004  2 (word)  Secondary TIS tile index
+            // 0x0006  1 (byte)  Draw flags
+            // 0x0007  1 (byte)  Animation speed
+            // 0x0008  2 (word)  Extra flags
+
+            position(offset);
+
+            //////////////////////////
+            // Write Tilemap Arrays //
+            //////////////////////////
+
+            for (final Overlay overlay : overlays)
+            {
+                short curFirstTisTileLookupArrayIndex = 0;
+
+                /////////////////////////
+                // Write Tilemap Array //
+                /////////////////////////
+
+                for (final TilemapEntry tilemapEntry : overlay.getTilemapEntries())
+                {
+                    final short numTisTileIndices = (short)tilemapEntry.getTisTileIndexArray().length;
+
+                    /////////////////////////
+                    // Write Tilemap Entry //
+                    /////////////////////////
+
+                    buffer.putShort(curFirstTisTileLookupArrayIndex);
+                    buffer.putShort(numTisTileIndices);
+                    buffer.putShort(tilemapEntry.getSecondaryTisTileIndex());
+                    buffer.put(tilemapEntry.getDrawFlags());
+                    buffer.put(tilemapEntry.getAnimationSpeed());
+                    buffer.putShort(tilemapEntry.getExtraFlags());
+
+                    /////////////////////
+                    // Advance Indices //
+                    /////////////////////
+
+                    curFirstTisTileLookupArrayIndex += numTisTileIndices;
+                }
+            }
+        }
+
+        private void saveTiledObjectTilemapIndices(final int offset)
+        {
+            position(offset);
+
+            /////////////////////////////////////////////////////
+            // Write Tiled Object Tilemap Indices Lookup Array //
+            /////////////////////////////////////////////////////
+
+            for (final TiledObject tiledObject : tiledObjects)
+            {
+                for (final short tilemapIndex : tiledObject.getTilemapIndices())
+                {
+                    buffer.putShort(tilemapIndex);
+                }
+            }
+        }
+
+        private void saveTisTileIndicesLookupTable(final int offset)
+        {
+            position(offset);
+
+            /////////////////////////////////////////////////
+            // Write Tilemap TIS Tile Indices Lookup Array //
+            /////////////////////////////////////////////////
+
+            for (final Overlay overlay : overlays)
+            {
+                for (final TilemapEntry tilemapEntry : overlay.getTilemapEntries())
+                {
+                    for (final short tisTileIndex : tilemapEntry.getTisTileIndexArray())
+                    {
+                        buffer.putShort(tisTileIndex);
+                    }
+                }
+            }
+        }
+
+        private void saveWallGroupsArray(final int offset)
+        {
+            // 0x0000  2 (word)  First wall group polygon lookup array index
+            // 0x0002  2 (word)  Number of wall group polygon lookup array indices
+
+            position(offset);
+            short curFirstWallgroupPolygonLookupArrayIndex = 0;
+
+            /////////////////////////////
+            // Write Wall Groups Array //
+            /////////////////////////////
+
+            for (final ArrayList<Short> wallGroupPolygonIndices : wallGroupPolygonIndicesArray)
+            {
+                final short numWallGroupPolygonIndices = (short)(wallGroupPolygonIndices != null
+                    ? wallGroupPolygonIndices.size()
+                    : 0);
+
+                //////////////////////
+                // Write Wall Group //
+                //////////////////////
+
+                buffer.putShort(curFirstWallgroupPolygonLookupArrayIndex);
+                buffer.putShort(numWallGroupPolygonIndices);
+
+                /////////////////////
+                // Advance Indices //
+                /////////////////////
+
+                curFirstWallgroupPolygonLookupArrayIndex += numWallGroupPolygonIndices;
+            }
+        }
+
+        private void savePolygonsArray(final int offset)
+        {
+            // 0x0000  4 (dword)          First vertex index
+            // 0x0004  4 (dword)          Number of vertex indices
+            // 0x0008  1 (unsigned byte)  Flags
+            // 0x0009  1 (byte)           Height
+            // 0x000A  2 (word)           Minimum X coordinate of bounding box
+            // 0x000C  2 (word)           Maximum X coordinate of bounding box
+            // 0x000E  2 (word)           Minimum Y coordinate of bounding box
+            // 0x0010  2 (word)           Maximum Y coordinate of bounding box
+
+            position(offset);
+            int curFirstVertexIndex = 0;
+
+            //////////////////////////
+            // Write Polygons Array //
+            //////////////////////////
+
+            for (final Polygon polygon : polygonsArray)
+            {
+                final int numVertices = polygon.getVertices().size();
+
+                ///////////////////
+                // Write Polygon //
+                ///////////////////
+
+                buffer.putInt(curFirstVertexIndex);
+                buffer.putInt(numVertices);
+                buffer.put(polygon.getFlags());
+                buffer.put(polygon.getHeight());
+                buffer.putShort(polygon.getBoundingBoxLeft());
+                buffer.putShort(polygon.getBoundingBoxRight());
+                buffer.putShort(polygon.getBoundingBoxTop());
+                buffer.putShort(polygon.getBoundingBoxBottom());
+
+                /////////////////////
+                // Advance Indices //
+                /////////////////////
+
+                curFirstVertexIndex += numVertices;
+            }
+        }
+
+        private void savePolygonIndicesArray(final int offset)
+        {
+            position(offset);
+
+            ///////////////////////////////////////////////////
+            // Write Wall Group Polygon Indices Lookup Array //
+            ///////////////////////////////////////////////////
+
+            for (final ArrayList<Short> wallGroupPolygonIndices : wallGroupPolygonIndicesArray)
+            {
+                if (wallGroupPolygonIndices == null)
+                {
+                    continue;
+                }
+
+                for (short polygonIndex : wallGroupPolygonIndices)
+                {
+                    buffer.putShort(polygonIndex);
+                }
+            }
+        }
+
+        private void saveVerticesArray(final int offset)
+        {
+            // 0x0000  2 (word)  X coordinate
+            // 0x0002  2 (word)  Y coordinate
+
+            position(offset);
+
+            //////////////////////////
+            // Write Vertices Array //
+            //////////////////////////
+
+            for (final Polygon polygon : polygonsArray)
+            {
+                for (final Vertex vertex : polygon.getVertices())
+                {
+                    buffer.putShort(vertex.x());
+                    buffer.putShort(vertex.y());
+                }
+            }
+        }
+
+        private WEDSectionSizes calculateSectionSizes()
+        {
+            final int headerSize = calculateHeaderSize();
+            final int overlaysArraySize = calculateOverlaysArraySize();
+            final int secondaryHeaderSize = calculateSecondaryHeaderSize();
+            final int tiledObjectsArraySize = calculateTiledObjectsArraySize();
+            final int tilemapArraysSize = calculateTilemapArraysSize();
+            final int tiledObjectTilemapIndicesSize = calculateTiledObjectTilemapIndicesSize();
+            final int tisTileIndicesLookupTableSize = calculateTisTileIndicesLookupTableSize();
+            final int wallGroupsArraySize = calculateWallGroupsArraySize();
+            final int polygonsArraySize = calculatePolygonsArraySize();
+            final int polygonIndicesArraySize = calculatePolygonIndicesArraySize();
+            final int verticesArraySize = calculateVerticesArraySize();
+            final int total = headerSize + overlaysArraySize + secondaryHeaderSize + tiledObjectsArraySize
+                + tilemapArraysSize + tiledObjectTilemapIndicesSize + tisTileIndicesLookupTableSize + wallGroupsArraySize
+                + polygonsArraySize + polygonIndicesArraySize + verticesArraySize;
+
+            return new WEDSectionSizes(
+                headerSize,
+                overlaysArraySize,
+                secondaryHeaderSize,
+                tiledObjectsArraySize,
+                tilemapArraysSize,
+                tiledObjectTilemapIndicesSize,
+                tisTileIndicesLookupTableSize,
+                wallGroupsArraySize,
+                polygonsArraySize,
+                polygonIndicesArraySize,
+                verticesArraySize,
+                total
+            );
+        }
+
+        /**
+         * Main header.
+         */
+        private int calculateHeaderSize()
+        {
+            return 0x20;
+        }
+
+        /**
+         * Table that stores Overlay data (there are normally / maximally 5 overlays, indices [0-4]).
+         */
+        private int calculateOverlaysArraySize()
+        {
+            return overlays.size() * 0x18;
+        }
+
+        /**
+         * Per-overlay table that stores metadata about TIS tiles to be rendered at derived tile coordinates
+         * (tile coordinates being derived based on the metadata's position in this table).
+         */
+        private int calculateTilemapArraysSize()
+        {
+            int total = 0;
+            for (final Overlay overlay : overlays)
+            {
+                total += overlay.getTilemapEntries().size();
+            }
+            return total * 0xA;
+        }
+
+        /**
+         * TilemapEntry structures use this per-overlay indirect table to index into TIS tiles
+         */
+        private int calculateTisTileIndicesLookupTableSize()
+        {
+            // TODO: Compress using something like LZW
+            int total = 0;
+            for (final Overlay overlay : overlays)
+            {
+                for (final TilemapEntry tilemapEntry : overlay.getTilemapEntries())
+                {
+                    total += tilemapEntry.getTisTileIndexArray().length;
+                }
+            }
+            return total * 0x2;
+        }
+
+        /**
+         * Table that stores TiledObject data (doors, anything that should switch between two states, altering
+         * whether primary / secondary tiles are displayed, and whether primary / secondary polygons are used).
+         */
+        private int calculateTiledObjectsArraySize()
+        {
+            return tiledObjects.size() * 0x1A;
+        }
+
+        /**
+         * TiledObject entries use this indirect table to index into Overlay 0's TilemapEntry structures
+          */
+        private int calculateTiledObjectTilemapIndicesSize()
+        {
+            int total = 0;
+            for (final TiledObject tiledObject : tiledObjects)
+            {
+                total += tiledObject.getTilemapIndices().size();
+            }
+            return total * 0x2;
+        }
+
+        /**
+         * Header that stores offsets related to wallgroups / wallgroup polygons.
+         */
+        private int calculateSecondaryHeaderSize()
+        {
+            return 0x14;
+        }
+
+        /**
+         * WallGroups point to which polygons are present in their area, (each WallGroup is 10 tiles wide and 7.5
+         * tiles high). Like Tilemap entries, the position of a WallGroup in this table determines which part of
+         * the area it is associated with.
+         */
+        private int calculateWallGroupsArraySize()
+        {
+            return 0x4 * calculateNumberOfWallGroups();
+        }
+
+        private int calculatePolygonsArraySize()
+        {
+            polygonsArray = new AppendOnlyOrderedInstanceSet<>(polygons);
+            return polygonsArray.size() * 0x12;
+        }
+
+        // WallGroup instances use this indirect table into wall polygons
+        private int calculatePolygonIndicesArraySize()
+        {
+            final WallGroupDimensions wallGroupDimensions = calculateWallGroupDimensions();
+            final short wallGroupsWidth = wallGroupDimensions.widthInTiles();
+            final short wallGroupsHeight = wallGroupDimensions.heightInTiles();
+
+            //noinspection unchecked
+            wallGroupPolygonIndicesArray = new ArrayList[wallGroupsWidth * wallGroupsHeight];
+            int totalPolygonIndices = 0;
+
+            for (final Polygon polygon : polygons)
+            {
+                final int boundsX = polygon.getBoundingBoxLeft();
+                final int boundsWidth = polygon.getBoundingBoxRight() - boundsX;
+                if (boundsWidth <= 0) continue;
+
+                final int boundsY = polygon.getBoundingBoxTop();
+                final int boundsHeight = polygon.getBoundingBoxBottom() - boundsY;
+                if (boundsHeight <= 0) continue;
+
+                final int startWallGroupX = boundsX / 640;
+                final int startWallGroupY = boundsY / 480;
+
+                int numWallGroupsX = MiscUtil.divideRoundUp(boundsWidth, 640);
+                if (boundsWidth < 640 && boundsX % 640 + boundsWidth >= 640) ++numWallGroupsX;
+
+                int numWallGroupsY = MiscUtil.divideRoundUp(boundsWidth, 480);
+                if (boundsHeight < 480 && boundsY % 480 + boundsHeight >= 480) ++numWallGroupsY;
+
+                final Short polygonIndex = (short)(int)polygonsArray.indexOf(polygon);
+                final int pitch = wallGroupsWidth - numWallGroupsX;
+
+                for (int wallGroupIndex = startWallGroupY * wallGroupsWidth + startWallGroupX,
+                     indexLimitY = wallGroupIndex + numWallGroupsY * wallGroupsWidth;
+                     wallGroupIndex < indexLimitY; wallGroupIndex += pitch)
+                {
+                    for (int indexLimitX = wallGroupIndex + numWallGroupsX;
+                         wallGroupIndex < indexLimitX; ++wallGroupIndex)
+                    {
+                        ArrayList<Short> polygonIndices = wallGroupPolygonIndicesArray[wallGroupIndex];
+                        if (polygonIndices == null)
+                        {
+                            polygonIndices = new ArrayList<>();
+                            wallGroupPolygonIndicesArray[wallGroupIndex] = polygonIndices;
+                        }
+                        polygonIndices.add(polygonIndex);
+                        ++totalPolygonIndices;
+                    }
+                }
+            }
+
+            return totalPolygonIndices * 0x2;
+        }
+
+        // Referenced by WallGroup Polygons and Door open/close Polygons
+        private int calculateVerticesArraySize()
+        {
+            int total = 0;
+            for (final Polygon polygon : polygonsArray)
+            {
+                total += polygon.getVertices().size();
+            }
+
+            return total * 0x4;
+        }
+
+        /////////////////////
+        // Private Classes //
+        /////////////////////
+
+        // Vanilla WED files stored in the following order:
+        //   Header
+        //   Overlays Array
+        //   Secondary Header
+        //   Tiled Objects Array
+        //   Tilemap Array (Overlay 0)
+        //   Tilemap Array (Overlay 1)
+        //   ...
+        //   Tiled Object Tilemap Indices Lookup Array
+        //   Tilemap TIS Tile Indices Lookup Array (Overlay 0)
+        //   Tilemap TIS Tile Indices Lookup Array (Overlay 1)
+        //   ...
+        //   Wall Groups Array
+        //   Polygons Array
+        //   Wall Group Polygon Indices Lookup Array
+        //   Vertices Array
+        private record WEDSectionSizes(
+            int header,
+            int overlaysArray,
+            int secondaryHeader,
+            int tiledObjectsArray,
+            int tilemapArrays,
+            int tiledObjectTilemapIndices,
+            int tisTileIndicesLookupTable,
+            int wallGroupsArray,
+            int polygonsArray,
+            int polygonIndicesArray,
+            int verticesArray,
+            int total
+        ) {}
     }
 }

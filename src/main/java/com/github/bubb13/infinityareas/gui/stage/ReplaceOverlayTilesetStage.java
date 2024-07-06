@@ -4,8 +4,12 @@ package com.github.bubb13.infinityareas.gui.stage;
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.game.resource.ResourceDataCache;
+import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
+import com.github.bubb13.infinityareas.game.resource.TIS;
 import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.control.DynamicListView;
+import com.github.bubb13.infinityareas.misc.SimpleCache;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -231,7 +235,27 @@ public class ReplaceOverlayTilesetStage extends Stage
     {
         final int overlayIndex = overlayDropdown.getSelectionModel().getSelectedItem();
         final TilesetEntry entry = tilesetList.getSelectionModel().getSelectedItem();
-        wed.getOverlays().get(overlayIndex).setTilesetResref(entry.getText());
+        final WED.Overlay overlay = wed.getOverlays().get(overlayIndex);
+        overlay.setTilesetResref(entry.getText());
+
+        final TIS tis = new TIS(
+            GlobalState.getGame().getResource(new ResourceIdentifier(overlay.getTilesetResref(), KeyFile.NumericResourceType.TIS)).getPrimarySource(),
+            new ResourceDataCache(),
+            new SimpleCache<>()
+        );
+        tis.loadTISTask().run();
+
+        short[] temp = new short[tis.getNumTiles()];
+        for (short i = 0; i < tis.getNumTiles(); ++i)
+        {
+            temp[i] = i;
+        }
+
+        for (WED.TilemapEntry tilemapEntry : overlay.getTilemapEntries())
+        {
+            tilemapEntry.setTisTileIndexArray(temp);
+        }
+
         close();
     }
 

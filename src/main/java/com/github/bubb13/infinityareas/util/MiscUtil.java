@@ -70,6 +70,11 @@ public final class MiscUtil
         return (short)(b & 0xFF);
     }
 
+    public static short toUnsignedShort(final short b)
+    {
+        return (short)(b & 0xFFFF);
+    }
+
     public static void printHierarchy(final Parent parent, final String indent, final String special)
     {
         System.out.println(indent + special + parent.getClass().getName());

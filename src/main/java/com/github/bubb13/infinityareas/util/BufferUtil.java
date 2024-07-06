@@ -44,6 +44,16 @@ public final class BufferUtil
         return toReturn;
     }
 
+    public static void writeLUTF8(final ByteBuffer buffer, final int length, String str)
+    {
+        if (str.length() > length) str = str.substring(0, length);
+        buffer.put(str.getBytes(StandardCharsets.UTF_8));
+        for (int i = str.length(); i < length; ++i)
+        {
+            buffer.put((byte)0);
+        }
+    }
+
     public static ByteBuffer readAtOffset(final Path path, final long offset, final int readSize) throws IOException
     {
         try (final FileChannel fileChannel = FileChannel.open(path, StandardOpenOption.READ))

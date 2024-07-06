@@ -293,7 +293,7 @@ public final class PrimaryScene extends Stage
                         ErrorAlert.openAndWait(String.format(
                             "Failed to render area \"%s\"", resource.getIdentifier().resref()), e);
                     }
-                    Thread.sleep(200);
+                    //Thread.sleep(200);
                 }
                 return null;
             }

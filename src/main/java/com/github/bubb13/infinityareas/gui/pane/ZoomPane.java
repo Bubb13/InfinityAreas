@@ -8,6 +8,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 
 import java.awt.image.BufferedImage;
+import java.util.function.Consumer;
 
 public class ZoomPane extends NotifyingScrollPane
 {
@@ -17,6 +18,7 @@ public class ZoomPane extends NotifyingScrollPane
 
     private final PartiallyRenderedImage partialImage = new PartiallyRenderedImage();
     private double zoomFactor = 1;
+    private Consumer<Double> zoomFactorListener;
 
     /////////////////////////
     // Public Constructors //
@@ -32,12 +34,22 @@ public class ZoomPane extends NotifyingScrollPane
     // Public Methods //
     ////////////////////
 
+    public void setZoomFactorListener(final Consumer<Double> zoomFactorListener)
+    {
+        this.zoomFactorListener = zoomFactorListener;
+    }
+
+    public double getZoomFactor()
+    {
+        return zoomFactor;
+    }
+
     public void setImage(final BufferedImage image, final boolean resetZoomFactor)
     {
         partialImage.setImage(image);
         if (resetZoomFactor)
         {
-            zoomFactor = 1;
+            setZoomFactor(1);
             partialImage.setZoomFactor(zoomFactor);
         }
 
@@ -57,6 +69,15 @@ public class ZoomPane extends NotifyingScrollPane
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    private void setZoomFactor(final double newValue)
+    {
+        zoomFactor = newValue;
+        if (zoomFactorListener != null)
+        {
+            zoomFactorListener.accept(zoomFactor);
+        }
+    }
 
     private void init()
     {
@@ -115,11 +136,11 @@ public class ZoomPane extends NotifyingScrollPane
 
         if (deltaY > 0)
         {
-            zoomFactor *= 1.1;
+            setZoomFactor(zoomFactor * 1.1);
         }
         else if (deltaY < 0)
         {
-            zoomFactor *= 0.9;
+            setZoomFactor(zoomFactor * 0.9);
         }
 
         final BufferedImage image = partialImage.getImage();

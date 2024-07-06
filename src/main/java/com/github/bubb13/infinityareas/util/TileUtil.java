@@ -1,7 +1,7 @@
 
 package com.github.bubb13.infinityareas.util;
 
-import java.awt.*;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.nio.IntBuffer;
 
