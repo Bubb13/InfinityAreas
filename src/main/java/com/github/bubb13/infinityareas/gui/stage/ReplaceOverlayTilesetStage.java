@@ -9,6 +9,7 @@ import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
 import com.github.bubb13.infinityareas.game.resource.TIS;
 import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.control.DynamicListView;
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -243,7 +244,16 @@ public class ReplaceOverlayTilesetStage extends Stage
             new ResourceDataCache(),
             new SimpleCache<>()
         );
-        tis.loadTISTask().run();
+
+        // TODO
+        try
+        {
+            tis.load();
+        }
+        catch (final Exception e)
+        {
+            ErrorAlert.openAndWait("Failed to load TIS", e);
+        }
 
         short[] temp = new short[tis.getNumTiles()];
         for (short i = 0; i < tis.getNumTiles(); ++i)

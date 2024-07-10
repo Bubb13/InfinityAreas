@@ -6,6 +6,8 @@ import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
+import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
@@ -39,7 +41,7 @@ public class WEDPane extends StackPane
     private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Polygons");
 
     private final Object zoomRenderLock = new Object();
-    private JavaFXUtil.TaskManager.ManagedTask<Void> curZoomRenderTask;
+    private TrackedTask<Void> curZoomRenderTask;
 
     /////////////////////////
     // Public Constructors //
@@ -55,7 +57,7 @@ public class WEDPane extends StackPane
     // Public Methods //
     ////////////////////
 
-    public JavaFXUtil.TaskManager.ManagedTask<Void> setSourceTask(final Game.ResourceSource source)
+    public TrackedTask<Void> setSourceTask(final Game.ResourceSource source)
     {
         return new SetWEDTask(source);
     }
@@ -139,12 +141,12 @@ public class WEDPane extends StackPane
 
             final WED.WEDGraphics graphics = wed.newGraphics();
 
-            curZoomRenderTask = new JavaFXUtil.TaskManager.ManagedTask<>()
+            curZoomRenderTask = new TrackedTask<>()
             {
                 @Override
-                protected Void call() throws Exception
+                protected Void doTask() throws Exception
                 {
-                    graphics.renderOverlays(this, 0, 1, 2, 3, 4);
+                    graphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
                     if (Thread.interrupted()) return null;
                     graphics.renderPolygons(calculatePolygonRenderWidth());
                     if (Thread.interrupted()) return null;
@@ -152,12 +154,12 @@ public class WEDPane extends StackPane
                     if (Thread.interrupted()) return null;
                     synchronized (zoomRenderLock)
                     {
-                        JavaFXUtil.waitForGuiThreadToExecute(() -> zoomPane.setImage(image, false));
+                        JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image, false));
                     }
                     return null;
                 }
             };
-            JavaFXUtil.runTaskNoManager(curZoomRenderTask);
+            curZoomRenderTask.start();
         }
     }
 
@@ -184,9 +186,10 @@ public class WEDPane extends StackPane
             return;
         }
 
-        JavaFXUtil.runTask(wed.saveWEDTask(selectedFile.toPath())
+        wed.saveWEDTask(selectedFile.toPath())
+            .trackWith(new LoadingStageTracker())
             .onFailed((e) -> ErrorAlert.openAndWait("Failed to save WED", e))
-        );
+            .start();
     }
 
     private void onSelectReplaceOverlayTileset()
@@ -196,9 +199,11 @@ public class WEDPane extends StackPane
 
         if (wed.checkAndClearChanged())
         {
-            JavaFXUtil.runTask(wed.renderOverlaysTask(0, 1, 2, 3, 4)
-                .onSucceeded(zoomPane::setImage)
-                .onFailed((e) -> ErrorAlert.openAndWait("Failed to render WED", e)));
+            wed.renderOverlaysTask(0, 1, 2, 3, 4)
+                .trackWith(new LoadingStageTracker())
+                .onSucceededFx(zoomPane::setImage)
+                .onFailed((e) -> ErrorAlert.openAndWait("Failed to render WED", e))
+                .start();
         }
     }
 
@@ -209,15 +214,15 @@ public class WEDPane extends StackPane
 
     private void onRenderPolygonsChanged(final boolean newValue)
     {
-        JavaFXUtil.runTask(new JavaFXUtil.TaskManager.ManagedTask<Void>()
+        new TrackedTask<Void>()
         {
             @Override
-            protected Void call() throws Exception
+            protected Void doTask() throws Exception
             {
                 synchronized (zoomRenderLock)
                 {
                     graphics.clear();
-                    graphics.renderOverlays(this, 0, 1, 2, 3, 4);
+                    graphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
 
                     if (newValue)
                     {
@@ -225,18 +230,20 @@ public class WEDPane extends StackPane
                     }
 
                     final BufferedImage image = graphics.getSnapshot();
-                    JavaFXUtil.waitForGuiThreadToExecute(() -> zoomPane.setImage(image, false));
+                    JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image, false));
                     return null;
                 }
             }
-        });
+        }
+        .trackWith(new LoadingStageTracker())
+        .start();
     }
 
     /////////////////////
     // Private Classes //
     /////////////////////
 
-    private class SetWEDTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
+    private class SetWEDTask extends TrackedTask<Void>
     {
         ////////////////////
         // Private Fields //
@@ -258,17 +265,17 @@ public class WEDPane extends StackPane
         ///////////////////////
 
         @Override
-        protected Void call() throws Exception
+        protected Void doTask() throws Exception
         {
             final WED wed = new WED(source);
-            subtask(wed.loadWEDTask());
+            wed.load(getTracker());
             WEDPane.this.wed = wed;
             graphics = wed.newGraphics();
 
-            graphics.renderOverlays(this, 0, 1, 2, 3, 4);
+            graphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
             final BufferedImage image = graphics.getSnapshot();
 
-            JavaFXUtil.waitForGuiThreadToExecute(() -> zoomPane.setImage(image));
+            JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image));
             return null;
         }
     }

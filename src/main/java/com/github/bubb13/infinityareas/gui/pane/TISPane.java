@@ -6,6 +6,7 @@ import com.github.bubb13.infinityareas.game.resource.PVRZ;
 import com.github.bubb13.infinityareas.game.resource.ResourceDataCache;
 import com.github.bubb13.infinityareas.game.resource.TIS;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -51,7 +52,7 @@ public class TISPane extends StackPane
     // Public Methods //
     ////////////////////
 
-    public JavaFXUtil.TaskManager.ManagedTask<Void> setSourceTask(final Game.ResourceSource source)
+    public TrackedTask<Void> setSourceTask(final Game.ResourceSource source)
     {
         return new SetTISTask(source);
     }
@@ -146,7 +147,7 @@ public class TISPane extends StackPane
             }
         }
 
-        JavaFXUtil.waitForGuiThreadToExecute(() ->
+        JavaFXUtil.waitForFxThreadToExecute(() ->
         {
             previewTileWidthLabel.setText("Preview Tile Width: " + previewNumTilesX);
             slider.setValue(previewNumTilesX);
@@ -158,7 +159,7 @@ public class TISPane extends StackPane
     // Private Classes //
     /////////////////////
 
-    private class SetTISTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
+    private class SetTISTask extends TrackedTask<Void>
     {
         ////////////////////
         // Private Fields //
@@ -176,10 +177,10 @@ public class TISPane extends StackPane
         }
 
         @Override
-        protected Void call() throws Exception
+        protected Void doTask() throws Exception
         {
             final TIS tis = new TIS(source, resourceDataCache, pvrzCache);
-            subtask(tis.loadTISTask());
+            tis.load(getTracker());
             TISPane.this.tis = tis;
 
             final int numTiles = tis.getNumTiles();

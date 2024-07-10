@@ -23,6 +23,6 @@ public class InfinityAreasShutdownHook extends Thread
         {
             GlobalState.cleanTemp();
         }
-        catch (Exception ignored) {}
+        catch (final Exception ignored) {}
     }
 }

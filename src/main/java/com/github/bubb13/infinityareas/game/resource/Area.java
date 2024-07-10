@@ -3,8 +3,10 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.misc.TaskTracker;
+import com.github.bubb13.infinityareas.misc.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.BufferUtil;
-import com.github.bubb13.infinityareas.util.JavaFXUtil;
 
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
@@ -33,9 +35,27 @@ public class Area
     // Public Methods //
     ////////////////////
 
-    public JavaFXUtil.TaskManager.ManagedTask<Void> loadAreaTask()
+    public void load(final TaskTrackerI tracker) throws Exception
     {
-        return new LoadAreaTask();
+        tracker.subtask(this::loadInternal);
+    }
+
+    public void load() throws Exception
+    {
+        loadInternal(TaskTracker.DUMMY);
+    }
+
+    public TrackedTask<Void> loadTask()
+    {
+        return new TrackedTask<>()
+        {
+            @Override
+            protected Void doTask() throws Exception
+            {
+                subtask(Area.this::loadInternal);
+                return null;
+            }
+        };
     }
 
     public int getOverlayCount()
@@ -43,9 +63,16 @@ public class Area
         return wed.getOverlays().size();
     }
 
-    public JavaFXUtil.TaskManager.ManagedTask<BufferedImage> renderOverlaysTask(final int... overlayIndexes)
+    public TrackedTask<BufferedImage> renderOverlaysTask(final int... overlayIndexes)
     {
         return wed.renderOverlaysTask(overlayIndexes);
+    }
+
+    public BufferedImage renderOverlays(final TaskTrackerI tracker, final int... overlayIndexes) throws Exception
+    {
+        final WED.WEDGraphics wedGraphics = wed.newGraphics();
+        wedGraphics.renderOverlays(tracker, overlayIndexes);
+        return wedGraphics.getImage();
     }
 
     /////////////////////
@@ -57,48 +84,68 @@ public class Area
         buffer.position(pos);
     }
 
-    /////////////////////
-    // Private Classes //
-    /////////////////////
+    ///////////////////////
+    // START Loading ARE //
+    ///////////////////////
 
-    private class LoadAreaTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
+    private void loadInternal(final TaskTrackerI tracker) throws Exception
     {
-        ///////////////////////
-        // Protected Methods //
-        ///////////////////////
+        buffer = source.demandFileData();
 
-        @Override
-        protected Void call() throws Exception
+        tracker.updateProgress(0, 100);
+        tracker.updateMessage("Processing area ...");
+
+        position(0x0);
+
+        final String signature = BufferUtil.readUTF8(buffer, 4);
+        if (!signature.equals("AREA"))
         {
-            buffer = source.demandFileData();
-            parse();
-            return null;
+            throw new IllegalStateException("Invalid ARE signature: \"" + signature + "\"");
         }
 
-        /////////////////////
-        // Private Methods //
-        /////////////////////
-
-        private void parse() throws Exception
+        final String version = BufferUtil.readUTF8(buffer, 4);
+        if (version.equals("V1.0"))
         {
-            updateProgress(0, 100);
-            updateMessage("Processing area ...");
-
-            position(8); final String wedResref = BufferUtil.readLUTF8(buffer, 8);
-
-            final Game game = GlobalState.getGame();
-
-            final ResourceIdentifier wedIdentifier = new ResourceIdentifier(wedResref, KeyFile.NumericResourceType.WED);
-            final Game.Resource wedResource = game.getResource(wedIdentifier);
-
-            if (wedResource == null)
-            {
-                throw new IllegalStateException("Unable to find source for WED resource \"" + wedResref + "\"");
-            }
-
-            final WED tempWed = new WED(wedResource.getPrimarySource());
-            subtask(tempWed.loadWEDTask());
-            wed = tempWed;
+            parse_V1_0(tracker);
+        }
+        else if (version.equals("V9.1"))
+        {
+            parse_V9_1(tracker);
+        }
+        else
+        {
+            throw new IllegalStateException("Invalid ARE version: \"" + version + "\"");
         }
     }
+
+    private void parse_V1_0(final TaskTrackerI tracker) throws Exception
+    {
+        loadWED(tracker);
+    }
+
+    private void parse_V9_1(final TaskTrackerI tracker) throws Exception
+    {
+        loadWED(tracker);
+    }
+
+    private void loadWED(final TaskTrackerI tracker) throws Exception
+    {
+        position(0x8);
+        final String wedResref = BufferUtil.readLUTF8(buffer, 8);
+        final ResourceIdentifier wedIdentifier = new ResourceIdentifier(wedResref, KeyFile.NumericResourceType.WED);
+        final Game.Resource wedResource = GlobalState.getGame().getResource(wedIdentifier);
+
+        if (wedResource == null)
+        {
+            throw new IllegalStateException("Unable to find source for WED resource \"" + wedResref + "\"");
+        }
+
+        final WED tempWed = new WED(wedResource.getPrimarySource());
+        tempWed.load(tracker);
+        wed = tempWed;
+    }
+
+    /////////////////////
+    // END Loading ARE //
+    /////////////////////
 }

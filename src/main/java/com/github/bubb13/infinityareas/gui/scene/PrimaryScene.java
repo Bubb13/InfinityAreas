@@ -12,7 +12,8 @@ import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.pane.AreaPane;
 import com.github.bubb13.infinityareas.gui.pane.TISPane;
 import com.github.bubb13.infinityareas.gui.pane.WEDPane;
-import com.github.bubb13.infinityareas.util.JavaFXUtil;
+import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -199,39 +200,35 @@ public final class PrimaryScene extends Stage
 
     private void onSelectResourceSource(final Game.ResourceSource source)
     {
-        final ResourceIdentifier identifier = source.getIdentifier();
         switch (source.getNumericType())
         {
             case ARE ->
             {
                 final Area area = new Area(source);
-                new JavaFXUtil.TaskManager(area.loadAreaTask()
+                area.loadTask()
+                    .trackWith(new LoadingStageTracker())
                     .onSucceeded(() -> renderPrimaryOverlay(area))
                     .onFailed((e) ->
-                    {
-                        ErrorAlert.openAndWait("An exception occurred while loading the area.", e);
-                    })
-                ).run();
+                        ErrorAlert.openAndWait("An exception occurred while loading the area.", e))
+                    .start();
             }
             case TIS ->
             {
-                new JavaFXUtil.TaskManager(tisPane.setSourceTask(source)
-                    .onSucceeded(() -> changeRightNode(tisPane))
+                tisPane.setSourceTask(source)
+                    .trackWith(new LoadingStageTracker())
+                    .onSucceededFx(() -> changeRightNode(tisPane))
                     .onFailed((e) ->
-                    {
-                        ErrorAlert.openAndWait("An exception occurred while loading the tileset.", e);
-                    })
-                ).run();
+                        ErrorAlert.openAndWait("An exception occurred while loading the tileset.", e))
+                    .start();
             }
             case WED ->
             {
-                new JavaFXUtil.TaskManager(wedPane.setSourceTask(source)
-                    .onSucceeded(() -> changeRightNode(wedPane))
+                wedPane.setSourceTask(source)
+                    .trackWith(new LoadingStageTracker())
+                    .onSucceededFx(() -> changeRightNode(wedPane))
                     .onFailed((e) ->
-                    {
-                        ErrorAlert.openAndWait("An exception occurred while loading the WED.", e);
-                    })
-                ).run();
+                        ErrorAlert.openAndWait("An exception occurred while loading the WED.", e))
+                    .start();
             }
         }
     }
@@ -254,14 +251,12 @@ public final class PrimaryScene extends Stage
             return;
         }
 
-        new JavaFXUtil.TaskManager(area.renderOverlaysTask(0, 1, 2, 3, 4)
-            .onSucceeded(this::showRenderedOverlay)
+        area.renderOverlaysTask(0, 1, 2, 3, 4)
+            .trackWith(new LoadingStageTracker())
+            .onSucceededFx(this::showRenderedOverlay)
             .onFailed((e) ->
-            {
-                ErrorAlert.openAndWait("An exception occurred while rendering " +
-                    "the primary area overlay.", e);
-            })
-        ).run();
+                ErrorAlert.openAndWait("An exception occurred while rendering the primary area overlay.", e))
+            .start();
     }
 
     private void showRenderedOverlay(final BufferedImage overlay)
@@ -272,10 +267,10 @@ public final class PrimaryScene extends Stage
 
     private void debugStepThroughAllAreas()
     {
-        new JavaFXUtil.TaskManager(new JavaFXUtil.TaskManager.ManagedTask<>()
+        new TrackedTask<>()
         {
             @Override
-            protected Void call() throws Exception
+            protected Void doTask() throws Exception
             {
                 for (final Game.Resource resource : GlobalState.getGame()
                     .getResourcesOfType(KeyFile.NumericResourceType.ARE))
@@ -283,10 +278,10 @@ public final class PrimaryScene extends Stage
                     try
                     {
                         final Area area = new Area(resource.getPrimarySource());
-                        subtask(area.loadAreaTask());
+                        area.load(getTracker());
 
-                        final BufferedImage overlay = subtask(area.renderOverlaysTask(0, 1, 2, 3, 4));
-                        waitForGuiThreadToExecute(() -> showRenderedOverlay(overlay));
+                        final BufferedImage overlay = area.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
+                        waitForFxThreadToExecute(() -> showRenderedOverlay(overlay));
                     }
                     catch (final Exception e)
                     {
@@ -297,15 +292,15 @@ public final class PrimaryScene extends Stage
                 }
                 return null;
             }
-        }).run();
+        }.start();
     }
 
     private void debugSaveOverlays()
     {
-        new JavaFXUtil.TaskManager(new JavaFXUtil.TaskManager.ManagedTask<>()
+        new TrackedTask<>()
         {
             @Override
-            protected Void call() throws Exception
+            protected Void doTask() throws Exception
             {
                 final Game game = GlobalState.getGame();
                 final Path debugPath = game.getRoot().resolve("debug");
@@ -315,11 +310,11 @@ public final class PrimaryScene extends Stage
                     new ResourceIdentifier("AR0011", KeyFile.NumericResourceType.ARE));
 
                 final Area area = new Area(resource.getPrimarySource());
-                subtask(area.loadAreaTask());
+                area.load(getTracker());
 
                 for (int i = 0; i < area.getOverlayCount(); ++i)
                 {
-                    final BufferedImage overlay = subtask(area.renderOverlaysTask(i));
+                    final BufferedImage overlay = area.renderOverlays(getTracker(), i);
 
                     ImageIO.write(overlay, "png", debugPath.resolve(
                         String.format("OVERLAY_%d.PNG", i)).toFile());
@@ -327,7 +322,7 @@ public final class PrimaryScene extends Stage
 
                 return null;
             }
-        }).run();
+        }.start();
     }
 
     /////////////////////

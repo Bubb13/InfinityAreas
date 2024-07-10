@@ -5,18 +5,25 @@ import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.scene.PrimaryScene;
 import com.github.bubb13.infinityareas.gui.stage.GamePickerStage;
+import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
+import com.github.bubb13.infinityareas.util.SettingsUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class MainJavaFX extends Application
 {
+    // Buffers used to save the x and y values from before a maximize operation
+    private static final int[] bufferedX = new int[2];
+    private static final int[] bufferedY = new int[2];
+
     //////////
     // Main //
     //////////
@@ -57,6 +64,45 @@ public class MainJavaFX extends Application
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    private static void saveMainWindowLocation(final int x, final int y, final int w, final int h)
+    {
+        final JsonObject settingsRoot = GlobalState.getSettingsFile().getRoot();
+        settingsRoot.addProperty("mainWindowX", x);
+        settingsRoot.addProperty("mainWindowY", y);
+        settingsRoot.addProperty("mainWindowWidth", w);
+        settingsRoot.addProperty("mainWindowHeight", h);
+    }
+
+    private static void saveMainWindowLocation()
+    {
+        final Stage primaryStage = GlobalState.getPrimaryStage();
+        saveMainWindowLocation((int)primaryStage.getX(), (int)primaryStage.getY(),
+            (int)primaryStage.getWidth(), (int)primaryStage.getHeight());
+    }
+
+    private static void onPrimaryStageClosing(final WindowEvent event)
+    {
+        final Stage primaryStage = (Stage)event.getSource();
+        if (!primaryStage.isMaximized())
+        {
+            saveMainWindowLocation();
+        }
+
+        Platform.exit();
+    }
+
+    private static void onPrimaryStageMaximizedChanged(final boolean oldValue, final boolean newValue)
+    {
+        if (!oldValue && newValue)
+        {
+            final Stage primaryStage = GlobalState.getPrimaryStage();
+            saveMainWindowLocation(bufferedX[1], bufferedY[1],
+                (int)primaryStage.getWidth(), (int)primaryStage.getHeight());
+        }
+        final JsonObject settingsRoot = GlobalState.getSettingsFile().getRoot();
+        settingsRoot.addProperty("mainWindowMaximized", newValue);
+    }
 
     private static KeyFile resumeOrAskForGame()
     {
@@ -124,16 +170,17 @@ public class MainJavaFX extends Application
             return;
         }
 
-        new JavaFXUtil.TaskManager(GlobalState.loadGameTask(keyFile)
-            .onSucceeded(MainJavaFX::showPrimaryStage)
-            .onFailed((final Throwable exception) ->
+        GlobalState.loadGameTask(keyFile)
+            .trackWith(new LoadingStageTracker())
+            .onSucceededFx(MainJavaFX::showPrimaryStage)
+            .onFailedFx((final Throwable exception) ->
             {
                 ErrorAlert.openAndWait("An exception occurred while loading game " +
                     "resources. You will be asked to select a new game install.", exception);
 
                 attemptLoadGame(onInvalidAskForGame(GlobalState.getSettingsFile().getRoot()));
             })
-        ).run();
+            .start();
     }
 
     private static KeyFile onInvalidAskForGame(final JsonObject settingsRoot)
@@ -157,11 +204,44 @@ public class MainJavaFX extends Application
         settingsRoot.addProperty("lastGameDirectory", GlobalState.getGame().getRoot().toString());
 
         final Stage primaryStage = GlobalState.getPrimaryStage();
-        primaryStage.setOnCloseRequest((ignored) -> Platform.exit());
+        primaryStage.setOnCloseRequest(MainJavaFX::onPrimaryStageClosing);
+
+        primaryStage.maximizedProperty().addListener((observable, oldValue, newValue)
+            -> onPrimaryStageMaximizedChanged(oldValue, newValue));
+
+        primaryStage.xProperty().addListener((observable, oldValue, newValue) ->
+        {
+            bufferedX[1] = bufferedX[0];
+            bufferedX[0] = newValue.intValue();
+        });
+
+        primaryStage.yProperty().addListener((observable, oldValue, newValue) ->
+        {
+            bufferedY[1] = bufferedY[0];
+            bufferedY[0] = newValue.intValue();
+        });
 
         final PrimaryScene primaryScene = new PrimaryScene(primaryStage);
         primaryScene.initMainScene();
 
+        final JavaFXUtil.Rectangle screenRect = JavaFXUtil.getScreenRect();
+
+        SettingsUtil.attemptApplyInt(settingsRoot, "mainWindowX",
+            (x) -> primaryStage.setX(Math.max(screenRect.x(), x)));
+
+        SettingsUtil.attemptApplyInt(settingsRoot, "mainWindowY",
+            (y) -> primaryStage.setY(Math.max(screenRect.y(), y)));
+
+        SettingsUtil.attemptApplyInt(settingsRoot, "mainWindowWidth",
+            (width) -> primaryStage.setWidth(Math.min(width, screenRect.width() - primaryStage.getX())));
+
+        SettingsUtil.attemptApplyInt(settingsRoot, "mainWindowHeight",
+            (height) -> primaryStage.setHeight(Math.min(height, screenRect.height() - primaryStage.getY())));
+
+        SettingsUtil.attemptApplyBoolean(settingsRoot, "mainWindowMaximized", primaryStage::setMaximized);
+
         primaryStage.show();
+        bufferedX[0] = (int)primaryStage.getX(); bufferedX[1] = bufferedX[0];
+        bufferedY[0] = (int)primaryStage.getY(); bufferedY[1] = bufferedY[0];
     }
 }

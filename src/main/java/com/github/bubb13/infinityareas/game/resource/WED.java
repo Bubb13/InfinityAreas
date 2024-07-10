@@ -7,8 +7,10 @@ import com.github.bubb13.infinityareas.misc.AppendOnlyOrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
+import com.github.bubb13.infinityareas.misc.TaskTracker;
+import com.github.bubb13.infinityareas.misc.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.BufferUtil;
-import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import com.github.bubb13.infinityareas.util.TileUtil;
 
@@ -74,17 +76,12 @@ public class WED
         return source;
     }
 
-    public JavaFXUtil.TaskManager.ManagedTask<Void> loadWEDTask()
-    {
-        return new LoadWEDTask();
-    }
-
-    public JavaFXUtil.TaskManager.ManagedTask<BufferedImage> renderOverlaysTask(final int... overlayIndexes)
+    public TrackedTask<BufferedImage> renderOverlaysTask(final int... overlayIndexes)
     {
         return new RenderOverlaysTask(overlayIndexes);
     }
 
-    public JavaFXUtil.TaskManager.ManagedTask<Void> saveWEDTask(final Path path)
+    public TrackedTask<Void> saveWEDTask(final Path path)
     {
         return new SaveWEDTask(path);
     }
@@ -104,6 +101,16 @@ public class WED
     public WEDGraphics newGraphics()
     {
         return new WEDGraphics();
+    }
+
+    public void load(final TaskTrackerI tracker) throws Exception
+    {
+        tracker.subtask(this::loadInternal);
+    }
+
+    public void load() throws Exception
+    {
+        loadInternal(TaskTracker.DUMMY);
     }
 
     /////////////////////
@@ -550,477 +557,435 @@ public class WED
         }
     }
 
-    /////////////////////
-    // Private Classes //
-    /////////////////////
+    ///////////////////////
+    // START Loading WED //
+    ///////////////////////
 
-    private record WallGroupDimensions(short widthInTiles, short heightInTiles) {}
-
-    private class LoadWEDTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
+    private void loadInternal(final TaskTrackerI tracker) throws Exception
     {
-        ///////////////////////
-        // Protected Methods //
-        ///////////////////////
+        buffer = source.demandFileData();
 
-        @Override
-        protected Void call() throws Exception
+        tracker.updateProgress(0, 100);
+        tracker.updateMessage("Processing WED ...");
+
+        position(0x0);
+
+        final String signature = BufferUtil.readUTF8(buffer, 4);
+        if (!signature.equals("WED "))
         {
-            buffer = source.demandFileData();
-            parse();
-            return null;
+            throw new IllegalStateException("Invalid WED signature: \"" + signature + "\"");
         }
 
-        /////////////////////
-        // Private Methods //
-        /////////////////////
-
-        private void parse() throws Exception
+        final String version = BufferUtil.readUTF8(buffer, 4);
+        if (!version.equals("V1.3"))
         {
-            updateProgress(0, 100);
-            updateMessage("Processing WED ...");
-
-            position(0x0);
-
-            final String signature = BufferUtil.readUTF8(buffer, 4);
-            if (!signature.equals("WED "))
-            {
-                throw new IllegalStateException("Invalid WED signature: \"" + signature + "\"");
-            }
-
-            final String version = BufferUtil.readUTF8(buffer, 4);
-            if (!version.equals("V1.3"))
-            {
-                throw new IllegalStateException("Invalid WED version: \"" + version + "\"");
-            }
-
-            final int numOverlays = buffer.getInt();
-            final int numTiledObjects = buffer.getInt();
-            final int overlaysOffset = buffer.getInt();
-            final int secondaryHeaderOffset = buffer.getInt();
-            final int tiledObjectsOffset = buffer.getInt();
-            final int tiledObjectsTilemapIndicesOffset = buffer.getInt();
-
-            parseOverlays(overlaysOffset, numOverlays);
-            final SecondaryHeaderInfo secondaryHeaderInfo = parseSecondaryHeader(secondaryHeaderOffset);
-            parseTiledObjects(tiledObjectsOffset, numTiledObjects,
-                tiledObjectsTilemapIndicesOffset, secondaryHeaderInfo);
+            throw new IllegalStateException("Invalid WED version: \"" + version + "\"");
         }
 
-        private void parseOverlays(final int offset, final int count) throws Exception
+        final int numOverlays = buffer.getInt();
+        final int numTiledObjects = buffer.getInt();
+        final int overlaysOffset = buffer.getInt();
+        final int secondaryHeaderOffset = buffer.getInt();
+        final int tiledObjectsOffset = buffer.getInt();
+        final int tiledObjectsTilemapIndicesOffset = buffer.getInt();
+
+        parseOverlays(overlaysOffset, numOverlays);
+        final SecondaryHeaderInfo secondaryHeaderInfo = parseSecondaryHeader(secondaryHeaderOffset);
+        parseTiledObjects(tiledObjectsOffset, numTiledObjects,
+            tiledObjectsTilemapIndicesOffset, secondaryHeaderInfo);
+    }
+
+    private void parseOverlays(final int offset, final int count) throws Exception
+    {
+        int curBase = offset;
+        for (int i = 0; i < count; ++i)
         {
-            int curBase = offset;
-            for (int i = 0; i < count; ++i)
-            {
-                position(curBase);        final short widthInTiles = buffer.getShort();
-                position(curBase + 0x2);  final short heightInTiles = buffer.getShort();
-                position(curBase + 0x4);  final String tilesetResref = BufferUtil.readLUTF8(buffer, 8);
-                position(curBase + 0xC);  final short uniqueTileCount = buffer.getShort();
-                position(curBase + 0xE);  final short movementType = buffer.getShort();
-                position(curBase + 0x10); final int tilemapEntriesOffset = buffer.getInt();
-                position(curBase + 0x14); final int tileIndexLookupTableOffset = buffer.getInt();
+            position(curBase);        final short widthInTiles = buffer.getShort();
+            position(curBase + 0x2);  final short heightInTiles = buffer.getShort();
+            position(curBase + 0x4);  final String tilesetResref = BufferUtil.readLUTF8(buffer, 8);
+            position(curBase + 0xC);  final short uniqueTileCount = buffer.getShort();
+            position(curBase + 0xE);  final short movementType = buffer.getShort();
+            position(curBase + 0x10); final int tilemapEntriesOffset = buffer.getInt();
+            position(curBase + 0x14); final int tileIndexLookupTableOffset = buffer.getInt();
 
-                final ArrayList<TilemapEntry> tilemapEntries = parseTilemapEntries(
-                    tilemapEntriesOffset, widthInTiles * heightInTiles, tileIndexLookupTableOffset);
+            final ArrayList<TilemapEntry> tilemapEntries = parseTilemapEntries(
+                tilemapEntriesOffset, widthInTiles * heightInTiles, tileIndexLookupTableOffset);
 
-                overlays.add(new Overlay(
-                    widthInTiles, heightInTiles, tilesetResref,
-                    uniqueTileCount, movementType, tilemapEntries
-                ));
+            overlays.add(new Overlay(
+                widthInTiles, heightInTiles, tilesetResref,
+                uniqueTileCount, movementType, tilemapEntries
+            ));
 
-                curBase += WED_OVERLAY_ENTRY_SIZE;
-            }
+            curBase += WED_OVERLAY_ENTRY_SIZE;
         }
+    }
 
-        /**
-         * Parses the per-overlay tilemap table.
-         */
-        private ArrayList<TilemapEntry> parseTilemapEntries(
-            final int offset, final int count, final int tisTileIndexLookupTableOffset)
+    /**
+     * Parses the per-overlay tilemap table.
+     */
+    private ArrayList<TilemapEntry> parseTilemapEntries(
+        final int offset, final int count, final int tisTileIndexLookupTableOffset)
+    {
+        final ArrayList<TilemapEntry> tilemapEntries = new ArrayList<>();
+
+        position(offset);
+        for (int i = 0; i < count; ++i)
         {
-            final ArrayList<TilemapEntry> tilemapEntries = new ArrayList<>();
+            final short tisTileIndexLookupTableStartIndex = buffer.getShort();
+            final short numTisTileIndexLookupTableEntries = buffer.getShort();
+            final short secondaryTisTileIndex = buffer.getShort();
+            final byte drawFlags = buffer.get();
+            final byte animationSpeed = buffer.get();
+            final short extraFlags = buffer.getShort();
 
-            position(offset);
-            for (int i = 0; i < count; ++i)
-            {
-                final short tisTileIndexLookupTableStartIndex = buffer.getShort();
-                final short numTisTileIndexLookupTableEntries = buffer.getShort();
-                final short secondaryTisTileIndex = buffer.getShort();
-                final byte drawFlags = buffer.get();
-                final byte animationSpeed = buffer.get();
-                final short extraFlags = buffer.getShort();
+            final short[] tisTileIndexArray = new short[numTisTileIndexLookupTableEntries];
 
-                final short[] tisTileIndexArray = new short[numTisTileIndexLookupTableEntries];
+            ////////////////////////////
+            // Read tisTileIndexArray //
+            ////////////////////////////
 
-                ////////////////////////////
-                // Read tisTileIndexArray //
-                ////////////////////////////
-
-                mark();
-                position(tisTileIndexLookupTableOffset + 2 * tisTileIndexLookupTableStartIndex);
-                for (int j = 0; j < numTisTileIndexLookupTableEntries; ++j)
-                {
-                    tisTileIndexArray[j] = buffer.getShort();
-                }
-                reset();
-
-                /////////////////////////
-                // Create TilemapEntry //
-                /////////////////////////
-
-                tilemapEntries.add(new TilemapEntry(
-                    secondaryTisTileIndex, drawFlags, animationSpeed, extraFlags, tisTileIndexArray));
-            }
-
-            return tilemapEntries;
-        }
-
-        private SecondaryHeaderInfo parseSecondaryHeader(final int offset)
-        {
-            position(offset);
-
-            // Important:
-            //   The engine doesn't care what this is set to, and outright ignores it.
-            //   Certain WED files even store (and index) wall polygons past this number.
-            //   Don't assume there are *only* this number of polygons!
-            final int numPolygons = buffer.getInt();
-            final int polygonsOffset = buffer.getInt();
-            final int verticesOffset = buffer.getInt();
-            final int wallGroupsOffset = buffer.getInt();
-            final int polygonIndicesLookupTableOffset = buffer.getInt();
-
-            // Wall group polygons used in CInfinity::FXRenderClippingPolys()
-            final WallGroupsInfo wallGroupsInfo = parseWallGroups(
-                wallGroupsOffset, polygonIndicesLookupTableOffset, polygonsOffset, verticesOffset
-            );
-            return new SecondaryHeaderInfo(polygonsOffset, wallGroupsInfo.maxReferencedPolygonIndex(), verticesOffset);
-        }
-
-        private Polygon readPolygon(final int verticesOffset)
-        {
-            final int vertexStartIndex = buffer.getInt();
-            final int numVertices = buffer.getInt();
-            final byte flags = buffer.get();
-            final byte height = buffer.get();
-            final short boundingBoxLeft = buffer.getShort();
-            final short boundingBoxRight = buffer.getShort();
-            final short boundingBoxTop = buffer.getShort();
-            final short boundingBoxBottom = buffer.getShort();
-
-            final ArrayList<Vertex> vertices = new ArrayList<>();
-
-            // Read vertices
             mark();
-            position(verticesOffset + vertexStartIndex * 4);
-            for (int j = 0; j < numVertices; ++j)
+            position(tisTileIndexLookupTableOffset + 2 * tisTileIndexLookupTableStartIndex);
+            for (int j = 0; j < numTisTileIndexLookupTableEntries; ++j)
             {
-                final short vertexX = buffer.getShort();
-                final short vertexY = buffer.getShort();
-                vertices.add(new Vertex(vertexX, vertexY));
+                tisTileIndexArray[j] = buffer.getShort();
             }
             reset();
 
-            return new Polygon(
-                flags, height,
-                boundingBoxLeft, boundingBoxRight,
-                boundingBoxTop, boundingBoxBottom,
-                vertices
-            );
+            /////////////////////////
+            // Create TilemapEntry //
+            /////////////////////////
+
+            tilemapEntries.add(new TilemapEntry(
+                secondaryTisTileIndex, drawFlags, animationSpeed, extraFlags, tisTileIndexArray));
         }
 
-        private WallGroupsInfo parseWallGroups(
-            final int offset, final int polygonIndicesLookupTableOffset,
-            final int polygonsOffset, final int verticesOffset)
+        return tilemapEntries;
+    }
+
+    private SecondaryHeaderInfo parseSecondaryHeader(final int offset)
+    {
+        position(offset);
+
+        // Important:
+        //   The engine doesn't care what this is set to, and outright ignores it.
+        //   Certain WED files even store (and index) wall polygons past this number.
+        //   Don't assume there are *only* this number of polygons!
+        final int numPolygons = buffer.getInt();
+        final int polygonsOffset = buffer.getInt();
+        final int verticesOffset = buffer.getInt();
+        final int wallGroupsOffset = buffer.getInt();
+        final int polygonIndicesLookupTableOffset = buffer.getInt();
+
+        // Wall group polygons used in CInfinity::FXRenderClippingPolys()
+        final WallGroupsInfo wallGroupsInfo = parseWallGroups(
+            wallGroupsOffset, polygonIndicesLookupTableOffset, polygonsOffset, verticesOffset
+        );
+        return new SecondaryHeaderInfo(polygonsOffset, wallGroupsInfo.maxReferencedPolygonIndex(), verticesOffset);
+    }
+
+    private Polygon readPolygon(final int verticesOffset)
+    {
+        final int vertexStartIndex = buffer.getInt();
+        final int numVertices = buffer.getInt();
+        final byte flags = buffer.get();
+        final byte height = buffer.get();
+        final short boundingBoxLeft = buffer.getShort();
+        final short boundingBoxRight = buffer.getShort();
+        final short boundingBoxTop = buffer.getShort();
+        final short boundingBoxBottom = buffer.getShort();
+
+        final ArrayList<Vertex> vertices = new ArrayList<>();
+
+        // Read vertices
+        mark();
+        position(verticesOffset + vertexStartIndex * 4);
+        for (int j = 0; j < numVertices; ++j)
         {
-            ////////////////////////////////////
-            // Find maxReferencedPolygonIndex //
-            ////////////////////////////////////
+            final short vertexX = buffer.getShort();
+            final short vertexY = buffer.getShort();
+            vertices.add(new Vertex(vertexX, vertexY));
+        }
+        reset();
 
-            final int numWallGroups = calculateNumberOfWallGroups();
-            short maxReferencedPolygonIndex = Short.MIN_VALUE;
+        return new Polygon(
+            flags, height,
+            boundingBoxLeft, boundingBoxRight,
+            boundingBoxTop, boundingBoxBottom,
+            vertices
+        );
+    }
 
-            position(offset);
-            for (int i = 0; i < numWallGroups; ++i)
+    private WallGroupsInfo parseWallGroups(
+        final int offset, final int polygonIndicesLookupTableOffset,
+        final int polygonsOffset, final int verticesOffset)
+    {
+        ////////////////////////////////////
+        // Find maxReferencedPolygonIndex //
+        ////////////////////////////////////
+
+        final int numWallGroups = calculateNumberOfWallGroups();
+        short maxReferencedPolygonIndex = Short.MIN_VALUE;
+
+        position(offset);
+        for (int i = 0; i < numWallGroups; ++i)
+        {
+            final short startPolygonsIndexIndex = buffer.getShort();
+            final short polygonIndexCount = buffer.getShort();
+
+            // Read polygons indices
+            mark();
+            position(polygonIndicesLookupTableOffset + startPolygonsIndexIndex * 0x2);
+            for (int j = 0; j < polygonIndexCount; ++j)
             {
-                final short startPolygonsIndexIndex = buffer.getShort();
-                final short polygonIndexCount = buffer.getShort();
-
-                // Read polygons indices
-                mark();
-                position(polygonIndicesLookupTableOffset + startPolygonsIndexIndex * 0x2);
-                for (int j = 0; j < polygonIndexCount; ++j)
+                final short polygonIndex = buffer.getShort();
+                if (polygonIndex > maxReferencedPolygonIndex)
                 {
-                    final short polygonIndex = buffer.getShort();
-                    if (polygonIndex > maxReferencedPolygonIndex)
-                    {
-                        maxReferencedPolygonIndex = polygonIndex;
-                    }
+                    maxReferencedPolygonIndex = polygonIndex;
                 }
-                reset();
             }
-
-            ///////////////////
-            // Read Polygons //
-            ///////////////////
-
-            position(polygonsOffset);
-            for (int i = 0; i <= maxReferencedPolygonIndex; ++i)
-            {
-                polygons.add(readPolygon(verticesOffset));
-            }
-
-            return new WallGroupsInfo(maxReferencedPolygonIndex);
+            reset();
         }
 
-        private void parseTiledObjects(
-            final int offset, final int numTiledObjects, final int tiledObjectsTilemapIndicesOffset,
-            final SecondaryHeaderInfo secondaryHeaderInfo)
+        ///////////////////
+        // Read Polygons //
+        ///////////////////
+
+        position(polygonsOffset);
+        for (int i = 0; i <= maxReferencedPolygonIndex; ++i)
         {
-            position(offset);
-
-            for (int i = 0; i < numTiledObjects; ++i)
-            {
-                final String resref = BufferUtil.readLUTF8(buffer, 8);
-                final short openOrClosed = buffer.getShort();
-                final short tiledObjectsTilemapStartIndex = buffer.getShort();
-                final short numTiledObjectsTilemaps = buffer.getShort();
-                final short numOpenPolygons = buffer.getShort();
-                final short numClosedPolygons = buffer.getShort();
-                final int openPolygonsOffset = buffer.getInt();
-                final int closedPolygonsOffset = buffer.getInt();
-
-                //////////////////////////////////////
-                // Read tiledObjectsTilemapIndices //
-                //////////////////////////////////////
-
-                final ArrayList<Short> tiledObjectsTilemapIndices = new ArrayList<>();
-
-                mark();
-                position(tiledObjectsTilemapIndicesOffset + tiledObjectsTilemapStartIndex * 2);
-                for (int j = 0; j < numTiledObjectsTilemaps; ++j)
-                {
-                    final short tiledObjectsTilemapIndex = buffer.getShort();
-                    tiledObjectsTilemapIndices.add(tiledObjectsTilemapIndex);
-                }
-                reset();
-
-                ///////////////////////
-                // Read openPolygons //
-                ///////////////////////
-
-                final ArrayList<Polygon> openPolygons = handleTiledObjectReferencedPolygons(
-                    secondaryHeaderInfo, i, "open", openPolygonsOffset, numOpenPolygons);
-
-                /////////////////////////
-                // Read closedPolygons //
-                /////////////////////////
-
-                final ArrayList<Polygon> closedPolygons = handleTiledObjectReferencedPolygons(
-                    secondaryHeaderInfo, i, "closed", closedPolygonsOffset, numClosedPolygons);
-
-                ////////////////////////
-                // Create TiledObject //
-                ////////////////////////
-
-                final TiledObject tiledObject = new TiledObject(resref, openOrClosed,
-                    tiledObjectsTilemapIndices, openPolygons, closedPolygons);
-
-                for (final Polygon openPolygon : openPolygons)
-                {
-                    tiledObjectByReferencedPolygon.put(openPolygon, tiledObject);
-                }
-
-                for (final Polygon closedPolygon : closedPolygons)
-                {
-                    tiledObjectByReferencedPolygon.put(closedPolygon, tiledObject);
-                }
-
-                tiledObjects.add(tiledObject);
-            }
+            polygons.add(readPolygon(verticesOffset));
         }
 
-        private ArrayList<Polygon> handleTiledObjectReferencedPolygons(
-            final SecondaryHeaderInfo secondaryHeaderInfo, final int tiledObjectI, final String polygonTypeName,
-            final int polygonsOffset, final short numPolygons)
+        return new WallGroupsInfo(maxReferencedPolygonIndex);
+    }
+
+    private void parseTiledObjects(
+        final int offset, final int numTiledObjects, final int tiledObjectsTilemapIndicesOffset,
+        final SecondaryHeaderInfo secondaryHeaderInfo)
+    {
+        position(offset);
+
+        for (int i = 0; i < numTiledObjects; ++i)
         {
-            validateTiledObjectPolygonsOffset(secondaryHeaderInfo, tiledObjectI,
-                polygonTypeName, polygonsOffset, numPolygons);
+            final String resref = BufferUtil.readLUTF8(buffer, 8);
+            final short openOrClosed = buffer.getShort();
+            final short tiledObjectsTilemapStartIndex = buffer.getShort();
+            final short numTiledObjectsTilemaps = buffer.getShort();
+            final short numOpenPolygons = buffer.getShort();
+            final short numClosedPolygons = buffer.getShort();
+            final int openPolygonsOffset = buffer.getInt();
+            final int closedPolygonsOffset = buffer.getInt();
 
-            final int polygonsStartIndex = (polygonsOffset - secondaryHeaderInfo.polygonsOffset()) / 0x12;
-            final int polygonsStartIndexBounded = Math.max(0, polygonsStartIndex);
-            final int polygonsEndIndexBounded = Math.min(
-                polygonsStartIndex + numPolygons, secondaryHeaderInfo.maxReferencedPolygonIndex());
+            //////////////////////////////////////
+            // Read tiledObjectsTilemapIndices //
+            //////////////////////////////////////
 
-            final ArrayList<Polygon> referencedPolygons = new ArrayList<>();
+            final ArrayList<Short> tiledObjectsTilemapIndices = new ArrayList<>();
 
-            for (int i = polygonsStartIndexBounded; i < polygonsEndIndexBounded; ++i)
+            mark();
+            position(tiledObjectsTilemapIndicesOffset + tiledObjectsTilemapStartIndex * 2);
+            for (int j = 0; j < numTiledObjectsTilemaps; ++j)
             {
-                final Polygon referencedPolygon = polygons.get(i);
-                referencedPolygons.add(referencedPolygon);
+                final short tiledObjectsTilemapIndex = buffer.getShort();
+                tiledObjectsTilemapIndices.add(tiledObjectsTilemapIndex);
+            }
+            reset();
+
+            ///////////////////////
+            // Read openPolygons //
+            ///////////////////////
+
+            final ArrayList<Polygon> openPolygons = handleTiledObjectReferencedPolygons(
+                secondaryHeaderInfo, i, "open", openPolygonsOffset, numOpenPolygons);
+
+            /////////////////////////
+            // Read closedPolygons //
+            /////////////////////////
+
+            final ArrayList<Polygon> closedPolygons = handleTiledObjectReferencedPolygons(
+                secondaryHeaderInfo, i, "closed", closedPolygonsOffset, numClosedPolygons);
+
+            ////////////////////////
+            // Create TiledObject //
+            ////////////////////////
+
+            final TiledObject tiledObject = new TiledObject(resref, openOrClosed,
+                tiledObjectsTilemapIndices, openPolygons, closedPolygons);
+
+            for (final Polygon openPolygon : openPolygons)
+            {
+                tiledObjectByReferencedPolygon.put(openPolygon, tiledObject);
             }
 
-            return referencedPolygons;
+            for (final Polygon closedPolygon : closedPolygons)
+            {
+                tiledObjectByReferencedPolygon.put(closedPolygon, tiledObject);
+            }
+
+            tiledObjects.add(tiledObject);
+        }
+    }
+
+    private ArrayList<Polygon> handleTiledObjectReferencedPolygons(
+        final SecondaryHeaderInfo secondaryHeaderInfo, final int tiledObjectI, final String polygonTypeName,
+        final int polygonsOffset, final short numPolygons)
+    {
+        validateTiledObjectPolygonsOffset(secondaryHeaderInfo, tiledObjectI,
+            polygonTypeName, polygonsOffset, numPolygons);
+
+        final int polygonsStartIndex = (polygonsOffset - secondaryHeaderInfo.polygonsOffset()) / 0x12;
+        final int polygonsStartIndexBounded = Math.max(0, polygonsStartIndex);
+        final int polygonsEndIndexBounded = Math.min(
+            polygonsStartIndex + numPolygons, secondaryHeaderInfo.maxReferencedPolygonIndex());
+
+        final ArrayList<Polygon> referencedPolygons = new ArrayList<>();
+
+        for (int i = polygonsStartIndexBounded; i < polygonsEndIndexBounded; ++i)
+        {
+            final Polygon referencedPolygon = polygons.get(i);
+            referencedPolygons.add(referencedPolygon);
         }
 
-        private void validateTiledObjectPolygonsOffset(
-            final SecondaryHeaderInfo secondaryHeaderInfo, final int tiledObjectIndex, final String openCloseLabel,
-            final int startPolygonsOffset, final short numPolygons)
+        return referencedPolygons;
+    }
+
+    private void validateTiledObjectPolygonsOffset(
+        final SecondaryHeaderInfo secondaryHeaderInfo, final int tiledObjectIndex, final String openCloseLabel,
+        final int startPolygonsOffset, final short numPolygons)
+    {
+        if (numPolygons == 0)
         {
-            if (numPolygons == 0)
+            return;
+        }
+
+        final int startWallPolygonsOffset = secondaryHeaderInfo.polygonsOffset();
+        final int afterWallPolygonsOffset = startWallPolygonsOffset
+            + (secondaryHeaderInfo.maxReferencedPolygonIndex() + 1) * 0x12;
+
+        Integer specialNegativeInfringingPolygonIndex = null;
+        Integer firstInfringingPolygonIndex = null;
+        int lastInfringingPolygonIndex;
+
+        if (startPolygonsOffset < startWallPolygonsOffset || startPolygonsOffset >= afterWallPolygonsOffset)
+        {
+            firstInfringingPolygonIndex = (startPolygonsOffset - startWallPolygonsOffset) / 0x12;
+        }
+
+        final int afterPolygonsOffset = startPolygonsOffset + numPolygons * 0x12;
+
+        if (afterPolygonsOffset > afterWallPolygonsOffset)
+        {
+            if (firstInfringingPolygonIndex != null && firstInfringingPolygonIndex < 0)
             {
+                // Two invalid groups, one before the table, and one after
+                specialNegativeInfringingPolygonIndex = firstInfringingPolygonIndex;
+            }
+
+            if (firstInfringingPolygonIndex == null || firstInfringingPolygonIndex < 0)
+            {
+                // One invalid group, starts after the table
+                firstInfringingPolygonIndex = (afterWallPolygonsOffset - startWallPolygonsOffset) / 0x12;
+            }
+
+            lastInfringingPolygonIndex = (afterPolygonsOffset - startWallPolygonsOffset) / 0x12 - 1;
+        }
+        else
+        {
+            if (firstInfringingPolygonIndex == null)
+            {
+                // All polygons are valid
                 return;
             }
+            // One invalid group, starts before the table
+            lastInfringingPolygonIndex = -1;
+        }
 
-            final int startWallPolygonsOffset = secondaryHeaderInfo.polygonsOffset();
-            final int afterWallPolygonsOffset = startWallPolygonsOffset
-                + (secondaryHeaderInfo.maxReferencedPolygonIndex() + 1) * 0x12;
+        int numInfringing = lastInfringingPolygonIndex - firstInfringingPolygonIndex + 1;
+        if (specialNegativeInfringingPolygonIndex != null)
+        {
+            numInfringing += -1 - specialNegativeInfringingPolygonIndex + 1;
+        }
 
-            Integer specialNegativeInfringingPolygonIndex = null;
-            Integer firstInfringingPolygonIndex = null;
-            int lastInfringingPolygonIndex;
-
-            if (startPolygonsOffset < startWallPolygonsOffset || startPolygonsOffset >= afterWallPolygonsOffset)
-            {
-                firstInfringingPolygonIndex = (startPolygonsOffset - startWallPolygonsOffset) / 0x12;
-            }
-
-            final int afterPolygonsOffset = startPolygonsOffset + numPolygons * 0x12;
-
-            if (afterPolygonsOffset > afterWallPolygonsOffset)
-            {
-                if (firstInfringingPolygonIndex != null && firstInfringingPolygonIndex < 0)
-                {
-                    // Two invalid groups, one before the table, and one after
-                    specialNegativeInfringingPolygonIndex = firstInfringingPolygonIndex;
-                }
-
-                if (firstInfringingPolygonIndex == null || firstInfringingPolygonIndex < 0)
-                {
-                    // One invalid group, starts after the table
-                    firstInfringingPolygonIndex = (afterWallPolygonsOffset - startWallPolygonsOffset) / 0x12;
-                }
-
-                lastInfringingPolygonIndex = (afterPolygonsOffset - startWallPolygonsOffset) / 0x12 - 1;
-            }
-            else
-            {
-                if (firstInfringingPolygonIndex == null)
-                {
-                    // All polygons are valid
-                    return;
-                }
-                // One invalid group, starts before the table
-                lastInfringingPolygonIndex = -1;
-            }
-
-            int numInfringing = lastInfringingPolygonIndex - firstInfringingPolygonIndex + 1;
+        if (numInfringing < numPolygons)
+        {
+            System.out.printf(
+                "[%s.WED] Tiled object %d references %s polygons which are not part of the wall polygons table, " +
+                "but has at least one valid polygon\n",
+                source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel);
+        }
+        else
+        {
             if (specialNegativeInfringingPolygonIndex != null)
             {
-                numInfringing += -1 - specialNegativeInfringingPolygonIndex + 1;
-            }
-
-            if (numInfringing < numPolygons)
-            {
-                System.out.printf(
-                    "[%s.WED] Tiled object %d references %s polygons which are not part of the wall polygons table, " +
-                    "but has at least one valid polygon\n",
-                    source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel);
-            }
-            else
-            {
-                if (specialNegativeInfringingPolygonIndex != null)
-                {
-                    System.out.printf(
-                        "[%s.WED] Tiled object %d references %s polygons [%d-%d], " +
-                        "which are not part of the wall polygons table\n",
-                        source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel,
-                        firstInfringingPolygonIndex, -1);
-                }
-
                 System.out.printf(
                     "[%s.WED] Tiled object %d references %s polygons [%d-%d], " +
                     "which are not part of the wall polygons table\n",
                     source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel,
-                    firstInfringingPolygonIndex, lastInfringingPolygonIndex);
-
-                if (firstInfringingPolygonIndex >= 0)
-                {
-                    mark();
-                    position(startWallPolygonsOffset + firstInfringingPolygonIndex * 0x12);
-                    for (int i = firstInfringingPolygonIndex; i <= lastInfringingPolygonIndex; ++i)
-                    {
-                        final Polygon polygon = readPolygon(secondaryHeaderInfo.verticesOffset());
-                        System.out.printf("  [%d, %d, %d, %d]\n",
-                            polygon.getBoundingBoxLeft(),
-                            polygon.getBoundingBoxRight(),
-                            polygon.getBoundingBoxTop(),
-                            polygon.getBoundingBoxBottom());
-                    }
-                    reset();
-                }
+                    firstInfringingPolygonIndex, -1);
             }
-        }
 
-        /////////////////////
-        // Private Classes //
-        /////////////////////
+            System.out.printf(
+                "[%s.WED] Tiled object %d references %s polygons [%d-%d], " +
+                "which are not part of the wall polygons table\n",
+                source.getIdentifier().resref(), tiledObjectIndex, openCloseLabel,
+                firstInfringingPolygonIndex, lastInfringingPolygonIndex);
 
-        public record WallGroupsInfo(short maxReferencedPolygonIndex) {}
-    }
-
-    private class LoadTISTask extends JavaFXUtil.TaskManager.ManagedTask<TIS>
-    {
-        ////////////////////
-        // Private Fields //
-        ////////////////////
-
-        final String tisResref;
-
-        /////////////////////////
-        // Public Constructors //
-        /////////////////////////
-
-        public LoadTISTask(final String tisResref)
-        {
-            this.tisResref = tisResref;
-        }
-
-        ///////////////////////
-        // Protected Methods //
-        ///////////////////////
-
-        @Override
-        protected TIS call() throws Exception
-        {
-            return loadTIS(tisResref);
-        }
-
-        /////////////////////
-        // Private Methods //
-        /////////////////////
-
-        private TIS loadTIS(final String tisResref) throws Exception
-        {
-            TIS tis = tisCache.get(tisResref);
-
-            if (tis == null)
+            if (firstInfringingPolygonIndex >= 0)
             {
-                final Game.Resource tisResource = GlobalState.getGame().getResource(new ResourceIdentifier(
-                    tisResref, KeyFile.NumericResourceType.TIS));
-
-                if (tisResource == null)
+                mark();
+                position(startWallPolygonsOffset + firstInfringingPolygonIndex * 0x12);
+                for (int i = firstInfringingPolygonIndex; i <= lastInfringingPolygonIndex; ++i)
                 {
-                    throw new IllegalStateException("Unable to find source for TIS resource \"" + tisResref + "\"");
+                    final Polygon polygon = readPolygon(secondaryHeaderInfo.verticesOffset());
+                    System.out.printf("  [%d, %d, %d, %d]\n",
+                        polygon.getBoundingBoxLeft(),
+                        polygon.getBoundingBoxRight(),
+                        polygon.getBoundingBoxTop(),
+                        polygon.getBoundingBoxBottom());
                 }
-
-                tis = new TIS(tisResource.getPrimarySource(), resourceDataCache, pvrzCache);
-                subtask(tis.loadTISTask());
-
-                tisCache.add(tisResref, tis);
+                reset();
             }
-
-            return tis;
         }
     }
+
+    private record WallGroupsInfo(short maxReferencedPolygonIndex) {}
+    private record WallGroupDimensions(short widthInTiles, short heightInTiles) {}
+
+    /////////////////////
+    // END Loading WED //
+    /////////////////////
+
+    ///////////////////////
+    // START Loading TIS //
+    ///////////////////////
+
+    private TIS loadTIS(final TaskTrackerI tracker, final String tisResref) throws Exception
+    {
+        TIS tis = tisCache.get(tisResref);
+
+        if (tis == null)
+        {
+            final Game.Resource tisResource = GlobalState.getGame().getResource(new ResourceIdentifier(
+                tisResref, KeyFile.NumericResourceType.TIS));
+
+            if (tisResource == null)
+            {
+                throw new IllegalStateException("Unable to find source for TIS resource \"" + tisResref + "\"");
+            }
+
+            tis = new TIS(tisResource.getPrimarySource(), resourceDataCache, pvrzCache);
+            tis.load(tracker);
+
+            tisCache.add(tisResref, tis);
+        }
+
+        return tis;
+    }
+
+    /////////////////////
+    // END Loading TIS //
+    /////////////////////
 
     public class WEDGraphics
     {
@@ -1051,8 +1016,7 @@ public class WED
             return copy;
         }
 
-        public WEDGraphics renderOverlays(
-            final JavaFXUtil.TaskManager.ManagedTask<?> task, final int... overlayIndexes) throws Exception
+        public WEDGraphics renderOverlays(final TaskTrackerI tracker, final int... overlayIndexes) throws Exception
         {
             final Game game = GlobalState.getGame();
             final Game.Type engineType = game.getEngineType();
@@ -1105,7 +1069,7 @@ public class WED
 
                 final int overlayRenderFlag = 1 << overlayIndex;
                 final WED.TilemapEntry overlayTilemapEntry = overlayTilemapEntries.get(0);
-                final TIS overlayTIS = task.subtask(new LoadTISTask(overlay.getTilesetResref()));
+                final TIS overlayTIS = loadTIS(tracker, overlay.getTilesetResref());
 
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
                 {
@@ -1138,7 +1102,7 @@ public class WED
                     )
                         ? 0x4000000 : 0;
 
-                final TIS baseOverlayTIS = task.subtask(new LoadTISTask(baseOverlayTISResref));
+                final TIS baseOverlayTIS = loadTIS(tracker, baseOverlayTISResref);
                 assert baseOverlayTIS != null;
 
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
@@ -1314,7 +1278,7 @@ public class WED
         }
     }
 
-    private class RenderOverlaysTask extends JavaFXUtil.TaskManager.ManagedTask<BufferedImage>
+    private class RenderOverlaysTask extends TrackedTask<BufferedImage>
     {
         ////////////////////
         // Private Fields //
@@ -1336,15 +1300,15 @@ public class WED
         ///////////////////////
 
         @Override
-        protected BufferedImage call() throws Exception
+        protected BufferedImage doTask() throws Exception
         {
             final WEDGraphics wedGraphics = new WEDGraphics();
-            wedGraphics.renderOverlays(this, overlayIndexes);
+            wedGraphics.renderOverlays(getTracker(), overlayIndexes);
             return wedGraphics.getImage();
         }
     }
 
-    private class SaveWEDTask extends JavaFXUtil.TaskManager.ManagedTask<Void>
+    private class SaveWEDTask extends TrackedTask<Void>
     {
         ////////////////////
         // Private Fields //
@@ -1369,7 +1333,7 @@ public class WED
         ///////////////////////
 
         @Override
-        protected Void call() throws Exception
+        protected Void doTask() throws Exception
         {
             save();
             return null;

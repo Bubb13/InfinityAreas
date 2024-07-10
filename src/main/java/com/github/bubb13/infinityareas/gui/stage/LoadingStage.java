@@ -2,8 +2,6 @@
 package com.github.bubb13.infinityareas.gui.stage;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.concurrent.Task;
 import javafx.event.EventHandler;
@@ -29,8 +27,8 @@ public class LoadingStage extends Stage
     // Instance Fields //
     /////////////////////
 
-    private StringProperty messageProperty = new SimpleStringProperty();
-    private DoubleProperty progressProperty = new SimpleDoubleProperty();
+    private StringProperty messageProperty;
+    private DoubleProperty progressProperty;
 
     //////////////////
     // Constructors //
@@ -42,6 +40,11 @@ public class LoadingStage extends Stage
         bindToTask(task);
     }
 
+    public LoadingStage()
+    {
+        init();
+    }
+
     ////////////////////
     // Public Methods //
     ////////////////////
@@ -50,6 +53,12 @@ public class LoadingStage extends Stage
     {
         messageProperty.bind(task.messageProperty());
         progressProperty.bind(task.progressProperty());
+    }
+
+    public void bind(final StringProperty messageProperty, final DoubleProperty progressProperty)
+    {
+        this.messageProperty.bind(messageProperty);
+        this.progressProperty.bind(progressProperty);
     }
 
     /////////////////////

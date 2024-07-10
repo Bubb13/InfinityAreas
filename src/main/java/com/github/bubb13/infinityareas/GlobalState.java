@@ -3,8 +3,8 @@ package com.github.bubb13.infinityareas;
 
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
-import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.application.Application;
 import javafx.stage.Stage;
@@ -74,10 +74,10 @@ public class GlobalState
         GlobalState.application = application;
     }
 
-    public static JavaFXUtil.TaskManager.ManagedTask<Void> loadGameTask(final KeyFile keyFile)
+    public static TrackedTask<Void> loadGameTask(final KeyFile keyFile)
     {
         final Game game = new Game(keyFile);
-        return game.loadResourcesTask().onSucceeded(() -> GlobalState.game = game);
+        return game.loadTask().onSucceeded(() -> GlobalState.game = game);
     }
 
     public static void cleanTemp()

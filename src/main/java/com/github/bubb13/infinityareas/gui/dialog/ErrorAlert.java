@@ -29,7 +29,7 @@ public class ErrorAlert extends Alert
         }
         else
         {
-            JavaFXUtil.waitForGuiThreadToExecute(() -> doShowAndWait(errorMessage, throwable));
+            JavaFXUtil.waitForFxThreadToExecute(() -> doShowAndWait(errorMessage, throwable));
         }
     }
 
