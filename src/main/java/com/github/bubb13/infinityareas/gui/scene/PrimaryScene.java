@@ -205,12 +205,26 @@ public final class PrimaryScene extends Stage
             case ARE ->
             {
                 final Area area = new Area(source);
-                area.loadTask()
-                    .trackWith(new LoadingStageTracker())
-                    .onSucceeded(() -> renderPrimaryOverlay(area))
-                    .onFailed((e) ->
-                        ErrorAlert.openAndWait("An exception occurred while loading the area.", e))
-                    .start();
+
+                new TrackedTask<BufferedImage>()
+                {
+                    @Override
+                    protected BufferedImage doTask() throws Exception
+                    {
+                        area.load();
+                        areaPane.setArea(area);
+                        return areaPane.render();
+                    }
+                }
+                .trackWith(new LoadingStageTracker())
+                .onSucceededFx((image) ->
+                {
+                    areaPane.setImage(image);
+                    changeRightNode(areaPane);
+                })
+                .onFailed((e) ->
+                    ErrorAlert.openAndWait("An exception occurred while loading the area.", e))
+                .start();
             }
             case TIS ->
             {
@@ -244,27 +258,6 @@ public final class PrimaryScene extends Stage
         }
     }
 
-    private void renderPrimaryOverlay(final Area area)
-    {
-        if (area.getOverlayCount() <= 0)
-        {
-            return;
-        }
-
-        area.renderOverlaysTask(0, 1, 2, 3, 4)
-            .trackWith(new LoadingStageTracker())
-            .onSucceededFx(this::showRenderedOverlay)
-            .onFailed((e) ->
-                ErrorAlert.openAndWait("An exception occurred while rendering the primary area overlay.", e))
-            .start();
-    }
-
-    private void showRenderedOverlay(final BufferedImage overlay)
-    {
-        areaPane.setImage(overlay);
-        changeRightNode(areaPane);
-    }
-
     private void debugStepThroughAllAreas()
     {
         new TrackedTask<>()
@@ -281,7 +274,7 @@ public final class PrimaryScene extends Stage
                         area.load(getTracker());
 
                         final BufferedImage overlay = area.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
-                        waitForFxThreadToExecute(() -> showRenderedOverlay(overlay));
+                        //waitForFxThreadToExecute(() -> showRenderedOverlay(overlay));
                     }
                     catch (final Exception e)
                     {

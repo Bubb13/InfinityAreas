@@ -3,6 +3,9 @@ package com.github.bubb13.infinityareas.gui.pane;
 
 import com.github.bubb13.infinityareas.gui.region.PartiallyRenderedImage;
 import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
@@ -19,6 +22,10 @@ public class ZoomPane extends NotifyingScrollPane
     private final PartiallyRenderedImage partialImage = new PartiallyRenderedImage();
     private double zoomFactor = 1;
     private Consumer<Double> zoomFactorListener;
+    private Consumer<MouseEvent> mouseDraggedListener;
+    private Consumer<MouseEvent> mouseClickedListener;
+    private Consumer<MouseEvent> mousePressedListener;
+    private Consumer<MouseEvent> mouseReleasedListener;
 
     /////////////////////////
     // Public Constructors //
@@ -66,16 +73,29 @@ public class ZoomPane extends NotifyingScrollPane
         setImage(image, true);
     }
 
+    public GraphicsContext getGraphics()
+    {
+        return partialImage.getGraphics();
+    }
+
+    public void setDrawCallback(final Consumer<GraphicsContext> drawCallback)
+    {
+        partialImage.setDrawCallback(drawCallback);
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
 
     private void setZoomFactor(final double newValue)
     {
-        zoomFactor = newValue;
-        if (zoomFactorListener != null)
+        if (zoomFactor != newValue)
         {
-            zoomFactorListener.accept(zoomFactor);
+            zoomFactor = newValue;
+            if (zoomFactorListener != null)
+            {
+                zoomFactorListener.accept(zoomFactor);
+            }
         }
     }
 
@@ -90,18 +110,42 @@ public class ZoomPane extends NotifyingScrollPane
         setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
 
         addEventFilter(ScrollEvent.SCROLL, this::onScroll);
-        partialImage.setOnMouseClicked(this::onMouseClick);
+        partialImage.setOnMouseClicked(this::onMouseClicked);
+        partialImage.setOnMouseDragged(this::onMouseDragged);
+        partialImage.setOnMousePressed(this::onMousePressed);
+        partialImage.setOnMouseReleased(this::onMouseReleased);
     }
 
-    private void onMouseClick(final MouseEvent event)
+    private void onMouseClicked(final MouseEvent event)
     {
-        final double imageViewX = event.getX();
-        final double imageViewY = event.getY();
+        if (mouseClickedListener != null)
+        {
+            mouseClickedListener.accept(event);
+        }
+    }
 
-        final int imageX = (int)(imageViewX / zoomFactor);
-        final int imageY = (int)(imageViewY / zoomFactor);
+    private void onMouseDragged(final MouseEvent event)
+    {
+        if (mouseDraggedListener != null)
+        {
+            mouseDraggedListener.accept(event);
+        }
+    }
 
-        System.out.printf("Click at (%d,%d)\n", imageX, imageY);
+    private void onMousePressed(final MouseEvent event)
+    {
+        if (mousePressedListener != null)
+        {
+            mousePressedListener.accept(event);
+        }
+    }
+
+    private void onMouseReleased(final MouseEvent event)
+    {
+        if (mouseReleasedListener != null)
+        {
+            mouseReleasedListener.accept(event);
+        }
     }
 
     private void onScroll(final ScrollEvent event)
@@ -111,6 +155,26 @@ public class ZoomPane extends NotifyingScrollPane
             event.consume();
             onZoom(event.getDeltaY());
         }
+    }
+
+    public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
+    {
+        return partialImage.sourceToAbsoluteCanvasPosition(srcX, srcY);
+    }
+
+    public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
+    {
+        return partialImage.absoluteToRelativeCanvasPosition(canvasX, canvasY);
+    }
+
+    public Point2D absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
+    {
+        return partialImage.absoluteCanvasToSourcePosition(canvasX, canvasY);
+    }
+
+    public Rectangle2D getVisibleSourceRect()
+    {
+        return partialImage.getVisibleSourceRect();
     }
 
     private void onZoom(final double deltaY)
@@ -166,5 +230,30 @@ public class ZoomPane extends NotifyingScrollPane
 
         setHvalue(newHVal);
         setVvalue(newVVal);
+    }
+
+    public void setMouseDraggedListener(final Consumer<MouseEvent> mouseDraggedListener)
+    {
+        this.mouseDraggedListener = mouseDraggedListener;
+    }
+
+    public void setMouseClickedListener(final Consumer<MouseEvent> mouseDraggedListener)
+    {
+        this.mouseClickedListener = mouseDraggedListener;
+    }
+
+    public void setMousePressedListener(final Consumer<MouseEvent> mousePressedListener)
+    {
+        this.mousePressedListener = mousePressedListener;
+    }
+
+    public void setMouseReleasedListener(final Consumer<MouseEvent> mouseReleasedListener)
+    {
+        this.mouseReleasedListener = mouseReleasedListener;
+    }
+
+    public void requestDraw()
+    {
+        partialImage.requestLayout();
     }
 }

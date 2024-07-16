@@ -1,8 +1,9 @@
 
 package com.github.bubb13.infinityareas.util;
 
-import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.PrintWriter;
 import java.nio.IntBuffer;
 
 public final class TileUtil
@@ -88,7 +89,7 @@ public final class TileUtil
         // tile and stencil tile data
         final int[] tilePaletteData, final byte[] tilePalettedData, final byte[] stencilTilePalettedData,
         // destination
-        final Graphics graphics)
+        final Graphics2D graphics)
     {
         final int[] realized = new int[tileSideLength * tileSideLength];
 
@@ -99,7 +100,7 @@ public final class TileUtil
     }
 
     public static void drawTileData(
-        final Graphics graphics, final int tileSideLength,
+        final Graphics2D graphics, final int tileSideLength,
         final int[] tileData, final int x, final int y)
     {
         final BufferedImage image = new BufferedImage(tileSideLength, tileSideLength, BufferedImage.TYPE_INT_ARGB);
@@ -108,7 +109,7 @@ public final class TileUtil
     }
 
     public static void drawTileData(
-        final Graphics graphics, final int tileSideLength,
+        final Graphics2D graphics, final int tileSideLength,
         final IntBuffer tileData, final int x, final int y)
     {
         drawTileData(graphics, tileSideLength, tileData.array(), x, y);
@@ -120,7 +121,7 @@ public final class TileUtil
         // tile and stencil tile data
         final int[] tilePaletteData, final byte[] tilePalettedData, final byte[] stencilTilePalettedData,
         // destination
-        final Graphics graphics)
+        final Graphics2D graphics)
     {
         final int[] realized = new int[tileSideLength * tileSideLength];
 
@@ -138,7 +139,8 @@ public final class TileUtil
         // tile and stencil tile data
         final int[] tileData,
         // destination
-        final int[] dst)
+        final int[] dst,
+        final PrintWriter debugWriter)
     {
         final int dstLineAdvance = dstPitch - tileSideLength;
         int curPalettedIndex = 0;
@@ -150,6 +152,10 @@ public final class TileUtil
             {
                 int color = multAlpha(tileData[curPalettedIndex], dwAlpha);
                 color = blend_srcAlpha_OneMinusSrcAlpha(color, dst[curDstIndex]);
+                if (debugWriter != null)
+                {
+                    debugWriter.printf("final color: 0x%X\n", color);
+                }
                 dst[curDstIndex] = color;
             }
         }
@@ -163,12 +169,13 @@ public final class TileUtil
         // tile and stencil tile data
         final int[] tileData,
         // destination
-        final BufferedImage image)
+        final BufferedImage image,
+        final PrintWriter debugWriter)
     {
         final int[] realized = new int[tileSideLength * tileSideLength];
         image.getRaster().getDataElements(x, y, tileSideLength, tileSideLength, realized);
-        copyAlphaTo(tileSideLength, tileSideLength, 0, dwAlpha, tileData, realized);
-        drawTileData(image.getGraphics(), tileSideLength, realized, x, y);
+        copyAlphaTo(tileSideLength, tileSideLength, 0, dwAlpha, tileData, realized, debugWriter);
+        drawTileData(image.createGraphics(), tileSideLength, realized, x, y);
     }
 
     private static int blend_srcAlpha_OneMinusSrcAlpha(final int src, final int dst)
@@ -217,9 +224,10 @@ public final class TileUtil
         // tile and stencil tile data
         final IntBuffer tileData,
         // destination
-        final BufferedImage image)
+        final BufferedImage image,
+        final PrintWriter debugWriter)
     {
-        drawAlphaTo(tileSideLength, x, y, dwAlpha, tileData.array(), image);
+        drawAlphaTo(tileSideLength, x, y, dwAlpha, tileData.array(), image, debugWriter);
     }
 
     public static void classicCopyStenciledTo(

@@ -7,7 +7,9 @@ import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.util.ImageUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
@@ -131,35 +133,48 @@ public class WEDPane extends StackPane
     {
         if (renderPolygonsCheckbox.isSelected())
         {
-            if (curZoomRenderTask != null)
+//            if (curZoomRenderTask != null)
+//            {
+//                synchronized (zoomRenderLock)
+//                {
+//                    curZoomRenderTask.cancel();
+//                }
+//            }
+//
+//            final WED.WEDGraphics graphics = wed.newGraphics();
+//
+//            curZoomRenderTask = new TrackedTask<>()
+//            {
+//                @Override
+//                protected Void doTask() throws Exception
+//                {
+//                    graphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
+//                    if (Thread.interrupted()) return null;
+//                    graphics.renderPolygons(calculatePolygonRenderWidth());
+//                    if (Thread.interrupted()) return null;
+//                    final BufferedImage image = graphics.getImage();
+//                    if (Thread.interrupted()) return null;
+//                    synchronized (zoomRenderLock)
+//                    {
+//                        JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image, false));
+//                    }
+//                    return null;
+//                }
+//            };
+//            curZoomRenderTask.start();
+
+            try
             {
-                synchronized (zoomRenderLock)
-                {
-                    curZoomRenderTask.cancel();
-                }
+                final WED.WEDGraphics graphics = wed.newGraphics();
+                graphics.renderOverlays(TaskTracker.DUMMY, 0, 1, 2, 3, 4);
+                graphics.renderPolygons(calculatePolygonRenderWidth());
+                final BufferedImage image = graphics.getImage();
+                zoomPane.setImage(image, false);
             }
-
-            final WED.WEDGraphics graphics = wed.newGraphics();
-
-            curZoomRenderTask = new TrackedTask<>()
+            catch (final Exception e)
             {
-                @Override
-                protected Void doTask() throws Exception
-                {
-                    graphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
-                    if (Thread.interrupted()) return null;
-                    graphics.renderPolygons(calculatePolygonRenderWidth());
-                    if (Thread.interrupted()) return null;
-                    final BufferedImage image = graphics.getImage();
-                    if (Thread.interrupted()) return null;
-                    synchronized (zoomRenderLock)
-                    {
-                        JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image, false));
-                    }
-                    return null;
-                }
-            };
-            curZoomRenderTask.start();
+
+            }
         }
     }
 
@@ -229,7 +244,7 @@ public class WEDPane extends StackPane
                         graphics.renderPolygons(calculatePolygonRenderWidth());
                     }
 
-                    final BufferedImage image = graphics.getSnapshot();
+                    final BufferedImage image = ImageUtil.copyArgb(graphics.getImage());
                     JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image, false));
                     return null;
                 }
@@ -273,7 +288,7 @@ public class WEDPane extends StackPane
             graphics = wed.newGraphics();
 
             graphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
-            final BufferedImage image = graphics.getSnapshot();
+            final BufferedImage image = ImageUtil.copyArgb(graphics.getImage());
 
             JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image));
             return null;

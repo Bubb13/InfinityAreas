@@ -2,12 +2,15 @@
 package com.github.bubb13.infinityareas.util;
 
 import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
+import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.util.concurrent.Phaser;
 import java.util.function.Consumer;
@@ -17,6 +20,30 @@ public final class JavaFXUtil
     ///////////////////////////
     // Public Static Methods //
     ///////////////////////////
+
+    public static void forceToFront(final Stage stage)
+    {
+        // Force the window to the top of the window stack
+        // Note: Stage::toFront() doesn't work for an unknown reason
+        if (stage.isShowing())
+        {
+            stage.setAlwaysOnTop(true);
+            stage.setAlwaysOnTop(false);
+        }
+        else
+        {
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, new EventHandler<>()
+            {
+                @Override
+                public void handle(WindowEvent window)
+                {
+                    stage.removeEventHandler(WindowEvent.WINDOW_SHOWN, this);
+                    stage.setAlwaysOnTop(true);
+                    stage.setAlwaysOnTop(false);
+                }
+            });
+        }
+    }
 
     public static Rectangle getScreenRect()
     {

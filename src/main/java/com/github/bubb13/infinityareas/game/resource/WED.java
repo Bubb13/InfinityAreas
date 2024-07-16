@@ -4,6 +4,7 @@ package com.github.bubb13.infinityareas.game.resource;
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.misc.AppendOnlyOrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
@@ -17,6 +18,10 @@ import com.github.bubb13.infinityareas.util.TileUtil;
 import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -24,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Stack;
@@ -98,9 +104,20 @@ public class WED
         return temp;
     }
 
+    public WEDGraphics newGraphics(final ImageAndGraphics imageAndGraphics)
+    {
+        return new WEDGraphics(imageAndGraphics);
+    }
+
     public WEDGraphics newGraphics()
     {
-        return new WEDGraphics();
+        final Overlay baseOverlay = overlays.get(0);
+        final BufferedImage image = new BufferedImage(
+            baseOverlay.getWidthInTiles() * 64,
+            baseOverlay.getHeightInTiles() * 64,
+            BufferedImage.TYPE_INT_ARGB
+        );
+        return new WEDGraphics(new ImageAndGraphics(image, image.createGraphics()));
     }
 
     public void load(final TaskTrackerI tracker) throws Exception
@@ -987,33 +1004,25 @@ public class WED
     // END Loading TIS //
     /////////////////////
 
+    PrintWriter openFileForAppend(String fileName) throws IOException
+    {
+        new FileWriter(fileName).close();
+        return new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)), true);
+    }
+
     public class WEDGraphics
     {
-        private final BufferedImage image;
-        private final Graphics2D graphics;
+        private final ImageAndGraphics imageAndGraphics;
+        private final HashMap<String, TIS.TISGraphics> tisGraphicsCache = new HashMap<>();
 
-        public WEDGraphics()
+        public WEDGraphics(final ImageAndGraphics imageAndGraphics)
         {
-            final WED.Overlay baseOverlay = getOverlays().get(0);
-
-            image = new BufferedImage(
-                baseOverlay.getWidthInTiles() * 64,
-                baseOverlay.getHeightInTiles() * 64,
-                BufferedImage.TYPE_INT_ARGB);
-
-            graphics = (Graphics2D)image.getGraphics();
+            this.imageAndGraphics = imageAndGraphics;
         }
 
         public BufferedImage getImage()
         {
-            return image;
-        }
-
-        public BufferedImage getSnapshot()
-        {
-            final BufferedImage copy = new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
-            copy.getGraphics().drawImage(image, 0, 0, null);
-            return copy;
+            return imageAndGraphics.image();
         }
 
         public WEDGraphics renderOverlays(final TaskTrackerI tracker, final int... overlayIndexes) throws Exception
@@ -1042,6 +1051,9 @@ public class WED
             final ArrayList<WED.TilemapEntry> baseOverlayTilemapEntries = baseOverlay.getTilemapEntries();
             final int nGameTime = 0; // TODO - animate
 
+            final BufferedImage image = imageAndGraphics.image();
+            final Graphics2D graphics = imageAndGraphics.graphics();
+
             for (int overlayIndex = 4; overlayIndex > 0; --overlayIndex)
             {
                 if (!renderRequested(overlayIndexes, overlayIndex))
@@ -1069,7 +1081,11 @@ public class WED
 
                 final int overlayRenderFlag = 1 << overlayIndex;
                 final WED.TilemapEntry overlayTilemapEntry = overlayTilemapEntries.get(0);
-                final TIS overlayTIS = loadTIS(tracker, overlay.getTilesetResref());
+
+                final String overlayTisResref = overlay.getTilesetResref();
+                final TIS overlayTIS = loadTIS(tracker, overlayTisResref);
+                final TIS.TISGraphics tisGraphics = tisGraphicsCache.computeIfAbsent(overlayTisResref,
+                    (ignored) -> overlayTIS.newGraphics(imageAndGraphics));
 
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
                 {
@@ -1086,9 +1102,7 @@ public class WED
                             % overlayTilemapEntry.tisTileIndexArray.length
                         );
                         final int overlayTileIndex = overlayTilemapEntry.tisTileIndexArray[overlayTileLookupIndex];
-                        final IntBuffer tileData = overlayTIS.getPreRenderedTileData(overlayTileIndex);
-
-                        TileUtil.drawTileData(graphics, 64, tileData, xPos, yPos);
+                        tisGraphics.drawTile(overlayTileIndex, xPos, yPos);
                     }
                 }
             }
@@ -1100,10 +1114,13 @@ public class WED
                         (baseOverlay.getMovementType() & 2) != 0
                             || (engineType != Game.Type.BG1 && engineType != Game.Type.BGEE)
                     )
-                        ? 0x4000000 : 0;
+                    ? 0x4000000 : 0;
 
                 final TIS baseOverlayTIS = loadTIS(tracker, baseOverlayTISResref);
-                assert baseOverlayTIS != null;
+                final TIS.TISGraphics baseOverlayTISGraphics = tisGraphicsCache.computeIfAbsent(baseOverlayTISResref,
+                    (ignored) -> baseOverlayTIS.newGraphics(imageAndGraphics));
+
+                final PrintWriter logWriter = openFileForAppend(GlobalState.getInfinityAreasRoot().resolve("log.txt").toAbsolutePath().toString());
 
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
                 {
@@ -1206,17 +1223,12 @@ public class WED
                                     }
                                 }
 
-                                final IntBuffer tileData = baseOverlayTIS.getPreRenderedTileData(nTile);
-                                TileUtil.drawAlphaTo(64, xPos, yPos,
-                                    dwAlpha, tileData, image);
+                                baseOverlayTISGraphics.drawTileWithAlpha(nTile, xPos, yPos, dwAlpha, null);
 
                                 if (nStencilTile != -1)
                                 {
-                                    final IntBuffer stencilTileData = baseOverlayTIS
-                                        .getPreRenderedTileData(nStencilTile);
-
-                                    TileUtil.drawAlphaTo(64, xPos, yPos,
-                                        TIS.WATER_ALPHA << 24, stencilTileData, image);
+                                    baseOverlayTISGraphics.drawTileWithAlpha(nStencilTile, xPos, yPos,
+                                        TIS.WATER_ALPHA << 24, null);
                                 }
                             }
                         }
@@ -1226,6 +1238,7 @@ public class WED
                         }
                     }
                 }
+                logWriter.close();
             }
 
             return this;
@@ -1233,12 +1246,14 @@ public class WED
 
         public WEDGraphics clear()
         {
-            graphics.clearRect(0, 0, image.getWidth(), image.getHeight());
+            final BufferedImage image = imageAndGraphics.image();
+            imageAndGraphics.graphics().clearRect(0, 0, image.getWidth(), image.getHeight());
             return this;
         }
 
         public WEDGraphics renderPolygons(final float width)
         {
+            final Graphics2D graphics = imageAndGraphics.graphics();
             for (final Polygon polygon : polygons)
             {
                 final ArrayList<Vertex> vertices = polygon.getVertices();
@@ -1259,7 +1274,7 @@ public class WED
                 }
 
                 final Vertex vFirst = vertices.get(0);
-                final Vertex vLast = vertices.get(vertices.size() - 1);
+                final Vertex vLast = vertices.get(limit);
                 graphics.drawLine(vFirst.x(), vFirst.y(), vLast.x(), vLast.y());
             }
             return this;
@@ -1302,9 +1317,15 @@ public class WED
         @Override
         protected BufferedImage doTask() throws Exception
         {
-            final WEDGraphics wedGraphics = new WEDGraphics();
+            final Overlay baseOverlay = overlays.get(0);
+            final BufferedImage image = new BufferedImage(
+                baseOverlay.getWidthInTiles() * 64,
+                baseOverlay.getHeightInTiles() * 64,
+                BufferedImage.TYPE_INT_ARGB);
+
+            final WEDGraphics wedGraphics = new WEDGraphics(new ImageAndGraphics(image, image.createGraphics()));
             wedGraphics.renderOverlays(getTracker(), overlayIndexes);
-            return wedGraphics.getImage();
+            return image;
         }
     }
 

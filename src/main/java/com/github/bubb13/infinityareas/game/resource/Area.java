@@ -3,13 +3,17 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.BufferUtil;
+import com.github.bubb13.infinityareas.util.MiscUtil;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 public class Area
 {
@@ -18,6 +22,7 @@ public class Area
     ////////////////////
 
     private final Game.ResourceSource source;
+    private final ArrayList<Actor> actors = new ArrayList<>();
 
     private ByteBuffer buffer;
     private WED wed;
@@ -75,6 +80,32 @@ public class Area
         return wedGraphics.getImage();
     }
 
+    public Iterable<Actor> getActors()
+    {
+        return MiscUtil.readOnlyIterable(actors);
+    }
+
+    public AreaGraphics newGraphics(final ImageAndGraphics imageAndGraphics)
+    {
+        return new AreaGraphics(imageAndGraphics);
+    }
+
+    public AreaGraphics newGraphics()
+    {
+        final WED.Overlay baseOverlay = wed.getOverlays().get(0);
+        final BufferedImage image = new BufferedImage(
+            baseOverlay.getWidthInTiles() * 64,
+            baseOverlay.getHeightInTiles() * 64,
+            BufferedImage.TYPE_INT_ARGB
+        );
+        return new AreaGraphics(new ImageAndGraphics(image, image.createGraphics()));
+    }
+
+    public WED getWed()
+    {
+        return wed;
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -84,9 +115,9 @@ public class Area
         buffer.position(pos);
     }
 
-    ///////////////////////
+    //-------------------//
     // START Loading ARE //
-    ///////////////////////
+    //-------------------//
 
     private void loadInternal(final TaskTrackerI tracker) throws Exception
     {
@@ -121,6 +152,37 @@ public class Area
     private void parse_V1_0(final TaskTrackerI tracker) throws Exception
     {
         loadWED(tracker);
+
+        position(0x54);
+        final int actorsOffset = buffer.getInt();
+        final short numActors = buffer.getShort();
+
+        parseActors(tracker, actorsOffset, numActors);
+    }
+
+    private void parseActors(
+        final TaskTrackerI tracker, final int actorsOffset, final short numActors) throws Exception
+    {
+        tracker.updateMessage("Processing actors ...");
+
+        int curActorOffset = actorsOffset;
+
+        for (int i = 0; i < numActors; ++i, curActorOffset += 0x110)
+        {
+            tracker.updateProgress(i, numActors);
+            position(curActorOffset);
+
+            final String name = BufferUtil.readLUTF8(buffer, 32);
+            final short x = buffer.getShort();
+            final short y = buffer.getShort();
+
+            position(curActorOffset + 0x34);
+            final short orientation = buffer.getShort();
+
+            actors.add(new Actor(name, x, y, orientation));
+
+
+        }
     }
 
     private void parse_V9_1(final TaskTrackerI tracker) throws Exception
@@ -145,7 +207,120 @@ public class Area
         wed = tempWed;
     }
 
-    /////////////////////
+    //-----------------//
     // END Loading ARE //
+    //-----------------//
+
+    ////////////////////
+    // Public Classes //
+    ////////////////////
+
+    public class AreaGraphics
+    {
+        private final BufferedImage image;
+        private final Graphics2D graphics;
+        private final WED.WEDGraphics wedGraphics;
+        private double zoomFactor = 1;
+
+        public AreaGraphics(final ImageAndGraphics imageAndGraphics)
+        {
+            this.image = imageAndGraphics.image();
+            this.graphics = imageAndGraphics.graphics();
+            wedGraphics = wed.newGraphics(imageAndGraphics);
+        }
+
+        public AreaGraphics drawActors()
+        {
+//            graphics.setStroke(new BasicStroke((int)(2 * zoomFactor)));
+//            graphics.setFont(new Font("Times New Roman", Font.PLAIN, (int)(18 * zoomFactor)));
+//
+//            for (final Actor actor : actors)
+//            {
+//                graphics.drawString(actor.getName(), actor.getX(), actor.getY());
+//                graphics.drawOval(actor.getX(), actor.getY(), 100, 100);
+//            }
+
+            return this;
+        }
+
+        public WED.WEDGraphics getWedGraphics()
+        {
+            return wedGraphics;
+        }
+
+        public BufferedImage getImage()
+        {
+            return image;
+        }
+
+        public void setZoomFactor(final double zoomFactor)
+        {
+            this.zoomFactor = zoomFactor;
+        }
+
+        public void drawImage(final BufferedImage image, final int x, final int y)
+        {
+            graphics.drawImage(image, x, y, null);
+        }
+    }
+
     /////////////////////
+    // Private Classes //
+    /////////////////////
+
+    public class Actor
+    {
+        String name;
+        short x;
+        short y;
+        short orientation;
+
+        public Actor(final String name, final short x, final short y, final short orientation)
+        {
+            this.name = name;
+            this.x = x;
+            this.y = y;
+            this.orientation = orientation;
+        }
+
+        public String getName()
+        {
+            return name;
+        }
+
+        public void setName(final String name)
+        {
+            this.name = name;
+        }
+
+        public short getX()
+        {
+            return x;
+        }
+
+        public void setX(final short x)
+        {
+            this.x = x;
+        }
+
+        public short getY()
+        {
+            return y;
+        }
+
+        public void setY(final short y)
+        {
+            this.y = y;
+        }
+
+        public short getOrientation()
+        {
+            return orientation;
+        }
+
+        public void setOrientation(short orientation)
+        {
+            this.orientation = orientation;
+        }
+    }
 }

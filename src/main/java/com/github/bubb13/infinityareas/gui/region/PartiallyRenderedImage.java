@@ -2,18 +2,26 @@
 package com.github.bubb13.infinityareas.gui.region;
 
 import com.github.bubb13.infinityareas.gui.misc.VisibleNotifiable;
-import javafx.embed.swing.SwingFXUtils;
+import javafx.application.Platform;
 import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Region;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
+import java.util.function.Consumer;
 
 public class PartiallyRenderedImage extends Region implements VisibleNotifiable
 {
     private final Canvas canvas = new Canvas();
+    private final GraphicsContext graphics = canvas.getGraphicsContext2D();
+    private Consumer<GraphicsContext> drawCallback;
     private BufferedImage image;
     private double zoomFactor = 1;
 
@@ -24,6 +32,11 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
 
     public void setImage(final BufferedImage image)
     {
+        if (!Platform.isFxApplicationThread())
+        {
+            throw new IllegalStateException();
+        }
+
         this.image = image;
         requestLayout();
     }
@@ -66,30 +79,92 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         final int renderW = (int)layout.getWidth();
         final int renderH = (int)layout.getHeight();
 
-        if (renderX < 0 || renderY < 0 || renderW <= 0 || renderH <= 0)
+        if (renderX < 0 || renderY < 0 || renderW <= 0 || renderH <= 0
+            || (renderX + renderW) / zoomFactor > image.getWidth()
+            || (renderY + renderH) / zoomFactor > image.getHeight())
         {
             return;
         }
 
         final WritableRaster srcRaster = image.getRaster();
-        final BufferedImage toDraw = new BufferedImage(renderW, renderH, BufferedImage.TYPE_INT_ARGB);
-        final WritableRaster toDrawRaster = toDraw.getRaster();
+        final int srcWidth = image.getWidth();
 
-        for (int y = 0; y < renderH; ++y)
+        int[] srcBuffer;
+        if (srcRaster.getDataBuffer() instanceof DataBufferInt dataBufferInt)
         {
+            srcBuffer = dataBufferInt.getData();
+        }
+        else
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        // Copy scaled data from the buffered image
+        final int[] dst = new int[renderW * renderH];
+        for (int y = 0, curDstOffset = 0; y < renderH; ++y)
+        {
+            final int curSrcY = (int)((renderY + y) / zoomFactor);
             for (int x = 0; x < renderW; ++x)
             {
-                final int[] test = new int[1];
-                final int srcX = (int)((renderX + x) / zoomFactor);
-                final int srcY = (int)((renderY + y) / zoomFactor);
-                srcRaster.getDataElements(srcX, srcY, test);
-                toDrawRaster.setDataElements(x, y, test);
+                final int curSrcX = (int)((renderX + x) / zoomFactor);
+                dst[curDstOffset++] = srcBuffer[curSrcY * srcWidth + curSrcX];
             }
         }
 
-        final GraphicsContext graphics = canvas.getGraphicsContext2D();
+        final WritableImage toDrawImage = new WritableImage(renderW, renderH);
+        toDrawImage.getPixelWriter().setPixels(0, 0, renderW, renderH,
+            PixelFormat.getIntArgbInstance(), dst, 0, renderW);
+
         graphics.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        graphics.drawImage(SwingFXUtils.toFXImage(toDraw, null), 0, 0);
+        graphics.drawImage(toDrawImage, 0, 0);
+        if (drawCallback != null)
+        {
+            drawCallback.accept(graphics);
+        }
+    }
+
+    public GraphicsContext getGraphics()
+    {
+        return graphics;
+    }
+
+    public void setDrawCallback(final Consumer<GraphicsContext> drawCallback)
+    {
+        this.drawCallback = drawCallback;
+    }
+
+    public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        final int renderX = (int)layout.getMinX();
+        final int renderY = (int)layout.getMinY();
+        return new Point2D((int)(srcX * zoomFactor - renderX), (int)(srcY * zoomFactor - renderY));
+    }
+
+    public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        final int renderX = (int)layout.getMinX();
+        final int renderY = (int)layout.getMinY();
+        return new Point2D(canvasX - renderX, canvasY - renderY);
+    }
+
+    public Point2D absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
+    {
+        return new Point2D((int)(canvasX / zoomFactor), (int)(canvasY / zoomFactor));
+    }
+
+    public Rectangle2D getVisibleSourceRect()
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        final int renderX = (int)layout.getMinX();
+        final int renderY = (int)layout.getMinY();
+        final int renderW = (int)layout.getWidth();
+        final int renderH = (int)layout.getHeight();
+        return new Rectangle2D(
+            (int)(renderX / zoomFactor), (int)(renderY / zoomFactor),
+            (int)(renderW / zoomFactor), (int)(renderH / zoomFactor)
+        );
     }
 
     @Override

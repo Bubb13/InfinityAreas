@@ -240,7 +240,9 @@ public class MainJavaFX extends Application
 
         SettingsUtil.attemptApplyBoolean(settingsRoot, "mainWindowMaximized", primaryStage::setMaximized);
 
+        JavaFXUtil.forceToFront(primaryStage);
         primaryStage.show();
+
         bufferedX[0] = (int)primaryStage.getX(); bufferedX[1] = bufferedX[0];
         bufferedY[0] = (int)primaryStage.getY(); bufferedY[1] = bufferedY[0];
     }

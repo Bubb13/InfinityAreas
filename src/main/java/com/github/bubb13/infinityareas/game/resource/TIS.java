@@ -3,15 +3,21 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.BufferUtil;
+import com.github.bubb13.infinityareas.util.DrawUtil;
+import com.github.bubb13.infinityareas.util.ImageUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -131,6 +137,11 @@ public class TIS
     public PalettedTileData getPalettedTileData(final int index)
     {
         return (PalettedTileData)tiles.get(index);
+    }
+
+    public TISGraphics newGraphics(final ImageAndGraphics imageAndGraphics)
+    {
+        return new TISGraphics(imageAndGraphics);
     }
 
     /////////////////////
@@ -391,6 +402,53 @@ public class TIS
         public IntBuffer getPreRenderedData()
         {
             return preRenderedData;
+        }
+    }
+
+    public class TISGraphics
+    {
+        private final BufferedImage image;
+        private final Graphics2D graphics;
+
+        public TISGraphics(final ImageAndGraphics imageAndGraphics)
+        {
+            this.image = imageAndGraphics.image();
+            this.graphics = imageAndGraphics.graphics();
+        }
+
+        public TISGraphics drawTile(final int tileIndex, final int destX, final int destY)
+        {
+            final BufferedImage data = ImageUtil.wrapArgb(getPreRenderedTileData(tileIndex).array(),
+                tileSideLength, tileSideLength
+            );
+            graphics.drawImage(data, destX, destY, null);
+            return this;
+        }
+
+        public void drawTileWithAlpha(
+            final int tileIndex, final int x, final int y, final int dwAlpha, final PrintWriter debugWriter)
+        {
+            int[] dst;
+            if (image.getRaster().getDataBuffer() instanceof DataBufferInt dataBufferInt)
+            {
+                dst = dataBufferInt.getData();
+            }
+            else
+            {
+                throw new UnsupportedOperationException();
+            }
+
+            final int imageWidth = image.getWidth();
+            final int dstOffset = y * imageWidth + x;
+            final int[] src = getPreRenderedTileData(tileIndex).array();
+
+            DrawUtil.drawAlpha(
+                tileSideLength, tileSideLength,
+                tileSideLength, 0,
+                imageWidth, dstOffset,
+                dwAlpha, src, dst,
+                debugWriter
+            );
         }
     }
 

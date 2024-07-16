@@ -6,29 +6,49 @@ import javafx.application.Platform;
 
 public class LoadingStageTracker extends StackTaskTracker
 {
-    private final LoadingStage loadingStage = new LoadingStage();
+    private final Object loadingStageInitLock = new Object();
 
-    public LoadingStageTracker()
-    {
-        loadingStage.bind(messageProperty, progressProperty);
-    }
+    private boolean loadingStageInitQueued;
+    private LoadingStage loadingStage;
 
     @Override
     public void init()
     {
+        loadingStageInitQueued = true;
         if (Platform.isFxApplicationThread())
         {
-            loadingStage.show();
+            initStage();
         }
         else
         {
-            Platform.runLater(loadingStage::show);
+            Platform.runLater(this::initStage);
+        }
+    }
+
+    private void initStage()
+    {
+        synchronized (loadingStageInitLock)
+        {
+            if (!loadingStageInitQueued) return;
+            loadingStageInitQueued = false;
+            loadingStage = new LoadingStage();
+            loadingStage.bind(messageProperty, progressProperty);
+            loadingStage.show();
         }
     }
 
     @Override
     public void done()
     {
+        synchronized (loadingStageInitLock)
+        {
+            if (loadingStageInitQueued)
+            {
+                loadingStageInitQueued = false;
+                return;
+            }
+        }
+
         if (Platform.isFxApplicationThread())
         {
             loadingStage.close();

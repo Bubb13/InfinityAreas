@@ -567,7 +567,7 @@ public class Game
         return pathStr == null ? null : Paths.get(pathStr);
     }
 
-    private void readBifs(final TaskTrackerI tracker)
+    private void readBifs(final TaskTrackerI tracker) throws Exception
     {
         tracker.updateMessage("Processing BIFS ...");
         tracker.updateProgress(0, keyFile.getNumBifEntries());

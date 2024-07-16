@@ -48,7 +48,7 @@ public class InstanceHashMap<Key, Value>
         {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            final KeyWrapper<?> that = (KeyWrapper<?>) o;
+            final KeyWrapper<?> that = (KeyWrapper<?>)o;
             return key == that.key;
         }
 

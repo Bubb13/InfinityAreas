@@ -3,6 +3,8 @@ package com.github.bubb13.infinityareas.util;
 
 import com.github.bubb13.infinityareas.misc.IteratorToIterable;
 import com.github.bubb13.infinityareas.misc.ReadOnlyIterator;
+import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.ScrollPane;
@@ -121,6 +123,47 @@ public final class MiscUtil
             .multiply(new BigDecimal(r1))
             .divide(new BigDecimal(r2), RoundingMode.CEILING)
             .intValueExact();
+    }
+
+    public static double distance(final int x1, final int y1, final int x2, final int y2)
+    {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    }
+
+    public static double calculateAngle(final double x1, final double y1, final double x2, final double y2)
+    {
+        double degrees = Math.toDegrees(Math.atan2(y2 - y1, x2 - x1));
+        return degrees < 0 ? degrees + 360 : degrees;
+    }
+
+    public static Rectangle2D getRectangleFromCornerPointsExpand(final Point2D p1, final Point2D p2, final int expand)
+    {
+        final double p1X = p1.getX();
+        final double p1Y = p1.getY();
+        final double p2X = p2.getX();
+        final double p2Y = p2.getY();
+        final double left = Math.min(p1X, p2X) - expand;
+        final double top = Math.min(p1Y, p2Y) - expand;
+        final double right = Math.max(p1X, p2X) + expand;
+        final double bottom = Math.max(p1Y, p2Y) + expand;
+        return new Rectangle2D(left, top, right - left, bottom - top);
+    }
+
+    public static Rectangle2D getRectangleFromCornerPoints(final Point2D p1, final Point2D p2)
+    {
+        return getRectangleFromCornerPointsExpand(p1, p2, 0);
+    }
+
+    public static double snapToNearest(final double value, final double multiple)
+    {
+        return Math.round(value / multiple) * multiple;
+    }
+
+    public static double snapToNearest(final double value, final double lower, final double upper)
+    {
+        final double distLower = Math.abs(value - lower);
+        final double distUpper = Math.abs(value - upper);
+        return distLower < distUpper ? lower : upper;
     }
 
     private MiscUtil() {}
