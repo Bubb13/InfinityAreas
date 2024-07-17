@@ -75,7 +75,7 @@ public class Area
 
     public BufferedImage renderOverlays(final TaskTrackerI tracker, final int... overlayIndexes) throws Exception
     {
-        final WED.WEDGraphics wedGraphics = wed.newGraphics();
+        final WED.Graphics wedGraphics = wed.newGraphics();
         wedGraphics.renderOverlays(tracker, overlayIndexes);
         return wedGraphics.getImage();
     }
@@ -219,7 +219,7 @@ public class Area
     {
         private final BufferedImage image;
         private final Graphics2D graphics;
-        private final WED.WEDGraphics wedGraphics;
+        private final WED.Graphics wedGraphics;
         private double zoomFactor = 1;
 
         public AreaGraphics(final ImageAndGraphics imageAndGraphics)
@@ -243,7 +243,7 @@ public class Area
             return this;
         }
 
-        public WED.WEDGraphics getWedGraphics()
+        public WED.Graphics getWedGraphics()
         {
             return wedGraphics;
         }

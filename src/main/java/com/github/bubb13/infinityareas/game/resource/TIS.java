@@ -139,9 +139,9 @@ public class TIS
         return (PalettedTileData)tiles.get(index);
     }
 
-    public TISGraphics newGraphics(final ImageAndGraphics imageAndGraphics)
+    public Graphics newGraphics(final ImageAndGraphics imageAndGraphics)
     {
-        return new TISGraphics(imageAndGraphics);
+        return new Graphics(imageAndGraphics);
     }
 
     /////////////////////
@@ -405,18 +405,18 @@ public class TIS
         }
     }
 
-    public class TISGraphics
+    public class Graphics
     {
         private final BufferedImage image;
         private final Graphics2D graphics;
 
-        public TISGraphics(final ImageAndGraphics imageAndGraphics)
+        public Graphics(final ImageAndGraphics imageAndGraphics)
         {
             this.image = imageAndGraphics.image();
             this.graphics = imageAndGraphics.graphics();
         }
 
-        public TISGraphics drawTile(final int tileIndex, final int destX, final int destY)
+        public Graphics drawTile(final int tileIndex, final int destX, final int destY)
         {
             final BufferedImage data = ImageUtil.wrapArgb(getPreRenderedTileData(tileIndex).array(),
                 tileSideLength, tileSideLength

@@ -7,6 +7,10 @@ import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.application.Application;
+import javafx.scene.image.Image;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.stage.Stage;
 
 import java.nio.file.Files;
@@ -20,6 +24,7 @@ public class GlobalState
     private static Game game;
     private static Application application;
     private static Stage primaryStage;
+    private static PixelFormat.Type nativePixelFormatType;
 
     ///////////////////////////
     // Public Static Methods //
@@ -31,6 +36,7 @@ public class GlobalState
         infinityAreasTemp = infinityAreasRoot.resolve("InfinityAreasTemp");
         cleanTemp();
         settingsFile = new SettingsFile(GlobalState.getInfinityAreasRoot().resolve("settings.json"));
+        cacheNativePixelFormatType();
     }
 
     public static Path getInfinityAreasRoot()
@@ -80,6 +86,11 @@ public class GlobalState
         return game.loadTask().onSucceeded(() -> GlobalState.game = game);
     }
 
+    public static PixelFormat.Type getNativePixelFormatType()
+    {
+        return nativePixelFormatType;
+    }
+
     public static void cleanTemp()
     {
         if (Files.isDirectory(infinityAreasTemp))
@@ -114,6 +125,13 @@ public class GlobalState
 
             Files.createDirectories(infinityAreasTemp);
         }
+    }
+
+    private static void cacheNativePixelFormatType()
+    {
+        final Image image = new WritableImage(1, 1);
+        final PixelReader pixelReader = image.getPixelReader();
+        nativePixelFormatType = pixelReader.getPixelFormat().getType();
     }
 
     //////////////////////////

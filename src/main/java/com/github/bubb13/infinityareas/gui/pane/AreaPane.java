@@ -71,7 +71,7 @@ public class AreaPane extends StackPane
 
     public BufferedImage renderBackground() throws Exception
     {
-        final WED.WEDGraphics wedGraphics = graphics.getWedGraphics();
+        final WED.Graphics wedGraphics = graphics.getWedGraphics();
         wedGraphics.renderOverlays(TaskTracker.DUMMY, 0, 1, 2, 3, 4);
         return ImageUtil.copyArgb(graphics.getImage());
     }
@@ -79,7 +79,7 @@ public class AreaPane extends StackPane
     public BufferedImage render() throws Exception
     {
         graphics.drawImage(cachedBackground, 0, 0);
-        graphics.setZoomFactor(1 / zoomPane.getZoomFactor());
+        //graphics.setZoomFactor(1 / zoomPane.getZoomFactor());
         return ImageUtil.copyArgb(graphics.getImage());
     }
 
@@ -92,7 +92,7 @@ public class AreaPane extends StackPane
     {
         try
         {
-            zoomPane.setImage(render(), false);
+            //zoomPane.setImage(render(), false);
         }
         catch (final Exception e)
         {

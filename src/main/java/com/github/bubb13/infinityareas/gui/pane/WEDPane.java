@@ -36,7 +36,7 @@ public class WEDPane extends StackPane
 
     // Data
     private WED wed;
-    private WED.WEDGraphics graphics;
+    private WED.Graphics graphics;
 
     // GUI
     private final ZoomPane zoomPane = new ZoomPane();
@@ -165,7 +165,7 @@ public class WEDPane extends StackPane
 
             try
             {
-                final WED.WEDGraphics graphics = wed.newGraphics();
+                final WED.Graphics graphics = wed.newGraphics();
                 graphics.renderOverlays(TaskTracker.DUMMY, 0, 1, 2, 3, 4);
                 graphics.renderPolygons(calculatePolygonRenderWidth());
                 final BufferedImage image = graphics.getImage();

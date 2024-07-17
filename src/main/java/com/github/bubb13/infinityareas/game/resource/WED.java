@@ -104,12 +104,12 @@ public class WED
         return temp;
     }
 
-    public WEDGraphics newGraphics(final ImageAndGraphics imageAndGraphics)
+    public Graphics newGraphics(final ImageAndGraphics imageAndGraphics)
     {
-        return new WEDGraphics(imageAndGraphics);
+        return new Graphics(imageAndGraphics);
     }
 
-    public WEDGraphics newGraphics()
+    public Graphics newGraphics()
     {
         final Overlay baseOverlay = overlays.get(0);
         final BufferedImage image = new BufferedImage(
@@ -117,7 +117,7 @@ public class WED
             baseOverlay.getHeightInTiles() * 64,
             BufferedImage.TYPE_INT_ARGB
         );
-        return new WEDGraphics(new ImageAndGraphics(image, image.createGraphics()));
+        return new Graphics(new ImageAndGraphics(image, image.createGraphics()));
     }
 
     public void load(final TaskTrackerI tracker) throws Exception
@@ -1010,12 +1010,12 @@ public class WED
         return new PrintWriter(new BufferedWriter(new FileWriter(fileName, true)), true);
     }
 
-    public class WEDGraphics
+    public class Graphics
     {
         private final ImageAndGraphics imageAndGraphics;
-        private final HashMap<String, TIS.TISGraphics> tisGraphicsCache = new HashMap<>();
+        private final HashMap<String, TIS.Graphics> tisGraphicsCache = new HashMap<>();
 
-        public WEDGraphics(final ImageAndGraphics imageAndGraphics)
+        public Graphics(final ImageAndGraphics imageAndGraphics)
         {
             this.imageAndGraphics = imageAndGraphics;
         }
@@ -1025,7 +1025,7 @@ public class WED
             return imageAndGraphics.image();
         }
 
-        public WEDGraphics renderOverlays(final TaskTrackerI tracker, final int... overlayIndexes) throws Exception
+        public Graphics renderOverlays(final TaskTrackerI tracker, final int... overlayIndexes) throws Exception
         {
             final Game game = GlobalState.getGame();
             final Game.Type engineType = game.getEngineType();
@@ -1084,7 +1084,7 @@ public class WED
 
                 final String overlayTisResref = overlay.getTilesetResref();
                 final TIS overlayTIS = loadTIS(tracker, overlayTisResref);
-                final TIS.TISGraphics tisGraphics = tisGraphicsCache.computeIfAbsent(overlayTisResref,
+                final TIS.Graphics tisGraphics = tisGraphicsCache.computeIfAbsent(overlayTisResref,
                     (ignored) -> overlayTIS.newGraphics(imageAndGraphics));
 
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
@@ -1117,7 +1117,7 @@ public class WED
                     ? 0x4000000 : 0;
 
                 final TIS baseOverlayTIS = loadTIS(tracker, baseOverlayTISResref);
-                final TIS.TISGraphics baseOverlayTISGraphics = tisGraphicsCache.computeIfAbsent(baseOverlayTISResref,
+                final TIS.Graphics baseOverlayTISGraphics = tisGraphicsCache.computeIfAbsent(baseOverlayTISResref,
                     (ignored) -> baseOverlayTIS.newGraphics(imageAndGraphics));
 
                 final PrintWriter logWriter = openFileForAppend(GlobalState.getInfinityAreasRoot().resolve("log.txt").toAbsolutePath().toString());
@@ -1244,14 +1244,14 @@ public class WED
             return this;
         }
 
-        public WEDGraphics clear()
+        public Graphics clear()
         {
             final BufferedImage image = imageAndGraphics.image();
             imageAndGraphics.graphics().clearRect(0, 0, image.getWidth(), image.getHeight());
             return this;
         }
 
-        public WEDGraphics renderPolygons(final float width)
+        public Graphics renderPolygons(final float width)
         {
             final Graphics2D graphics = imageAndGraphics.graphics();
             for (final Polygon polygon : polygons)
@@ -1323,7 +1323,7 @@ public class WED
                 baseOverlay.getHeightInTiles() * 64,
                 BufferedImage.TYPE_INT_ARGB);
 
-            final WEDGraphics wedGraphics = new WEDGraphics(new ImageAndGraphics(image, image.createGraphics()));
+            final Graphics wedGraphics = new Graphics(new ImageAndGraphics(image, image.createGraphics()));
             wedGraphics.renderOverlays(getTracker(), overlayIndexes);
             return image;
         }
