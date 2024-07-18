@@ -415,20 +415,20 @@ public class PVRZ
     {
         final int fracColor1Upper = fracColorLower - fracColor2Upper;
 
-        final byte b1 = (byte)((color1 & 0xFF) * fracColor1Upper / fracColorLower);
-        final byte g1 = (byte)(((color1 >>> 8) & 0xFF) * fracColor1Upper / fracColorLower);
-        final byte r1 = (byte)(((color1 >>> 16) & 0xFF) * fracColor1Upper / fracColorLower);
-        final byte a1 = (byte)(((color1 >>> 24) & 0xFF) * fracColor1Upper / fracColorLower);
+        final short b1 = (short)(color1 & 0xFF);
+        final short g1 = (short)((color1 >>> 8) & 0xFF);
+        final short r1 = (short)((color1 >>> 16) & 0xFF);
+        final short a1 = (short)((color1 >>> 24) & 0xFF);
 
-        final byte b2 = (byte)((color2 & 0xF) * fracColor2Upper / fracColorLower);
-        final byte g2 = (byte)(((color2 >>> 8) & 0xFF) * fracColor2Upper / fracColorLower);
-        final byte r2 = (byte)(((color2 >>> 16) & 0xFF) * fracColor2Upper / fracColorLower);
-        final byte a2 = (byte)(((color2 >>> 24) & 0xFF) * fracColor2Upper / fracColorLower);
+        final short b2 = (short)(color2 & 0xFF);
+        final short g2 = (short)((color2 >>> 8) & 0xFF);
+        final short r2 = (short)((color2 >>> 16) & 0xFF);
+        final short a2 = (short)((color2 >>> 24) & 0xFF);
 
-        final byte aFinal = (byte)(a1 + a2);
-        final byte rFinal = (byte)(r1 + r2);
-        final byte gFinal = (byte)(g1 + g2);
-        final byte bFinal = (byte)(b1 + b2);
+        final byte aFinal = (byte)((fracColor1Upper * a1 + fracColor2Upper * a2 + 1) / fracColorLower);
+        final byte rFinal = (byte)((fracColor1Upper * r1 + fracColor2Upper * r2 + 1) / fracColorLower);
+        final byte gFinal = (byte)((fracColor1Upper * g1 + fracColor2Upper * g2 + 1) / fracColorLower);
+        final byte bFinal = (byte)((fracColor1Upper * b1 + fracColor2Upper * b2 + 1) / fracColorLower);
         return MiscUtil.packBytesIntoInt(aFinal, rFinal, gFinal, bFinal);
     }
 }

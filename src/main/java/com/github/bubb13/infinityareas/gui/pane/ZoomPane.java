@@ -62,9 +62,10 @@ public class ZoomPane extends NotifyingScrollPane
             partialImage.setZoomFactor(zoomFactor);
         }
 
-        if (resetZoomFactor
-            || previousImage.getWidth() != image.getWidth()
-            || previousImage.getHeight() != image.getHeight())
+        final boolean sizeChanged = previousImage != null
+            && (previousImage.getWidth() != image.getWidth() || previousImage.getHeight() != image.getHeight());
+
+        if (resetZoomFactor || sizeChanged)
         {
             setHvalue(0);
             setVvalue(0);

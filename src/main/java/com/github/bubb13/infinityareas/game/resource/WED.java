@@ -1120,8 +1120,6 @@ public class WED
                 final TIS.Graphics baseOverlayTISGraphics = tisGraphicsCache.computeIfAbsent(baseOverlayTISResref,
                     (ignored) -> baseOverlayTIS.newGraphics(imageAndGraphics));
 
-                final PrintWriter logWriter = openFileForAppend(GlobalState.getInfinityAreasRoot().resolve("log.txt").toAbsolutePath().toString());
-
                 for (int yPos = 0, i = 0; yPos < baseOverlayHeightInPixels; yPos += 64)
                 {
                     for (int xPos = 0; xPos < baseOverlayWidthInPixels; xPos += 64, ++i)
@@ -1238,7 +1236,6 @@ public class WED
                         }
                     }
                 }
-                logWriter.close();
             }
 
             return this;
