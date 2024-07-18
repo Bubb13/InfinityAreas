@@ -196,7 +196,10 @@ public class WEDPane extends StackPane
         fileChooser.setInitialDirectory(overridePath.toFile());
         fileChooser.setInitialFileName(wed.getSource().getIdentifier().resref() + ".WED");
 
+        GlobalState.pushModalStage(null);
         final File selectedFile = fileChooser.showSaveDialog(null);
+        GlobalState.popModalStage(null);
+
         if (selectedFile == null)
         {
             return;

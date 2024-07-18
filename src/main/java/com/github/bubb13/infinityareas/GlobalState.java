@@ -121,6 +121,8 @@ public class GlobalState
                 // Consume the event so that the blocked stage doesn't respond to the input
                 event.consume();
 
+                boolean modalBeep = false;
+
                 // Beep an error tone if the user attempts to interact with a blocked stage
                 final EventType<?> eventType = event.getEventType();
                 if (eventType == MouseEvent.MOUSE_PRESSED)
@@ -131,12 +133,23 @@ public class GlobalState
                 {
                     // Only beep if the click started after the modal mode was entered
                     modalMousePress = false;
-                    Toolkit.getDefaultToolkit().beep();
+                    modalBeep = true;
                 }
                 else if (eventType == WindowEvent.WINDOW_CLOSE_REQUEST)
                 {
                     // Also beep if a window close is attempted during a modal
+                    modalBeep = true;
+                }
+
+                if (modalBeep)
+                {
                     Toolkit.getDefaultToolkit().beep();
+                    for (final Stage modalStage : modalStages)
+                    {
+                        if (modalStage == null) continue;
+                        modalStage.toFront();
+                        break;
+                    }
                 }
             }
         };

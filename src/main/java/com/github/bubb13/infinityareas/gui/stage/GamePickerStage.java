@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas.gui.stage;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.control.DynamicListView;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
@@ -175,7 +176,10 @@ public class GamePickerStage extends Stage
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
             "Infinity Engine Key File", "chitin.key"));
 
+        GlobalState.pushModalStage(null);
         final File selectedFile = fileChooser.showOpenDialog(this);
+        GlobalState.popModalStage(null);
+
         String errorMessage = null;
 
         if (selectedFile != null)
