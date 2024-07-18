@@ -16,6 +16,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 
 public class AreaPane extends StackPane
@@ -109,7 +110,7 @@ public class AreaPane extends StackPane
 
         final Rectangle2D sourceRect = zoomPane.getVisibleSourceRect();
 
-        var iterateResult = objects.iterable((int)sourceRect.getMinX(), (int)sourceRect.getMinY(),
+        var iterateResult = objects.iterableNear((int)sourceRect.getMinX(), (int)sourceRect.getMinY(),
             (int)sourceRect.getMaxX(), (int)sourceRect.getMaxY());
 
         for (final Object obj : iterateResult)
@@ -175,7 +176,7 @@ public class AreaPane extends StackPane
         {
             case ORIENTATION ->
             {
-                final Point2D sourcePos = zoomPane.absoluteCanvasToSourcePosition(absoluteCanvasX, absoluteCanvasY);
+                final Point sourcePos = zoomPane.absoluteCanvasToSourcePosition(absoluteCanvasX, absoluteCanvasY);
                 final double angle = MiscUtil.calculateAngle(
                     actorBeingDragged.getX(), actorBeingDragged.getY(), sourcePos.getX(), sourcePos.getY()
                 );
@@ -207,7 +208,7 @@ public class AreaPane extends StackPane
 
         final Rectangle2D sourceRect = zoomPane.getVisibleSourceRect();
 
-        final var iterateResult = objects.iterable(
+        final var iterateResult = objects.iterableNear(
             (int)sourceRect.getMinX(), (int)sourceRect.getMinY(),
             (int)sourceRect.getMaxX(), (int)sourceRect.getMaxY());
 

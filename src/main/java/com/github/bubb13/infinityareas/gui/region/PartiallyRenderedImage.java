@@ -3,6 +3,7 @@ package com.github.bubb13.infinityareas.gui.region;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.gui.misc.VisibleNotifiable;
+import com.github.bubb13.infinityareas.misc.Corners;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Bounds;
@@ -14,6 +15,7 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Region;
 
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.util.ArrayList;
@@ -133,9 +135,9 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return new Point2D(canvasX - renderX, canvasY - renderY);
     }
 
-    public Point2D absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
+    public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
     {
-        return new Point2D((int)(canvasX / zoomFactor), (int)(canvasY / zoomFactor));
+        return new Point((int)(canvasX / zoomFactor), (int)(canvasY / zoomFactor));
     }
 
     public Rectangle2D getVisibleSourceRect()
@@ -148,6 +150,19 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return new Rectangle2D(
             (int)(renderX / zoomFactor), (int)(renderY / zoomFactor),
             (int)(renderW / zoomFactor), (int)(renderH / zoomFactor)
+        );
+    }
+
+    public Corners getVisibleSourceCorners()
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        final int renderTopLeftX = (int)layout.getMinX();
+        final int renderTopLeftY = (int)layout.getMinY();
+        final int renderBottomRightExclusiveX = (int)layout.getMaxX();
+        final int renderBottomRightExclusiveY = (int)layout.getMaxY();
+        return new Corners(
+            (int)(renderTopLeftX / zoomFactor), (int)(renderTopLeftY / zoomFactor),
+            (int)(renderBottomRightExclusiveX / zoomFactor), (int)(renderBottomRightExclusiveY / zoomFactor)
         );
     }
 

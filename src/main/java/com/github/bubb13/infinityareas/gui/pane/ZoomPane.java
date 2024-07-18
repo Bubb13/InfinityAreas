@@ -2,6 +2,7 @@
 package com.github.bubb13.infinityareas.gui.pane;
 
 import com.github.bubb13.infinityareas.gui.region.PartiallyRenderedImage;
+import com.github.bubb13.infinityareas.misc.Corners;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -10,6 +11,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.function.Consumer;
 
@@ -171,7 +173,7 @@ public class ZoomPane extends NotifyingScrollPane
         return partialImage.absoluteToRelativeCanvasPosition(canvasX, canvasY);
     }
 
-    public Point2D absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
+    public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
     {
         return partialImage.absoluteCanvasToSourcePosition(canvasX, canvasY);
     }
@@ -179,6 +181,11 @@ public class ZoomPane extends NotifyingScrollPane
     public Rectangle2D getVisibleSourceRect()
     {
         return partialImage.getVisibleSourceRect();
+    }
+
+    public Corners getVisibleSourceCorners()
+    {
+        return partialImage.getVisibleSourceCorners();
     }
 
     private void onZoom(final double deltaY)

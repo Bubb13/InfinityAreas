@@ -66,7 +66,16 @@ public class QuadTree<ElementType>
         final ElementType element,
         final int topLeftX, final int topLeftY, final int bottomRightExclusiveX, final int bottomRightExclusiveY)
     {
+        remove(element);
         root.addElement(element, topLeftX, topLeftY, bottomRightExclusiveX, bottomRightExclusiveY);
+    }
+
+    public void add(final ElementType element, final Corners corners)
+    {
+        add(element,
+            corners.topLeftX(), corners.topLeftY(),
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY()
+        );
     }
 
     public void remove(final ElementType element)
@@ -87,7 +96,7 @@ public class QuadTree<ElementType>
      * Iterates the quadrants intersected by the given area, and executes the given
      * callback once for every unique element instance that is encountered.
      */
-    public void iterate(
+    public void iterateNear(
         final int topLeftX, final int topLeftY, final int bottomRightExclusiveX, final int bottomRightExclusiveY,
         final Consumer<ElementType> consumer)
     {
@@ -95,12 +104,29 @@ public class QuadTree<ElementType>
         root.iterate(topLeftX, topLeftY, bottomRightExclusiveX, bottomRightExclusiveY, seen, consumer);
     }
 
-    public IterateResult iterable(
+    public void iterateNear(final Corners corners, final Consumer<ElementType> consumer)
+    {
+        iterateNear(
+            corners.topLeftX(), corners.topLeftY(),
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY(),
+            consumer
+        );
+    }
+
+    public IterateResult iterableNear(
         final int topLeftX, final int topLeftY, final int bottomRightExclusiveX, final int bottomRightExclusiveY)
     {
         final HashSet<ElementHolder<ElementType>> seen = new HashSet<>();
         root.iterate(topLeftX, topLeftY, bottomRightExclusiveX, bottomRightExclusiveY, seen, null);
         return new IterateResult(seen);
+    }
+
+    public IterateResult iterableNear(final Corners corners)
+    {
+        return iterableNear(
+            corners.topLeftX(), corners.topLeftY(),
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY()
+        );
     }
 
     /////////////////////
@@ -499,8 +525,6 @@ public class QuadTree<ElementType>
 
         private static final QuadrantEnum[] VALUES = QuadrantEnum.values();
     }
-
-    private record Corners(int topLeftX, int topLeftY, int bottomRightExclusiveX, int bottomRightExclusiveY) {}
 
     private static class SimpleLinkedList<T> implements Iterable<T>
     {

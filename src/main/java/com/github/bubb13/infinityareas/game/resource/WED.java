@@ -97,6 +97,11 @@ public class WED
         return overlays;
     }
 
+    public Iterable<Polygon> getPolygons()
+    {
+        return MiscUtil.readOnlyIterable(polygons);
+    }
+
     public boolean checkAndClearChanged()
     {
         final boolean temp = changed;
@@ -380,7 +385,37 @@ public class WED
         }
     }
 
-    public record Vertex(short x, short y) {}
+    public class Vertex
+    {
+        private short x;
+        private short y;
+
+        public Vertex(short x, short y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
+        public short x()
+        {
+            return x;
+        }
+
+        public void setX(short x)
+        {
+            this.x = x;
+        }
+
+        public short y()
+        {
+            return y;
+        }
+
+        public void setY(short y)
+        {
+            this.y = y;
+        }
+    }
 
     public class Polygon
     {
