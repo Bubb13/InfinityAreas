@@ -17,6 +17,7 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.awt.Toolkit;
 import java.nio.file.Files;
@@ -130,6 +131,11 @@ public class GlobalState
                 {
                     // Only beep if the click started after the modal mode was entered
                     modalMousePress = false;
+                    Toolkit.getDefaultToolkit().beep();
+                }
+                else if (eventType == WindowEvent.WINDOW_CLOSE_REQUEST)
+                {
+                    // Also beep if a window close is attempted during a modal
                     Toolkit.getDefaultToolkit().beep();
                 }
             }

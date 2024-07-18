@@ -1,8 +1,12 @@
 
 package com.github.bubb13.infinityareas.misc;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.gui.stage.LoadingStage;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.util.Duration;
 
 public class LoadingStageTracker extends StackTaskTracker
 {
@@ -14,15 +18,16 @@ public class LoadingStageTracker extends StackTaskTracker
     @Override
     public void init()
     {
+        GlobalState.pushModalStage(null);
         loadingStageInitQueued = true;
-        if (Platform.isFxApplicationThread())
-        {
-            initStage();
-        }
-        else
-        {
-            Platform.runLater(this::initStage);
-        }
+
+        // Open the loading stage if the task takes more than 300 milliseconds
+        final Timeline timeline = new Timeline(new KeyFrame(
+            Duration.millis(300),
+            event -> initStage()
+        ));
+        timeline.setCycleCount(1);
+        timeline.play();
     }
 
     private void initStage()
@@ -40,22 +45,31 @@ public class LoadingStageTracker extends StackTaskTracker
     @Override
     public void done()
     {
+        boolean wasLoadingStageInitQueued = false;
+
+        // Stop the loading stage from opening if it hasn't already
         synchronized (loadingStageInitLock)
         {
             if (loadingStageInitQueued)
             {
                 loadingStageInitQueued = false;
-                return;
+                wasLoadingStageInitQueued = true;
             }
         }
 
-        if (Platform.isFxApplicationThread())
+        // Close the loading stage if it is open
+        if (!wasLoadingStageInitQueued)
         {
-            loadingStage.close();
+            if (Platform.isFxApplicationThread())
+            {
+                loadingStage.close();
+            }
+            else
+            {
+                Platform.runLater(loadingStage::close);
+            }
         }
-        else
-        {
-            Platform.runLater(loadingStage::close);
-        }
+
+        GlobalState.popModalStage(null);
     }
 }

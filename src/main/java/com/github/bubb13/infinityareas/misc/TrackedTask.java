@@ -89,6 +89,7 @@ public abstract class TrackedTask<T>
 
     public void start()
     {
+        tracker.init();
         // Start asynchronous thread
         thread = new Thread(this::run);
         thread.setDaemon(true);
@@ -152,7 +153,6 @@ public abstract class TrackedTask<T>
 
     private void run()
     {
-        tracker.init();
         try
         {
             value = doTask();

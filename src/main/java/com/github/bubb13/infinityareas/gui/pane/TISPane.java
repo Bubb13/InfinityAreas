@@ -6,6 +6,7 @@ import com.github.bubb13.infinityareas.game.resource.PVRZ;
 import com.github.bubb13.infinityareas.game.resource.ResourceDataCache;
 import com.github.bubb13.infinityareas.game.resource.TIS;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
+import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.geometry.Insets;
@@ -179,6 +180,10 @@ public class TISPane extends StackPane
         @Override
         protected Void doTask() throws Exception
         {
+            final TaskTrackerI tracker = getTracker();
+            tracker.updateMessage("Processing TIS ...");
+            tracker.updateProgress(0, 1);
+
             final TIS tis = new TIS(source, resourceDataCache, pvrzCache);
             tis.load(getTracker());
             TISPane.this.tis = tis;

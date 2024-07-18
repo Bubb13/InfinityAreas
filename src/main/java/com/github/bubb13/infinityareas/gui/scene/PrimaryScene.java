@@ -211,7 +211,7 @@ public final class PrimaryScene extends Stage
                     @Override
                     protected BufferedImage doTask() throws Exception
                     {
-                        area.load();
+                        area.load(getTracker());
                         areaPane.setArea(area);
                         return areaPane.render();
                     }

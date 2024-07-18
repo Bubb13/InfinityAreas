@@ -8,6 +8,7 @@ import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
+import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
@@ -284,6 +285,10 @@ public class WEDPane extends StackPane
         @Override
         protected Void doTask() throws Exception
         {
+            final TaskTrackerI tracker = getTracker();
+            tracker.updateMessage("Processing WED ...");
+            tracker.updateProgress(0, 1);
+
             final WED wed = new WED(source);
             wed.load(getTracker());
             WEDPane.this.wed = wed;
@@ -292,7 +297,7 @@ public class WEDPane extends StackPane
             graphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
             final BufferedImage image = ImageUtil.copyArgb(graphics.getImage());
 
-            JavaFXUtil.waitForFxThreadToExecute(() -> zoomPane.setImage(image));
+            waitForFxThreadToExecute(() -> zoomPane.setImage(image));
             return null;
         }
     }
