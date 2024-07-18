@@ -192,8 +192,10 @@ public class MainJavaFX extends Application
     private static KeyFile showGamePicker()
     {
         final GamePickerStage gamePickerStage = new GamePickerStage();
+        GlobalState.registerStage(gamePickerStage);
         gamePickerStage.setOnCloseRequest((ignored) -> Platform.exit());
         gamePickerStage.showAndWait();
+        GlobalState.deregisterStage(gamePickerStage);
         return gamePickerStage.getPickedKeyFile();
     }
 

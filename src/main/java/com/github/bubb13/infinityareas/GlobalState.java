@@ -3,21 +3,31 @@ package com.github.bubb13.infinityareas;
 
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.application.Application;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 
+import java.awt.Toolkit;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Stack;
 
 public class GlobalState
 {
+    private static final InstanceHashMap<Stage, ExtraStageInfo> extraStageInfo = new InstanceHashMap<>();
+    private static final Stack<Stage> modalStages = new Stack<>();
+
     private static Path infinityAreasRoot;
     private static Path infinityAreasTemp;
     private static SettingsFile settingsFile;
@@ -67,6 +77,7 @@ public class GlobalState
 
     public static void setPrimaryStage(Stage primaryStage)
     {
+        registerStage(primaryStage);
         GlobalState.primaryStage = primaryStage;
     }
 
@@ -89,6 +100,59 @@ public class GlobalState
     public static PixelFormat.Type getNativePixelFormatType()
     {
         return nativePixelFormatType;
+    }
+
+    public static void registerStage(final Stage stage)
+    {
+        final EventHandler<Event> eventFilter = new EventHandler<>()
+        {
+            private boolean modalMousePress;
+
+            @Override
+            public void handle(Event event)
+            {
+                if (modalStages.empty() || modalStages.peek() == stage)
+                {
+                    // Allow event. Either no modal stages are open, or the topmost modal stage is the target.
+                    return;
+                }
+
+                // Consume the event so that the blocked stage doesn't respond to the input
+                event.consume();
+
+                // Beep an error tone if the user attempts to interact with a blocked stage
+                final EventType<?> eventType = event.getEventType();
+                if (eventType == MouseEvent.MOUSE_PRESSED)
+                {
+                    modalMousePress = true;
+                }
+                else if (eventType == MouseEvent.MOUSE_CLICKED && modalMousePress)
+                {
+                    // Only beep if the click started after the modal mode was entered
+                    modalMousePress = false;
+                    Toolkit.getDefaultToolkit().beep();
+                }
+            }
+        };
+
+        stage.addEventFilter(Event.ANY, eventFilter);
+        extraStageInfo.put(stage, new ExtraStageInfo(eventFilter));
+    }
+
+    public static void deregisterStage(final Stage stage)
+    {
+        final ExtraStageInfo extraStageInfo = GlobalState.extraStageInfo.remove(stage);
+        stage.removeEventFilter(Event.ANY, extraStageInfo.filters());
+    }
+
+    public static void pushModalStage(final Stage stage)
+    {
+        modalStages.push(stage);
+    }
+
+    public static void popModalStage(final Stage stage)
+    {
+        modalStages.remove(stage);
     }
 
     public static void cleanTemp()
@@ -139,4 +203,10 @@ public class GlobalState
     //////////////////////////
 
     private GlobalState() {}
+
+    /////////////////////
+    // Private Classes //
+    /////////////////////
+
+    private record ExtraStageInfo(EventHandler<Event> filters) {}
 }

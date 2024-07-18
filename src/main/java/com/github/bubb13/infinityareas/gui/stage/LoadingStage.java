@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas.gui.stage;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.concurrent.Task;
@@ -16,7 +17,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -67,8 +67,8 @@ public class LoadingStage extends Stage
 
     private void init()
     {
+        GlobalState.pushModalStage(this);
         initStyle(StageStyle.UNDECORATED);
-        initModality(Modality.APPLICATION_MODAL);
 
         final Label message;
         message = new Label("Infinity Areas is loading ...");
@@ -109,5 +109,12 @@ public class LoadingStage extends Stage
                 LoadingStage.this.setAlwaysOnTop(true);
             }
         });
+    }
+
+    @Override
+    public void hide()
+    {
+        super.hide();
+        GlobalState.popModalStage(this);
     }
 }

@@ -27,7 +27,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -69,8 +68,8 @@ public class ReplaceOverlayTilesetStage extends Stage
 
     private void init()
     {
+        GlobalState.pushModalStage(this);
         initStyle(StageStyle.DECORATED);
-        initModality(Modality.APPLICATION_MODAL);
 
         ////////////////////
         // Main StackPane //
@@ -267,6 +266,13 @@ public class ReplaceOverlayTilesetStage extends Stage
         }
 
         close();
+    }
+
+    @Override
+    public void hide()
+    {
+        super.hide();
+        GlobalState.popModalStage(this);
     }
 
     /////////////////////

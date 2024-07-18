@@ -210,7 +210,9 @@ public class WEDPane extends StackPane
     private void onSelectReplaceOverlayTileset()
     {
         final ReplaceOverlayTilesetStage stage = new ReplaceOverlayTilesetStage(wed);
+        GlobalState.registerStage(stage);
         stage.showAndWait();
+        GlobalState.deregisterStage(stage);
 
         if (wed.checkAndClearChanged())
         {
