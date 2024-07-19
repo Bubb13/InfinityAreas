@@ -41,6 +41,10 @@ import java.util.function.Consumer;
  */
 public class PartiallyRenderedImage extends Region implements VisibleNotifiable
 {
+    ////////////////////
+    // Private Fields //
+    ////////////////////
+
     private final Canvas canvas = new Canvas();
     private final GraphicsContext graphics = canvas.getGraphicsContext2D();
 
@@ -61,6 +65,7 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
     private int curToDrawImagesWidth = 0;
     private int curToDrawImagesHeight = 0;
     private int toDrawImageIndex = 0;
+    private boolean blockDraw = false;
 
     /////////////////////////
     // Public Constructors //
@@ -83,6 +88,11 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
     ////////////////////
     // Public Methods //
     ////////////////////
+
+    public void blockDraw(final boolean value)
+    {
+        blockDraw = value;
+    }
 
     public void setSourceImage(final BufferedImage sourceImage)
     {
@@ -171,6 +181,7 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
     {
         if (bounds.isEmpty())
         {
+            //System.out.printf("Bad bounds\n");
             return;
         }
 
@@ -200,6 +211,8 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         canvas.relocate(snappedMinX, snappedMinY);
         canvas.setWidth(snappedWidth);
         canvas.setHeight(snappedHeight);
+        //System.out.printf("Relocated canvas to (%d,%d) with dimensions [%d,%d]\n",
+        //    snappedMinX, snappedMinY, snappedWidth, snappedHeight);
     }
 
     ///////////////////////
@@ -231,6 +244,11 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
 
     private void draw()
     {
+        if (blockDraw)
+        {
+            return;
+        }
+
         final Bounds layout = canvas.getBoundsInParent();
         final int renderX = (int)layout.getMinX();
         final int renderY = (int)layout.getMinY();
@@ -262,9 +280,10 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
                     toDrawImage = toDrawImages.get(toDrawImageIndex);
                 }
 
-                //System.out.printf("Drawing from image %d with size [%d,%d], renderW: %d, renderH: %d\n",
+                //System.out.printf("Drawing from image %d with size [%d,%d], renderX: %d, renderY: %d, renderW: %d, " +
+                //    "renderH: %d, zoomFactor: %f\n",
                 //    toDrawImageIndex, (int)toDrawImage.getWidth(), (int)toDrawImage.getHeight(),
-                //    renderW, renderH);
+                //    renderX, renderY, renderW, renderH, zoomFactor);
 
                 ++toDrawImageIndex;
 

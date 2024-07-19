@@ -89,6 +89,31 @@ public class ZoomPane extends NotifyingScrollPane
         partialImage.setDrawCallback(drawCallback);
     }
 
+    public void setMouseDraggedListener(final Consumer<MouseEvent> mouseDraggedListener)
+    {
+        this.mouseDraggedListener = mouseDraggedListener;
+    }
+
+    public void setMouseClickedListener(final Consumer<MouseEvent> mouseDraggedListener)
+    {
+        this.mouseClickedListener = mouseDraggedListener;
+    }
+
+    public void setMousePressedListener(final Consumer<MouseEvent> mousePressedListener)
+    {
+        this.mousePressedListener = mousePressedListener;
+    }
+
+    public void setMouseReleasedListener(final Consumer<MouseEvent> mouseReleasedListener)
+    {
+        this.mouseReleasedListener = mouseReleasedListener;
+    }
+
+    public void requestDraw()
+    {
+        partialImage.requestLayout();
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -190,6 +215,9 @@ public class ZoomPane extends NotifyingScrollPane
 
     private void onZoom(final double deltaY)
     {
+        // Block notify+draw events until positioning is done
+        blockDraw(true);
+
         final Bounds viewportBounds = getViewportBounds();
         final double viewportWidth = viewportBounds.getWidth();
         final double viewportHeight = viewportBounds.getHeight();
@@ -240,31 +268,14 @@ public class ZoomPane extends NotifyingScrollPane
         final double newVVal = newVRel * vMax;
 
         setHvalue(newHVal);
+        // Release the notify+draw block so that the `setVvalue()` call triggers those events
+        blockDraw(false);
         setVvalue(newVVal);
     }
 
-    public void setMouseDraggedListener(final Consumer<MouseEvent> mouseDraggedListener)
+    private void blockDraw(final boolean newValue)
     {
-        this.mouseDraggedListener = mouseDraggedListener;
-    }
-
-    public void setMouseClickedListener(final Consumer<MouseEvent> mouseDraggedListener)
-    {
-        this.mouseClickedListener = mouseDraggedListener;
-    }
-
-    public void setMousePressedListener(final Consumer<MouseEvent> mousePressedListener)
-    {
-        this.mousePressedListener = mousePressedListener;
-    }
-
-    public void setMouseReleasedListener(final Consumer<MouseEvent> mouseReleasedListener)
-    {
-        this.mouseReleasedListener = mouseReleasedListener;
-    }
-
-    public void requestDraw()
-    {
-        partialImage.requestLayout();
+        blockNotify(newValue);
+        partialImage.blockDraw(newValue);
     }
 }

@@ -10,17 +10,25 @@ import javafx.scene.layout.Pane;
 
 public class NotifyingScrollPane extends ScrollPane
 {
+    ////////////////////
+    // Private Fields //
+    ////////////////////
+
+    private boolean blockNotify = false;
+
+    /////////////////////////
+    // Public Constructors //
+    /////////////////////////
+
     public NotifyingScrollPane()
     {
         super();
         init();
     }
 
-    private void init()
-    {
-        hvalueProperty().addListener((obs, oldBounds, newBounds) -> checkVisibility());
-        vvalueProperty().addListener((obs, oldBounds, newBounds) -> checkVisibility());
-    }
+    ///////////////////////
+    // Protected Methods //
+    ///////////////////////
 
     @Override
     protected void layoutChildren()
@@ -29,17 +37,41 @@ public class NotifyingScrollPane extends ScrollPane
         checkVisibility();
     }
 
+    protected void blockNotify(final boolean newValue)
+    {
+        blockNotify = newValue;
+    }
+
+    /////////////////////
+    // Private Methods //
+    /////////////////////
+
+    private void init()
+    {
+        hvalueProperty().addListener((obs, oldBounds, newBounds) -> checkVisibility());
+        vvalueProperty().addListener((obs, oldBounds, newBounds) -> checkVisibility());
+    }
+
     private void checkVisibility()
     {
+        if (blockNotify)
+        {
+            return;
+        }
+
         final Pane content = (Pane)getContent();
 
         final Bounds viewportBounds = getViewportBounds();
         final double viewportWidth = viewportBounds.getWidth();
         final double viewportHeight = viewportBounds.getHeight();
 
-        final Bounds contentBounds = content.getBoundsInLocal();
-        final double contentWidth = contentBounds.getWidth();
-        final double contentHeight = contentBounds.getHeight();
+        // Important: Using `getWidth()` and `getHeight()` instead of `content.getBoundsInLocal()` to see the
+        //            content's dimensions as they are RIGHT NOW, (`content.getBoundsInLocal()` returns the
+        //            values as they were before the current layout pass). Since this function might be called
+        //            during a layout pass, it is import to use the new dimensions, otherwise invalid bounds
+        //            might be passed to children in the below code.
+        final double contentWidth = content.getWidth();
+        final double contentHeight = content.getHeight();
 
         final double hMax = getHmax();
         final double vMax = getVmax();
@@ -60,6 +92,10 @@ public class NotifyingScrollPane extends ScrollPane
                     child.getLayoutX(), child.getLayoutY(),
                     child.prefWidth(-1), child.prefHeight(-1)
                 );
+                //System.out.printf("Notifying, seen: [%f,%f,%f,%f], child: [%f,%f,%f,%f]\n",
+                //    seenBounds.getMinX(), seenBounds.getMinY(), seenBounds.getWidth(), seenBounds.getHeight(),
+                //    childBounds.getMinX(), childBounds.getMinY(), childBounds.getWidth(), childBounds.getHeight());
+
                 final Bounds bounds = getIntersection(childBounds, seenBounds);
                 childNotifiable.notifyVisible(bounds);
             }
