@@ -37,7 +37,7 @@ public class OrderedInstanceSet<T> implements Iterable<T>
 
     public void remove(final T value)
     {
-        final Node<T> node = valueToNode.get(value);
+        final Node<T> node = valueToNode.remove(value);
         if (node == null) return;
         removeNode(node);
     }
@@ -73,6 +73,23 @@ public class OrderedInstanceSet<T> implements Iterable<T>
     public Iterator<T> iterator()
     {
         return values();
+    }
+
+    public void clear()
+    {
+        head.next = tail;
+        tail.prev = head;
+        valueToNode.clear();
+    }
+
+    public boolean contains(final T value)
+    {
+        return valueToNode.containsKey(value);
+    }
+
+    public int size()
+    {
+        return valueToNode.size();
     }
 
     /////////////////////

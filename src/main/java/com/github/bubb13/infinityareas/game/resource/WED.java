@@ -8,6 +8,7 @@ import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
+import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
@@ -15,7 +16,6 @@ import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import com.github.bubb13.infinityareas.util.TileUtil;
 
-import java.awt.BasicStroke;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
@@ -100,6 +100,11 @@ public class WED
     public Iterable<Polygon> getPolygons()
     {
         return MiscUtil.readOnlyIterable(polygons);
+    }
+
+    public void addPolygon(final Polygon polygon)
+    {
+        polygons.add(polygon);
     }
 
     public boolean checkAndClearChanged()
@@ -385,13 +390,15 @@ public class WED
         }
     }
 
-    public class Vertex
+    public static class Vertex
     {
+        private final SimpleLinkedList<Vertex>.Node node;
         private short x;
         private short y;
 
-        public Vertex(short x, short y)
+        public Vertex(final SimpleLinkedList<Vertex>.Node node, final short x, final short y)
         {
+            this.node = node;
             this.x = x;
             this.y = y;
         }
@@ -401,7 +408,7 @@ public class WED
             return x;
         }
 
-        public void setX(short x)
+        public void setX(final short x)
         {
             this.x = x;
         }
@@ -411,13 +418,18 @@ public class WED
             return y;
         }
 
-        public void setY(short y)
+        public void setY(final short y)
         {
             this.y = y;
         }
+
+        public SimpleLinkedList<Vertex>.Node getNode()
+        {
+            return node;
+        }
     }
 
-    public class Polygon
+    public static class Polygon
     {
         // In-file
         private byte flags;
@@ -428,13 +440,13 @@ public class WED
         private short boundingBoxBottom;
 
         // Derived
-        private final ArrayList<Vertex> vertices;
+        private final SimpleLinkedList<Vertex> vertices;
 
         public Polygon(
             final byte flags, final byte height,
             final short boundingBoxLeft, final short boundingBoxRight,
             final short boundingBoxTop, final short boundingBoxBottom,
-            final ArrayList<Vertex> vertices)
+            final SimpleLinkedList<Vertex> vertices)
         {
             this.flags = flags;
             this.height = height;
@@ -445,6 +457,11 @@ public class WED
             this.vertices = vertices;
         }
 
+        public Vertex addVertex(final short x, final short y)
+        {
+            return vertices.addTail((node) -> new Vertex(node, x, y)).value();
+        }
+
         public byte getFlags()
         {
             return flags;
@@ -453,7 +470,6 @@ public class WED
         public void setFlags(final byte flags)
         {
             this.flags = flags;
-            changed();
         }
 
         public byte getHeight()
@@ -464,7 +480,6 @@ public class WED
         public void setHeight(final byte height)
         {
             this.height = height;
-            changed();
         }
 
         public short getBoundingBoxLeft()
@@ -475,7 +490,6 @@ public class WED
         public void setBoundingBoxLeft(final short boundingBoxLeft)
         {
             this.boundingBoxLeft = boundingBoxLeft;
-            changed();
         }
 
         public short getBoundingBoxRight()
@@ -486,7 +500,6 @@ public class WED
         public void setBoundingBoxRight(final short boundingBoxRight)
         {
             this.boundingBoxRight = boundingBoxRight;
-            changed();
         }
 
         public short getBoundingBoxTop()
@@ -497,7 +510,6 @@ public class WED
         public void setBoundingBoxTop(final short boundingBoxTop)
         {
             this.boundingBoxTop = boundingBoxTop;
-            changed();
         }
 
         public short getBoundingBoxBottom()
@@ -508,10 +520,9 @@ public class WED
         public void setBoundingBoxBottom(final short boundingBoxBottom)
         {
             this.boundingBoxBottom = boundingBoxBottom;
-            changed();
         }
 
-        public ArrayList<Vertex> getVertices()
+        public SimpleLinkedList<Vertex> getVertices()
         {
             return vertices;
         }
@@ -747,7 +758,7 @@ public class WED
         final short boundingBoxTop = buffer.getShort();
         final short boundingBoxBottom = buffer.getShort();
 
-        final ArrayList<Vertex> vertices = new ArrayList<>();
+        final SimpleLinkedList<Vertex> vertices = new SimpleLinkedList<>();
 
         // Read vertices
         mark();
@@ -756,7 +767,7 @@ public class WED
         {
             final short vertexX = buffer.getShort();
             final short vertexY = buffer.getShort();
-            vertices.add(new Vertex(vertexX, vertexY));
+            vertices.addTail((node) -> new Vertex(node, vertexX, vertexY));
         }
         reset();
 
@@ -1283,34 +1294,34 @@ public class WED
             return this;
         }
 
-        public Graphics renderPolygons(final float width)
-        {
-            final Graphics2D graphics = imageAndGraphics.graphics();
-            for (final Polygon polygon : polygons)
-            {
-                final ArrayList<Vertex> vertices = polygon.getVertices();
-                final int limit = vertices.size() - 1;
-
-                if (limit <= 1)
-                {
-                    continue;
-                }
-
-                graphics.setStroke(new BasicStroke(width));
-
-                for (int i = 0; i < limit; ++i)
-                {
-                    final Vertex v1 = vertices.get(i);
-                    final Vertex v2 = vertices.get(i + 1);
-                    graphics.drawLine(v1.x(), v1.y(), v2.x(), v2.y());
-                }
-
-                final Vertex vFirst = vertices.get(0);
-                final Vertex vLast = vertices.get(limit);
-                graphics.drawLine(vFirst.x(), vFirst.y(), vLast.x(), vLast.y());
-            }
-            return this;
-        }
+//        public Graphics renderPolygons(final float width)
+//        {
+//            final Graphics2D graphics = imageAndGraphics.graphics();
+//            for (final Polygon polygon : polygons)
+//            {
+//                final ArrayList<Vertex> vertices = polygon.getVertices();
+//                final int limit = vertices.size() - 1;
+//
+//                if (limit <= 1)
+//                {
+//                    continue;
+//                }
+//
+//                graphics.setStroke(new BasicStroke(width));
+//
+//                for (int i = 0; i < limit; ++i)
+//                {
+//                    final Vertex v1 = vertices.get(i);
+//                    final Vertex v2 = vertices.get(i + 1);
+//                    graphics.drawLine(v1.x(), v1.y(), v2.x(), v2.y());
+//                }
+//
+//                final Vertex vFirst = vertices.get(0);
+//                final Vertex vLast = vertices.get(limit);
+//                graphics.drawLine(vFirst.x(), vFirst.y(), vLast.x(), vLast.y());
+//            }
+//            return this;
+//        }
 
         private boolean renderRequested(final int[] overlayIndexes, final int overlayIndex)
         {

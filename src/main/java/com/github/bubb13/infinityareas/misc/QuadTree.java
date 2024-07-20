@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -524,83 +523,6 @@ public class QuadTree<ElementType>
         BOTTOM_RIGHT;
 
         private static final QuadrantEnum[] VALUES = QuadrantEnum.values();
-    }
-
-    private static class SimpleLinkedList<T> implements Iterable<T>
-    {
-        private final Node head = new Node();
-        private final Node tail = new Node();
-        {
-            head.next = tail;
-            tail.previous = head;
-        }
-        private int size = 0;
-
-        public Node addTail(final T value)
-        {
-            final Node newTail = new Node(value);
-            newTail.previous = tail.previous;
-            newTail.next = tail;
-            tail.previous.next = newTail;
-            tail.previous = newTail;
-            ++size;
-            return newTail;
-        }
-
-        public int size()
-        {
-            return size;
-        }
-
-        @Override
-        public Iterator<T> iterator()
-        {
-            return new Iterator<>()
-            {
-                private Node current = head;
-
-                @Override
-                public boolean hasNext()
-                {
-                    return current.next != tail;
-                }
-
-                @Override
-                public T next()
-                {
-                    current = current.next;
-                    if (current == tail) throw new NoSuchElementException();
-                    return current.value;
-                }
-
-                @Override
-                public void remove()
-                {
-                    current.remove();
-                }
-            };
-        }
-
-        public class Node
-        {
-            private Node previous;
-            private Node next;
-            private T value;
-
-            private Node(final T value)
-            {
-                this.value = value;
-            }
-
-            private Node() {}
-
-            public void remove()
-            {
-                previous.next = next;
-                next.previous = previous;
-                --size;
-            }
-        }
     }
 
     public class IterateResult implements Iterable<ElementType>

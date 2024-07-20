@@ -91,9 +91,14 @@ public class Corners
         return new Corners(topLeftX, topLeftY, bottomRightXExclusive, bottomRightYExclusive);
     }
 
+    public boolean contains(final Point point, final int fudgeAmount)
+    {
+        return point.x >= topLeftX - fudgeAmount && point.x < bottomRightExclusiveX + fudgeAmount
+            && point.y >= topLeftY - fudgeAmount && point.y < bottomRightExclusiveY + fudgeAmount;
+    }
+
     public boolean contains(final Point point)
     {
-        return point.x >= topLeftX && point.x < bottomRightExclusiveX
-            && point.y >= topLeftY && point.y < bottomRightExclusiveY;
+        return contains(point, 0);
     }
 }

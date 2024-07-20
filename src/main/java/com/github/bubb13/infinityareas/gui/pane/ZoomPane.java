@@ -7,6 +7,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
@@ -28,6 +29,8 @@ public class ZoomPane extends NotifyingScrollPane
     private Consumer<MouseEvent> mouseClickedListener;
     private Consumer<MouseEvent> mousePressedListener;
     private Consumer<MouseEvent> mouseReleasedListener;
+    private Consumer<KeyEvent> keyPressedListener;
+    private Consumer<MouseEvent> dragDetectedListener;
 
     /////////////////////////
     // Public Constructors //
@@ -109,6 +112,16 @@ public class ZoomPane extends NotifyingScrollPane
         this.mouseReleasedListener = mouseReleasedListener;
     }
 
+    public void setKeyPressedListener(final Consumer<KeyEvent> keyPressedListener)
+    {
+        this.keyPressedListener = keyPressedListener;
+    }
+
+    public void setDragDetectedListener(final Consumer<MouseEvent> dragDetectedListener)
+    {
+        this.dragDetectedListener = dragDetectedListener;
+    }
+
     public void requestDraw()
     {
         partialImage.requestLayout();
@@ -140,11 +153,13 @@ public class ZoomPane extends NotifyingScrollPane
         setFocusTraversable(false);
         setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
 
-        addEventFilter(ScrollEvent.SCROLL, this::onScroll);
+        addEventFilter(ScrollEvent.SCROLL, this::onScrollFilter);
         partialImage.setOnMouseClicked(this::onMouseClicked);
         partialImage.setOnMouseDragged(this::onMouseDragged);
         partialImage.setOnMousePressed(this::onMousePressed);
         partialImage.setOnMouseReleased(this::onMouseReleased);
+        partialImage.setOnKeyPressed(this::onKeyPressed);
+        partialImage.setOnDragDetected(this::onDragDetected);
     }
 
     private void onMouseClicked(final MouseEvent event)
@@ -179,7 +194,23 @@ public class ZoomPane extends NotifyingScrollPane
         }
     }
 
-    private void onScroll(final ScrollEvent event)
+    private void onKeyPressed(final KeyEvent event)
+    {
+        if (keyPressedListener != null)
+        {
+            keyPressedListener.accept(event);
+        }
+    }
+
+    private void onDragDetected(final MouseEvent event)
+    {
+        if (dragDetectedListener != null)
+        {
+            dragDetectedListener.accept(event);
+        }
+    }
+
+    private void onScrollFilter(final ScrollEvent event)
     {
         if (event.isControlDown())
         {

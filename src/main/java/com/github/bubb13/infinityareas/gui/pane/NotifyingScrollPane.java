@@ -1,14 +1,14 @@
 
 package com.github.bubb13.infinityareas.gui.pane;
 
+import com.github.bubb13.infinityareas.gui.control.CustomScrollPane;
 import com.github.bubb13.infinityareas.gui.misc.VisibleNotifiable;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Pane;
 
-public class NotifyingScrollPane extends ScrollPane
+public class NotifyingScrollPane extends CustomScrollPane
 {
     ////////////////////
     // Private Fields //

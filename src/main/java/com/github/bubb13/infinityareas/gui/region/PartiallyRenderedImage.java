@@ -208,7 +208,7 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         }
 
         // Move the canvas so that it encompasses the visible part of the parent (ScrollPane)
-        canvas.relocate(snappedMinX, snappedMinY);
+        canvas.relocate(minX, minY);
         canvas.setWidth(snappedWidth);
         canvas.setHeight(snappedHeight);
         //System.out.printf("Relocated canvas to (%d,%d) with dimensions [%d,%d]\n",
