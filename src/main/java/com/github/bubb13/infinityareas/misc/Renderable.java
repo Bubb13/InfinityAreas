@@ -11,4 +11,5 @@ public interface Renderable
     void clicked(final MouseEvent mouseEvent);
     void selected();
     void unselected();
+    void delete();
 }

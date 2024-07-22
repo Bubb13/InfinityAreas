@@ -1,115 +1,97 @@
 
 package com.github.bubb13.infinityareas.misc;
 
-import java.util.Iterator;
+import java.util.function.Function;
 
-public class OrderedInstanceSet<T> implements Iterable<T>
+public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
 {
     ////////////////////
     // Private Fields //
     ////////////////////
 
-    private final Node<T> head = new Node<>();
-    private final Node<T> tail = new Node<>();
-    {
-        head.next = tail;
-        tail.prev = head;
-    }
-    private final InstanceHashMap<T, Node<T>> valueToNode = new InstanceHashMap<>();
+    private final InstanceHashMap<T, Node> valueToNode = new InstanceHashMap<>();
 
     ////////////////////
     // Public Methods //
     ////////////////////
-
-    public void addTail(final T value)
-    {
-        if (valueToNode.containsKey(value)) return;
-
-        final Node<T> node = new Node<>();
-        node.prev = tail.prev;
-        node.next = tail;
-        node.value = value;
-
-        tail.prev.next = node;
-        tail.prev = node;
-        valueToNode.put(value, node);
-    }
-
-    public void remove(final T value)
-    {
-        final Node<T> node = valueToNode.remove(value);
-        if (node == null) return;
-        removeNode(node);
-    }
-
-    public Iterator<T> values()
-    {
-        return new Iterator<>()
-        {
-            private Node<T> current = head;
-
-            @Override
-            public boolean hasNext()
-            {
-                return current.next != tail;
-            }
-
-            @Override
-            public T next()
-            {
-                current = current.next;
-                return current.value;
-            }
-
-            @Override
-            public void remove()
-            {
-                removeNode(current);
-            }
-        };
-    }
-
-    @Override
-    public Iterator<T> iterator()
-    {
-        return values();
-    }
-
-    public void clear()
-    {
-        head.next = tail;
-        tail.prev = head;
-        valueToNode.clear();
-    }
 
     public boolean contains(final T value)
     {
         return valueToNode.containsKey(value);
     }
 
-    public int size()
+    public void remove(final T value)
     {
-        return valueToNode.size();
+        final var node = valueToNode.remove(value);
+        if (node == null) return;
+        node.remove();
     }
 
-    /////////////////////
-    // Private Methods //
-    /////////////////////
-
-    private void removeNode(final Node<T> node)
+    public void clear()
     {
-        node.prev.next = node.next;
-        node.next.prev = node.prev;
+        super.clear();
+        valueToNode.clear();
     }
 
-    /////////////////////
-    // Private Classes //
-    /////////////////////
+    //////////////////////
+    // Public Overrides //
+    //////////////////////
 
-    private static class Node<T>
+    @Override
+    public Node addTail(final T value)
     {
-        private Node<T> prev;
-        private Node<T> next;
-        private T value;
+        final var existingNode = valueToNode.get(value);
+        if (existingNode != null) return existingNode;
+        return addTailInternal(new Node(value));
+    }
+
+    @Override
+    public Node addTail(final Function<Node, T> consumer)
+    {
+        final Node newTail = new Node();
+        final T value = consumer.apply(newTail);
+
+        final var existingNode = valueToNode.get(value);
+        if (existingNode != null) return existingNode;
+
+        newTail.value = value;
+        return addTailInternal(newTail);
+    }
+
+    /////////////////////////
+    // Protected Overrides //
+    /////////////////////////
+
+    @Override
+    protected Node addAfter(final Node node, final T value)
+    {
+        final var existingNode = valueToNode.get(value);
+        if (existingNode != null) return existingNode;
+        return addAfterInternal(node, new Node(value));
+    }
+
+    @Override
+    protected Node addAfter(final Node node, final Function<Node, T> consumer)
+    {
+        final Node newNode = new Node();
+        final T value = consumer.apply(newNode);
+
+        final var existingNode = valueToNode.get(value);
+        if (existingNode != null) return existingNode;
+
+        newNode.value = value;
+        return addAfterInternal(node, newNode);
+    }
+
+    @Override
+    protected void onAdd(final Node node)
+    {
+        valueToNode.put(node.value, node);
+    }
+
+    @Override
+    protected void onRemove(final T value)
+    {
+        valueToNode.remove(value);
     }
 }

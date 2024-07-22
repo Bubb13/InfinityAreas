@@ -10,6 +10,7 @@ import com.github.bubb13.infinityareas.gui.dialog.WarningAlertTwoOptions;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.AbstractRenderable;
 import com.github.bubb13.infinityareas.misc.Corners;
+import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.QuadTree;
@@ -45,6 +46,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 
 public class WEDPane extends StackPane
 {
@@ -75,6 +77,10 @@ public class WEDPane extends StackPane
 
     final private OrderedInstanceSet<Renderable> selectedObjects = new OrderedInstanceSet<>();
 
+    private QuickSelectRectangle quickSelectRectangle;
+    private boolean quickSelectMode = false;
+    private boolean quickSelectRender = false;
+
     /////////////////////////
     // Public Constructors //
     /////////////////////////
@@ -97,6 +103,31 @@ public class WEDPane extends StackPane
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    private void reset()
+    {
+        drawingPolygon = null;
+        editMode = EditMode.NORMAL;
+        dragMode = DragMode.NONE;
+        selectMode = SelectMode.NONE;
+
+        pressButton = null;
+        dragButton = null;
+
+        pressObject = null;
+        dragObject = null;
+
+        selectedObjects.clear();
+
+        quickSelectRectangle = new QuickSelectRectangle();
+        quickSelectMode = false;
+        quickSelectRender = false;
+
+        for (final WED.Polygon polygon : wed.getPolygons())
+        {
+            new RenderablePolygon(polygon);
+        }
+    }
 
     private void init()
     {
@@ -139,13 +170,19 @@ public class WEDPane extends StackPane
                 final Region padding3 = new Region();
                 padding3.setPadding(new Insets(0, 0, 0, 5));
 
+                final Button quickSelect = new UnderlinedButton("Quick Select");
+                quickSelect.setOnAction((ignored) -> this.onQuickSelect());
+
+                final Region padding4 = new Region();
+                padding4.setPadding(new Insets(0, 0, 0, 5));
+
                 final MenuButton overlaysDropdown = new MenuButton("Overlays");
                 final MenuItem replaceOverlayTisButton = new MenuItem("Replace Overlay Tileset");
                 replaceOverlayTisButton.setOnAction((ignored) -> this.onSelectReplaceOverlayTileset());
                 overlaysDropdown.getItems().addAll(replaceOverlayTisButton);
 
                 toolbar.getChildren().addAll(saveButton, padding1, drawPolygonButton,
-                    padding2, bisectLine, padding3, overlaysDropdown);
+                    padding2, bisectLine, padding3, quickSelect, padding4, overlaysDropdown);
 
             zoomPane.setZoomFactorListener(this::onZoomFactorChanged);
             zoomPane.setDrawCallback(this::onDraw);
@@ -289,12 +326,14 @@ public class WEDPane extends StackPane
         final short finalY = (short)(vertex2.y() - (vertex2.y() - vertex1.y()) / 2);
 
         renderableVertex1.addNewVertexAfter(finalX, finalY);
+        unselectAll();
         zoomPane.requestDraw();
     }
 
-    private void onDeleteNode()
+    private void onQuickSelect()
     {
-
+        quickSelectMode = true;
+        zoomPane.requestDraw();
     }
 
     private void setEditMode(final EditMode newMode)
@@ -315,30 +354,36 @@ public class WEDPane extends StackPane
             renderable.render();
         });
 
+        if (quickSelectMode)
+        {
+            drawModeText(context, "Quick Select Mode");
+            return;
+        }
+
         switch (editMode)
         {
-            case DRAW_POLYGON ->
-            {
-                final String text = "Draw Polygon Mode";
-
-                final Font font = new Font("Arial", 28);
-
-                final Text tempText = new Text(text);
-                tempText.setFont(font);
-                final double textHeight = tempText.getBoundsInLocal().getHeight();
-
-                context.setFill(Color.WHITE);
-                context.setFont(font);
-                context.setStroke(Color.BLACK);
-                context.setLineWidth(1);
-
-                context.fillText(text, 10, textHeight);
-                context.strokeText(text, 10, textHeight);
-            }
+            case DRAW_POLYGON -> drawModeText(context, "Draw Polygon Mode");
         }
     }
 
-    final void onMousePressed(final MouseEvent event)
+    private void drawModeText(final GraphicsContext context, final String text)
+    {
+        final Font font = new Font("Arial", 28);
+
+        final Text tempText = new Text(text);
+        tempText.setFont(font);
+        final double textHeight = tempText.getBoundsInLocal().getHeight();
+
+        context.setFill(Color.WHITE);
+        context.setFont(font);
+        context.setStroke(Color.BLACK);
+        context.setLineWidth(1);
+
+        context.fillText(text, 10, textHeight);
+        context.strokeText(text, 10, textHeight);
+    }
+
+    private void onMousePressed(final MouseEvent event)
     {
         final int absoluteCanvasX = (int)event.getX();
         final int absoluteCanvasY = (int)event.getY();
@@ -346,6 +391,19 @@ public class WEDPane extends StackPane
         final Point sourcePressPos = zoomPane.absoluteCanvasToSourcePosition(absoluteCanvasX, absoluteCanvasY);
         final short sourcePressX = (short)sourcePressPos.x;
         final short sourcePressY = (short)sourcePressPos.y;
+
+        if (quickSelectMode)
+        {
+            if (!quickSelectRender && event.getButton() == MouseButton.PRIMARY)
+            {
+                pressButton = event.getButton();
+                quickSelectRectangle.setOrigin(sourcePressX, sourcePressY);
+                quickSelectRectangle.setBoundingCorner(sourcePressX, sourcePressY);
+                quickSelectRender = true;
+                zoomPane.requestDraw();
+            }
+            return;
+        }
 
         final int fudgeAmount = (int)(5 / zoomPane.getZoomFactor());
         final Corners fudgeCorners = new Corners(
@@ -410,7 +468,27 @@ public class WEDPane extends StackPane
     final void onMouseDragged(final MouseEvent event)
     {
         final MouseButton button = event.getButton();
-        if (event.isMiddleButtonDown() || button != pressButton)
+
+        if (quickSelectMode)
+        {
+            if (button == pressButton)
+            {
+                event.consume();
+                final int absoluteCanvasX = (int)event.getX();
+                final int absoluteCanvasY = (int)event.getY();
+                final Point sourcePos = zoomPane.absoluteCanvasToSourcePosition(absoluteCanvasX, absoluteCanvasY);
+                quickSelectRectangle.setBoundingCorner((short)sourcePos.x, (short)sourcePos.y);
+            }
+            return;
+        }
+
+        if (editMode == EditMode.DRAW_POLYGON && button == MouseButton.PRIMARY && pressObject == null)
+        {
+            pressButton = button;
+            pressObject = drawingPolygon.getRenderablePolygonVertices().getLast();
+        }
+
+        if (button != pressButton)
         {
             return;
         }
@@ -479,6 +557,51 @@ public class WEDPane extends StackPane
     {
         final MouseButton button = event.getButton();
 
+        if (quickSelectRender)
+        {
+            if (button == pressButton)
+            {
+                if (!event.isShiftDown() && !event.isControlDown())
+                {
+                    unselectAll();
+                }
+
+                final Corners selectionCorners = quickSelectRectangle.getCorners();
+                for (final Renderable renderable : quadTree.iterableNear(selectionCorners))
+                {
+                    if (!renderable.isEnabled() || renderable.getCorners().intersect(selectionCorners) == null)
+                    {
+                        continue;
+                    }
+
+                    if (renderable instanceof RenderablePolygonVertex renderablePolygonVertex)
+                    {
+                        if (event.isControlDown())
+                        {
+                            if (renderablePolygonVertex.selected)
+                            {
+                                unselect(renderablePolygonVertex);
+                            }
+                            else
+                            {
+                                select(renderablePolygonVertex);
+                            }
+                        }
+                        else
+                        {
+                            select(renderablePolygonVertex);
+                        }
+                    }
+                }
+
+                pressButton = null;
+                quickSelectRender = false;
+                quickSelectMode = false;
+                zoomPane.requestDraw();
+            }
+            return;
+        }
+
         if (button == pressButton)
         {
             if (dragMode == DragMode.NONE)
@@ -490,6 +613,7 @@ public class WEDPane extends StackPane
                 }
             }
             pressButton = null;
+            pressObject = null;
         }
 
         if (button == dragButton)
@@ -507,7 +631,12 @@ public class WEDPane extends StackPane
         {
             case ESCAPE ->
             {
-                if (editMode == EditMode.DRAW_POLYGON)
+                if (selectedObjects.size() > 0)
+                {
+                    event.consume();
+                    unselectAll();
+                }
+                else if (editMode == EditMode.DRAW_POLYGON)
                 {
                     event.consume();
                     cancelDrawPolygonMode();
@@ -534,6 +663,92 @@ public class WEDPane extends StackPane
                     setEditMode(EditMode.DRAW_POLYGON);
                 }
             }
+            case Q ->
+            {
+                event.consume();
+                onQuickSelect();
+            }
+            case DELETE ->
+            {
+                event.consume();
+                onDelete();
+            }
+        }
+    }
+
+    private void onDelete()
+    {
+        final InstanceHashMap<RenderablePolygon, VerticesDeleteInfo> verticesDeleteInfoMap = new InstanceHashMap<>();
+        final ArrayList<Renderable> otherSelectedObjects = new ArrayList<>();
+
+        for (final Renderable renderable : selectedObjects)
+        {
+            if (renderable instanceof RenderablePolygonVertex vertex)
+            {
+                final VerticesDeleteInfo deleteInfo = verticesDeleteInfoMap.computeIfAbsent(
+                    vertex.getRenderablePolygon(), (ignored) -> new VerticesDeleteInfo());
+
+                deleteInfo.toDelete.add(vertex);
+            }
+            else
+            {
+                otherSelectedObjects.add(renderable);
+            }
+        }
+
+        final boolean[] noContinue = new boolean[] { false };
+
+        for (final var entry : verticesDeleteInfoMap.entries())
+        {
+            final RenderablePolygon polygon = entry.getKey();
+            final VerticesDeleteInfo deleteInfo = entry.getValue();
+            final int numVertices = polygon.getRenderablePolygonVertices().size();
+            final int numVerticesToDelete = deleteInfo.toDelete.size();
+            final int remainingVertices = numVertices - numVerticesToDelete;
+
+            if (remainingVertices > 0 && remainingVertices < 3)
+            {
+                noContinue[0] = true;
+
+                WarningAlertTwoOptions.openAndWait(
+                    "The delete operation will result in polygon(s) with less than 3 vertices. These " +
+                        "polygons will be deleted.\n\n" +
+                        "Do you still wish to perform the delete operation?",
+                    "Yes", () -> noContinue[0] = false,
+                    "Cancel", null);
+
+                if (noContinue[0])
+                {
+                    return;
+                }
+                break;
+            }
+        }
+
+        for (final var entry : verticesDeleteInfoMap.entries())
+        {
+            final RenderablePolygon polygon = entry.getKey();
+            final VerticesDeleteInfo deleteInfo = entry.getValue();
+            final int numVertices = polygon.getRenderablePolygonVertices().size();
+            final int numVerticesToDelete = deleteInfo.toDelete.size();
+            final int remainingVertices = numVertices - numVerticesToDelete;
+
+            if (remainingVertices < 3)
+            {
+                polygon.delete();
+            }
+            else
+            {
+                for (final RenderablePolygonVertex vertex : deleteInfo.toDelete)
+                {
+                    vertex.delete();
+                }
+            }
+        }
+
+        for (final Renderable renderable : otherSelectedObjects)
+        {
+            renderable.delete();
         }
     }
 
@@ -596,14 +811,20 @@ public class WEDPane extends StackPane
         // Remove all renderable objects from the quadtree
         for (final RenderablePolygonVertex vertex : drawingPolygon.getRenderablePolygonVertices())
         {
-            quadTree.remove(vertex);
+            removeRenderable(vertex);
         }
-        quadTree.remove(drawingPolygon);
+        removeRenderable(drawingPolygon);
     }
 
     private void addRenderable(final Renderable renderable)
     {
         quadTree.add(renderable, renderable.getCorners());
+    }
+
+    private void removeRenderable(final Renderable renderable)
+    {
+        selectedObjects.remove(renderable);
+        quadTree.remove(renderable);
     }
 
     private void select(final Renderable renderable)
@@ -672,10 +893,7 @@ public class WEDPane extends StackPane
                 image.getWidth(), image.getHeight(),
                 10);
 
-            for (final WED.Polygon polygon : wed.getPolygons())
-            {
-                new RenderablePolygon(polygon);
-            }
+            reset();
 
             waitForFxThreadToExecute(() -> zoomPane.setImage(image));
             return null;
@@ -716,7 +934,7 @@ public class WEDPane extends StackPane
         public void recalculateCorners()
         {
             calculateCorners();
-            quadTree.add(this, corners);
+            addRenderable(this);
         }
 
         public WED.Polygon getPolygon()
@@ -729,7 +947,7 @@ public class WEDPane extends StackPane
             this.renderImpliedFinalLine = renderImpliedFinalLine;
         }
 
-        public Iterable<RenderablePolygonVertex> getRenderablePolygonVertices()
+        public SimpleLinkedList<RenderablePolygonVertex> getRenderablePolygonVertices()
         {
             return renderableVertices;
         }
@@ -737,7 +955,7 @@ public class WEDPane extends StackPane
         @Override
         public boolean isEnabled()
         {
-            return renderPolygonsCheckbox.isSelected();
+            return editMode == EditMode.DRAW_POLYGON || renderPolygonsCheckbox.isSelected();
         }
 
         @Override
@@ -769,6 +987,18 @@ public class WEDPane extends StackPane
         public Corners getCorners()
         {
             return corners;
+        }
+
+        @Override
+        public void delete()
+        {
+            for (final RenderablePolygonVertex renderable : renderableVertices)
+            {
+                removeRenderable(renderable);
+            }
+            removeRenderable(this);
+            polygon.delete();
+            zoomPane.requestDraw();
         }
 
         /////////////////////
@@ -826,20 +1056,29 @@ public class WEDPane extends StackPane
             vertex.setX(x);
             vertex.setY(y);
             calculateCorners();
-            quadTree.add(this, corners);
+            addRenderable(this);
             recalculatePolygonCorners();
         }
 
         @Override
         public boolean isEnabled()
         {
-            return renderPolygonsCheckbox.isSelected();
+            return editMode == EditMode.DRAW_POLYGON || renderPolygonsCheckbox.isSelected();
         }
 
         @Override
         public void render()
         {
-            canvasGraphics.setStroke(selected ? Color.BLUE : Color.TEAL);
+            Color color = selected ? Color.BLUE : Color.TEAL;
+            if (editMode == EditMode.DRAW_POLYGON && renderablePolygon == drawingPolygon
+                && renderableVertexNode.next() == null)
+            {
+                color = selected
+                    ? Color.rgb(0, 255, 0)
+                    : Color.rgb(0, 127, 0);
+            }
+
+            canvasGraphics.setStroke(color);
             final Point2D p1 = zoomPane.sourceToAbsoluteCanvasPosition(vertex.x() - 1, vertex.y() - 1);
             final Point2D p2 = zoomPane.sourceToAbsoluteCanvasPosition(vertex.x() + 1, vertex.y() + 1);
             canvasGraphics.strokeRect(p1.getX(), p1.getY(), p2.getX() - p1.getX(), p2.getY() - p1.getY());
@@ -904,6 +1143,15 @@ public class WEDPane extends StackPane
             zoomPane.requestDraw();
         }
 
+        @Override
+        public void delete()
+        {
+            removeRenderable(this);
+            renderableVertexNode.remove();
+            vertex.getNode().remove();
+            zoomPane.requestDraw();
+        }
+
         public RenderablePolygonVertex addNewVertexAfter(final short x, final short y)
         {
             final WED.Vertex addedVertex = vertex.getNode().addAfter(
@@ -928,6 +1176,11 @@ public class WEDPane extends StackPane
             return nextNode == null ? renderablePolygon.renderableVertices.getFirst() : nextNode.value();
         }
 
+        public RenderablePolygon getRenderablePolygon()
+        {
+            return renderablePolygon;
+        }
+
         /////////////////////
         // Private Methods //
         /////////////////////
@@ -940,6 +1193,81 @@ public class WEDPane extends StackPane
             corners.setTopLeftY(y - 1);
             corners.setBottomRightExclusiveX(x + 1);
             corners.setBottomRightExclusiveY(y + 1);
+        }
+    }
+
+    private class QuickSelectRectangle extends AbstractRenderable
+    {
+        private final Corners corners = new Corners();
+        private short originX;
+        private short originY;
+
+        public QuickSelectRectangle()
+        {
+            addRenderable(this);
+        }
+
+        @Override
+        public boolean isEnabled()
+        {
+            return quickSelectRender;
+        }
+
+        @Override
+        public void render()
+        {
+            canvasGraphics.setLineWidth(1D);
+            canvasGraphics.setStroke(Color.rgb(0, 255, 0));
+
+            final Point2D absoluteTopLeft = zoomPane.sourceToAbsoluteCanvasPosition(
+                corners.topLeftX(), corners.topLeftY());
+
+            final Point2D absoluteBottomRightExclusive = zoomPane.sourceToAbsoluteCanvasPosition(
+                corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+
+            canvasGraphics.strokeRect(absoluteTopLeft.getX(), absoluteTopLeft.getY(),
+                absoluteBottomRightExclusive.getX() - absoluteTopLeft.getX(),
+                absoluteBottomRightExclusive.getY() - absoluteTopLeft.getY());
+        }
+
+        @Override
+        public Corners getCorners()
+        {
+            return corners;
+        }
+
+        public void setOrigin(final short x, final short y)
+        {
+            originX = x;
+            originY = y;
+        }
+
+        public void setBoundingCorner(final short x, final short y)
+        {
+            if (x < originX)
+            {
+                corners.setTopLeftX(x);
+                corners.setBottomRightExclusiveX(originX + 1);
+            }
+            else
+            {
+                corners.setTopLeftX(originX);
+                corners.setBottomRightExclusiveX(x + 1);
+            }
+
+            if (y < originY)
+            {
+                corners.setTopLeftY(y);
+                corners.setBottomRightExclusiveY(originY + 1);
+            }
+            else
+            {
+                corners.setTopLeftY(originY);
+                corners.setBottomRightExclusiveY(y + 1);
+            }
+
+            addRenderable(this);
+            zoomPane.requestDraw();
         }
     }
 
@@ -956,5 +1284,10 @@ public class WEDPane extends StackPane
     private enum SelectMode
     {
         NONE, ONLY_VERTICES
+    }
+
+    private static class VerticesDeleteInfo
+    {
+        public final ArrayList<RenderablePolygonVertex> toDelete = new ArrayList<>();
     }
 }

@@ -2,6 +2,9 @@
 package com.github.bubb13.infinityareas.misc;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.function.Function;
 
 public class InstanceHashMap<Key, Value>
 {
@@ -48,6 +51,65 @@ public class InstanceHashMap<Key, Value>
     public int size()
     {
         return map.size();
+    }
+
+    public Value computeIfAbsent(final Key key, final Function<? super Key, ? extends Value> mappingFunction)
+    {
+        tempWrapper.key = key;
+        //noinspection unchecked
+        return map.computeIfAbsent(tempWrapper, (keyWrapper) -> mappingFunction.apply((Key)keyWrapper.key));
+    }
+
+    public Iterator<MapEntry> entryIterator()
+    {
+        return new Iterator<>()
+        {
+            final Iterator<Map.Entry<KeyWrapper, Value>> itr = map.entrySet().iterator();
+            final MapEntry tempMapEntry = new MapEntry();
+
+            @Override
+            public boolean hasNext()
+            {
+                return itr.hasNext();
+            }
+
+            @Override
+            public MapEntry next()
+            {
+                final var entry = itr.next();
+                //noinspection unchecked
+                tempMapEntry.key = (Key)entry.getKey().key;
+                tempMapEntry.value = entry.getValue();
+                return tempMapEntry;
+            }
+        };
+    }
+
+    public Iterable<MapEntry> entries()
+    {
+        return this::entryIterator;
+    }
+
+    ////////////////////
+    // Public Classes //
+    ////////////////////
+
+    public class MapEntry
+    {
+        private Key key;
+        private Value value;
+
+        private MapEntry() {}
+
+        public Key getKey()
+        {
+            return key;
+        }
+
+        public Value getValue()
+        {
+            return value;
+        }
     }
 
     /////////////////////

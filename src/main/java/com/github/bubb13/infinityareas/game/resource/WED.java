@@ -6,12 +6,13 @@ import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.misc.AppendOnlyOrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
-import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import com.github.bubb13.infinityareas.util.TileUtil;
@@ -53,10 +54,9 @@ public class WED
 
     private final ArrayList<Overlay> overlays = new ArrayList<>();
 
-    //private final ArrayList<WallGroup> wallGroups = new ArrayList<>();
     private final ArrayList<TiledObject> tiledObjects = new ArrayList<>();
     private final InstanceHashMap<Polygon, TiledObject> tiledObjectByReferencedPolygon = new InstanceHashMap<>();
-    private final ArrayList<Polygon> polygons = new ArrayList<>();
+    private final TrackingOrderedInstanceSet<Polygon> polygons = new TrackingOrderedInstanceSet<>();
 
     private final ResourceDataCache resourceDataCache = new ResourceDataCache();
     private final SimpleCache<String, PVRZ> pvrzCache = new SimpleCache<>();
@@ -104,7 +104,7 @@ public class WED
 
     public void addPolygon(final Polygon polygon)
     {
-        polygons.add(polygon);
+        polygons.addTail(polygon);
     }
 
     public boolean checkAndClearChanged()
@@ -429,7 +429,7 @@ public class WED
         }
     }
 
-    public static class Polygon
+    public static class Polygon extends ReferenceTrackable
     {
         // In-file
         private byte flags;
@@ -547,33 +547,19 @@ public class WED
         }
     }
 
-    public static class WallGroup
-    {
-        private final OrderedInstanceSet<Polygon> polygons;
-
-        public WallGroup(final OrderedInstanceSet<Polygon> polygons)
-        {
-            this.polygons = polygons;
-        }
-
-        public OrderedInstanceSet<Polygon> getPolygons()
-        {
-            return polygons;
-        }
-    }
-
     public class TiledObject
     {
         private String resref; // Unused
         private short openOrClosed; // open = 0, closed = 1
         private final ArrayList<Short> tilemapIndices; // TODO
-        private final ArrayList<Polygon> openPolygons;
-        private final ArrayList<Polygon> closedPolygons;
+        private final TrackingOrderedInstanceSet<Polygon> openPolygons;
+        private final TrackingOrderedInstanceSet<Polygon> closedPolygons;
 
         public TiledObject(
             final String resref, final short openOrClosed,
             final ArrayList<Short> tilemapIndices,
-            final ArrayList<Polygon> openPolygons, final ArrayList<Polygon> closedPolygons)
+            final TrackingOrderedInstanceSet<Polygon> openPolygons,
+            final TrackingOrderedInstanceSet<Polygon> closedPolygons)
         {
             this.resref = resref;
             this.openOrClosed = openOrClosed;
@@ -609,12 +595,12 @@ public class WED
             return tilemapIndices;
         }
 
-        public ArrayList<Polygon> getOpenPolygons()
+        public TrackingOrderedInstanceSet<Polygon> getOpenPolygons()
         {
             return openPolygons;
         }
 
-        public ArrayList<Polygon> getClosedPolygons()
+        public TrackingOrderedInstanceSet<Polygon> getClosedPolygons()
         {
             return closedPolygons;
         }
@@ -817,7 +803,7 @@ public class WED
         position(polygonsOffset);
         for (int i = 0; i <= maxReferencedPolygonIndex; ++i)
         {
-            polygons.add(readPolygon(verticesOffset));
+            polygons.addTail(readPolygon(verticesOffset));
         }
 
         return new WallGroupsInfo(maxReferencedPolygonIndex);
@@ -859,14 +845,14 @@ public class WED
             // Read openPolygons //
             ///////////////////////
 
-            final ArrayList<Polygon> openPolygons = handleTiledObjectReferencedPolygons(
+            final TrackingOrderedInstanceSet<Polygon> openPolygons = handleTiledObjectReferencedPolygons(
                 secondaryHeaderInfo, i, "open", openPolygonsOffset, numOpenPolygons);
 
             /////////////////////////
             // Read closedPolygons //
             /////////////////////////
 
-            final ArrayList<Polygon> closedPolygons = handleTiledObjectReferencedPolygons(
+            final TrackingOrderedInstanceSet<Polygon> closedPolygons = handleTiledObjectReferencedPolygons(
                 secondaryHeaderInfo, i, "closed", closedPolygonsOffset, numClosedPolygons);
 
             ////////////////////////
@@ -890,7 +876,7 @@ public class WED
         }
     }
 
-    private ArrayList<Polygon> handleTiledObjectReferencedPolygons(
+    private TrackingOrderedInstanceSet<Polygon> handleTiledObjectReferencedPolygons(
         final SecondaryHeaderInfo secondaryHeaderInfo, final int tiledObjectI, final String polygonTypeName,
         final int polygonsOffset, final short numPolygons)
     {
@@ -900,14 +886,17 @@ public class WED
         final int polygonsStartIndex = (polygonsOffset - secondaryHeaderInfo.polygonsOffset()) / 0x12;
         final int polygonsStartIndexBounded = Math.max(0, polygonsStartIndex);
         final int polygonsEndIndexBounded = Math.min(
-            polygonsStartIndex + numPolygons, secondaryHeaderInfo.maxReferencedPolygonIndex());
+            polygonsStartIndex + numPolygons, secondaryHeaderInfo.maxReferencedPolygonIndex() + 1);
 
-        final ArrayList<Polygon> referencedPolygons = new ArrayList<>();
+        final TrackingOrderedInstanceSet<Polygon> referencedPolygons = new TrackingOrderedInstanceSet<>();
 
-        for (int i = polygonsStartIndexBounded; i < polygonsEndIndexBounded; ++i)
+        if (polygonsStartIndexBounded < polygonsEndIndexBounded)
         {
-            final Polygon referencedPolygon = polygons.get(i);
-            referencedPolygons.add(referencedPolygon);
+            var curNode = polygons.getNode(polygonsStartIndexBounded);
+            for (int i = polygonsStartIndexBounded; i < polygonsEndIndexBounded; ++i, curNode = curNode.next())
+            {
+                referencedPolygons.addTail(curNode.value());
+            }
         }
 
         return referencedPolygons;
@@ -1570,8 +1559,8 @@ public class WED
             for (final TiledObject tiledObject : tiledObjects)
             {
                 final short numTilemapIndices = (short)tiledObject.getTilemapIndices().size();
-                final ArrayList<Polygon> primaryPolygons = tiledObject.getOpenPolygons();
-                final ArrayList<Polygon> secondaryPolygons = tiledObject.getClosedPolygons();
+                final TrackingOrderedInstanceSet<Polygon> primaryPolygons = tiledObject.getOpenPolygons();
+                final TrackingOrderedInstanceSet<Polygon> secondaryPolygons = tiledObject.getClosedPolygons();
                 final short numPrimaryPolygons = (short)primaryPolygons.size();
                 final short numSecondaryPolygons = (short)secondaryPolygons.size();
 

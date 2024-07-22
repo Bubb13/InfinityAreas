@@ -23,17 +23,45 @@ public class SimpleLinkedList<T> implements Iterable<T>
     // Public Methods //
     ////////////////////
 
+    public T get(final int index)
+    {
+        return getNode(index).value;
+    }
+
+    public Node getNode(final int index)
+    {
+        if (index < 0 || index >= size)
+        {
+            throw new IndexOutOfBoundsException();
+        }
+
+        Node curNode = head.next;
+        for (int i = 0; i < index; ++i)
+        {
+            curNode = curNode.next;
+        }
+
+        return curNode;
+    }
+
     public Node addTail(final T value)
     {
         final Node newTail = new Node(value);
-        return addTail(newTail);
+        return addTailInternal(newTail);
     }
 
     public Node addTail(final Function<Node, T> consumer)
     {
         final Node newTail = new Node();
         newTail.value = consumer.apply(newTail);
-        return addTail(newTail);
+        return addTailInternal(newTail);
+    }
+
+    public void clear()
+    {
+        head.next = tail;
+        tail.previous = head;
+        size = 0;
     }
 
     public int size()
@@ -117,18 +145,46 @@ public class SimpleLinkedList<T> implements Iterable<T>
         };
     }
 
-    /////////////////////
-    // Private Methods //
-    /////////////////////
+    ///////////////////////
+    // Protected Methods //
+    ///////////////////////
 
-    private Node addTail(final Node newTail)
+    protected void onAdd(final Node node) {}
+
+    protected void onRemove(final T value) {}
+
+    protected Node addAfter(final Node node, final T value)
+    {
+        return addAfterInternal(node, new Node(value));
+    }
+
+    protected Node addAfter(final Node node, final Function<Node, T> consumer)
+    {
+        final Node newNode = new Node();
+        newNode.value = consumer.apply(newNode);
+        return addAfterInternal(node, newNode);
+    }
+
+    protected Node addTailInternal(final Node newTail)
     {
         newTail.previous = tail.previous;
         newTail.next = tail;
         tail.previous.next = newTail;
         tail.previous = newTail;
         ++size;
+        onAdd(newTail);
         return newTail;
+    }
+
+    protected Node addAfterInternal(final Node node, final Node newNode)
+    {
+        newNode.previous = node;
+        newNode.next = node.next;
+        node.next.previous = newNode;
+        node.next = newNode;
+        ++size;
+        onAdd(newNode);
+        return newNode;
     }
 
     ////////////////////
@@ -139,14 +195,14 @@ public class SimpleLinkedList<T> implements Iterable<T>
     {
         private Node previous;
         private Node next;
-        private T value;
+        protected T value;
 
-        private Node(final T value)
+        protected Node(final T value)
         {
             this.value = value;
         }
 
-        private Node() {}
+        protected Node() {}
 
         public Node previous()
         {
@@ -165,37 +221,22 @@ public class SimpleLinkedList<T> implements Iterable<T>
             previous.next = next;
             next.previous = previous;
             --size;
+            onRemove(value);
         }
 
         public Node addAfter(final T value)
         {
-            return addAfterInternal(new Node(value));
+            return SimpleLinkedList.this.addAfter(this, value);
         }
 
         public Node addAfter(final Function<Node, T> consumer)
         {
-            final Node newNode = new Node();
-            newNode.value = consumer.apply(newNode);
-            return addAfterInternal(newNode);
+            return SimpleLinkedList.this.addAfter(this, consumer);
         }
 
         public T value()
         {
             return value;
-        }
-
-        /////////////////////
-        // Private Methods //
-        /////////////////////
-
-        private Node addAfterInternal(final Node newNode)
-        {
-            newNode.previous = this;
-            newNode.next = next;
-            next.previous = newNode;
-            next = newNode;
-            ++size;
-            return newNode;
         }
     }
 }
