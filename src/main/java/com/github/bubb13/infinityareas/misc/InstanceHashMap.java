@@ -55,9 +55,9 @@ public class InstanceHashMap<Key, Value>
 
     public Value computeIfAbsent(final Key key, final Function<? super Key, ? extends Value> mappingFunction)
     {
-        tempWrapper.key = key;
+        // `new` KeyWrapper because it is used as the key on absence
         //noinspection unchecked
-        return map.computeIfAbsent(tempWrapper, (keyWrapper) -> mappingFunction.apply((Key)keyWrapper.key));
+        return map.computeIfAbsent(new KeyWrapper(key), (keyWrapper) -> mappingFunction.apply((Key)keyWrapper.key));
     }
 
     public Iterator<MapEntry> entryIterator()

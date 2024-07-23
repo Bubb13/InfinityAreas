@@ -3,10 +3,11 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
+import com.github.bubb13.infinityareas.gui.editor.GenericVertex;
+import com.github.bubb13.infinityareas.gui.editor.TrackedGenericPolygon;
 import com.github.bubb13.infinityareas.misc.AppendOnlyOrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
-import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
@@ -32,7 +33,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Stack;
 
 public class WED
@@ -390,76 +390,21 @@ public class WED
         }
     }
 
-    public static class Vertex
-    {
-        private final SimpleLinkedList<Vertex>.Node node;
-        private short x;
-        private short y;
-
-        public Vertex(final SimpleLinkedList<Vertex>.Node node, final short x, final short y)
-        {
-            this.node = node;
-            this.x = x;
-            this.y = y;
-        }
-
-        public short x()
-        {
-            return x;
-        }
-
-        public void setX(final short x)
-        {
-            this.x = x;
-        }
-
-        public short y()
-        {
-            return y;
-        }
-
-        public void setY(final short y)
-        {
-            this.y = y;
-        }
-
-        public SimpleLinkedList<Vertex>.Node getNode()
-        {
-            return node;
-        }
-    }
-
-    public static class Polygon extends ReferenceTrackable
+    public static class Polygon extends TrackedGenericPolygon
     {
         // In-file
         private byte flags;
         private byte height;
-        private short boundingBoxLeft;
-        private short boundingBoxRight;
-        private short boundingBoxTop;
-        private short boundingBoxBottom;
-
-        // Derived
-        private final SimpleLinkedList<Vertex> vertices;
 
         public Polygon(
             final byte flags, final byte height,
             final short boundingBoxLeft, final short boundingBoxRight,
             final short boundingBoxTop, final short boundingBoxBottom,
-            final SimpleLinkedList<Vertex> vertices)
+            final SimpleLinkedList<GenericVertex> vertices)
         {
+            super(boundingBoxLeft, boundingBoxRight, boundingBoxTop, boundingBoxBottom, vertices);
             this.flags = flags;
             this.height = height;
-            this.boundingBoxLeft = boundingBoxLeft;
-            this.boundingBoxRight = boundingBoxRight;
-            this.boundingBoxTop = boundingBoxTop;
-            this.boundingBoxBottom = boundingBoxBottom;
-            this.vertices = vertices;
-        }
-
-        public Vertex addVertex(final short x, final short y)
-        {
-            return vertices.addTail((node) -> new Vertex(node, x, y)).value();
         }
 
         public byte getFlags()
@@ -480,70 +425,6 @@ public class WED
         public void setHeight(final byte height)
         {
             this.height = height;
-        }
-
-        public short getBoundingBoxLeft()
-        {
-            return boundingBoxLeft;
-        }
-
-        public void setBoundingBoxLeft(final short boundingBoxLeft)
-        {
-            this.boundingBoxLeft = boundingBoxLeft;
-        }
-
-        public short getBoundingBoxRight()
-        {
-            return boundingBoxRight;
-        }
-
-        public void setBoundingBoxRight(final short boundingBoxRight)
-        {
-            this.boundingBoxRight = boundingBoxRight;
-        }
-
-        public short getBoundingBoxTop()
-        {
-            return boundingBoxTop;
-        }
-
-        public void setBoundingBoxTop(final short boundingBoxTop)
-        {
-            this.boundingBoxTop = boundingBoxTop;
-        }
-
-        public short getBoundingBoxBottom()
-        {
-            return boundingBoxBottom;
-        }
-
-        public void setBoundingBoxBottom(final short boundingBoxBottom)
-        {
-            this.boundingBoxBottom = boundingBoxBottom;
-        }
-
-        public SimpleLinkedList<Vertex> getVertices()
-        {
-            return vertices;
-        }
-
-        @Override
-        public boolean equals(Object o)
-        {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Polygon polygon = (Polygon) o;
-            return flags == polygon.flags && height == polygon.height
-                && boundingBoxLeft == polygon.boundingBoxLeft && boundingBoxRight == polygon.boundingBoxRight
-                && boundingBoxTop == polygon.boundingBoxTop && boundingBoxBottom == polygon.boundingBoxBottom
-                && Objects.equals(vertices, polygon.vertices);
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return Objects.hash(flags, height, boundingBoxLeft, boundingBoxRight,
-                boundingBoxTop, boundingBoxBottom, vertices);
         }
     }
 
@@ -744,7 +625,7 @@ public class WED
         final short boundingBoxTop = buffer.getShort();
         final short boundingBoxBottom = buffer.getShort();
 
-        final SimpleLinkedList<Vertex> vertices = new SimpleLinkedList<>();
+        final SimpleLinkedList<GenericVertex> vertices = new SimpleLinkedList<>();
 
         // Read vertices
         mark();
@@ -753,7 +634,7 @@ public class WED
         {
             final short vertexX = buffer.getShort();
             final short vertexY = buffer.getShort();
-            vertices.addTail((node) -> new Vertex(node, vertexX, vertexY));
+            vertices.addTail((node) -> new GenericVertex(node, vertexX, vertexY));
         }
         reset();
 
@@ -1734,10 +1615,10 @@ public class WED
                 buffer.putInt(numVertices);
                 buffer.put(polygon.getFlags());
                 buffer.put(polygon.getHeight());
-                buffer.putShort(polygon.getBoundingBoxLeft());
-                buffer.putShort(polygon.getBoundingBoxRight());
-                buffer.putShort(polygon.getBoundingBoxTop());
-                buffer.putShort(polygon.getBoundingBoxBottom());
+                buffer.putShort((short)polygon.getBoundingBoxLeft());
+                buffer.putShort((short)polygon.getBoundingBoxRight());
+                buffer.putShort((short)polygon.getBoundingBoxTop());
+                buffer.putShort((short)polygon.getBoundingBoxBottom());
 
                 /////////////////////
                 // Advance Indices //
@@ -1782,10 +1663,10 @@ public class WED
 
             for (final Polygon polygon : polygonsArray)
             {
-                for (final Vertex vertex : polygon.getVertices())
+                for (final GenericVertex vertex : polygon.getVertices())
                 {
-                    buffer.putShort(vertex.x());
-                    buffer.putShort(vertex.y());
+                    buffer.putShort((short)vertex.x());
+                    buffer.putShort((short)vertex.y());
                 }
             }
         }
