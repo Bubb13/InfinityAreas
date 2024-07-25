@@ -2,6 +2,9 @@
 package com.github.bubb13.infinityareas.gui.editor;
 
 import com.github.bubb13.infinityareas.gui.dialog.WarningAlertTwoOptions;
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 
 import java.awt.Toolkit;

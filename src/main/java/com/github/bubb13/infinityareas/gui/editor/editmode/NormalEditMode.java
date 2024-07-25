@@ -1,6 +1,10 @@
 
-package com.github.bubb13.infinityareas.gui.editor;
+package com.github.bubb13.infinityareas.gui.editor.editmode;
 
+import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;

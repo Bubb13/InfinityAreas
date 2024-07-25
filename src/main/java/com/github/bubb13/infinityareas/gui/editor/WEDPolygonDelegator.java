@@ -2,42 +2,29 @@
 package com.github.bubb13.infinityareas.gui.editor;
 
 import com.github.bubb13.infinityareas.game.resource.WED;
+import com.github.bubb13.infinityareas.misc.ReadOnlyReference;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 
-import java.util.function.Supplier;
-
-public class WEDPolygonDelegator implements PolygonDelegator
+public class WEDPolygonDelegator implements Delegator<GenericPolygon>
 {
     ////////////////////
     // Private Fields //
     ////////////////////
 
-    private final Supplier<Boolean> enabledSupplier;
-    private WED wed;
+    private final ReadOnlyReference<WED> wedRef;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public WEDPolygonDelegator(final Supplier<Boolean> enabledSupplier)
+    public WEDPolygonDelegator(final ReadOnlyReference<WED> wedRef)
     {
-        this.enabledSupplier = enabledSupplier;
+        this.wedRef = wedRef;
     }
 
     ////////////////////
     // Public Methods //
     ////////////////////
-
-    public void setWED(final WED wed)
-    {
-        this.wed = wed;
-    }
-
-    @Override
-    public boolean enabled()
-    {
-        return enabledSupplier.get();
-    }
 
     @Override
     public GenericPolygon create()
@@ -53,7 +40,7 @@ public class WEDPolygonDelegator implements PolygonDelegator
     @Override
     public void add(final GenericPolygon genericPolygon)
     {
-        wed.addPolygon((WED.Polygon)genericPolygon);
+        wedRef.get().addPolygon((WED.Polygon)genericPolygon);
     }
 
     @Override

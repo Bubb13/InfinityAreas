@@ -204,27 +204,12 @@ public final class PrimaryScene extends Stage
         {
             case ARE ->
             {
-                final Area area = new Area(source);
-
-                new TrackedTask<BufferedImage>()
-                {
-                    @Override
-                    protected BufferedImage doTask() throws Exception
-                    {
-                        area.load(getTracker());
-                        areaPane.setArea(area);
-                        return areaPane.render();
-                    }
-                }
-                .trackWith(new LoadingStageTracker())
-                .onSucceededFx((image) ->
-                {
-                    areaPane.setImage(image);
-                    changeRightNode(areaPane);
-                })
-                .onFailed((e) ->
-                    ErrorAlert.openAndWait("An exception occurred while loading the area.", e))
-                .start();
+                areaPane.setSourceTask(source)
+                    .trackWith(new LoadingStageTracker())
+                    .onSucceededFx((image) -> changeRightNode(areaPane))
+                    .onFailed((e) ->
+                        ErrorAlert.openAndWait("An exception occurred while loading the area.", e))
+                    .start();
             }
             case TIS ->
             {

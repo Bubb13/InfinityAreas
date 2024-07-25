@@ -1,7 +1,14 @@
 
-package com.github.bubb13.infinityareas.gui.editor;
+package com.github.bubb13.infinityareas.gui.editor.editmode;
 
 import com.github.bubb13.infinityareas.gui.dialog.WarningAlertTwoOptions;
+import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
+import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
+import com.github.bubb13.infinityareas.gui.editor.Delegator;
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -13,14 +20,14 @@ public class DrawPolygonEditMode extends LabeledEditMode
     // Private Fields //
     ////////////////////
 
-    private final PolygonDelegator polygonDelegator;
+    private final Delegator<GenericPolygon> polygonDelegator;
     private RenderablePolygon drawingPolygon;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public DrawPolygonEditMode(final Editor editor, final PolygonDelegator polygonDelegator)
+    public DrawPolygonEditMode(final Editor editor, final Delegator<GenericPolygon> polygonDelegator)
     {
         super(editor, "Draw Polygon Mode");
         this.polygonDelegator = polygonDelegator;
@@ -43,23 +50,27 @@ public class DrawPolygonEditMode extends LabeledEditMode
     }
 
     @Override
-    public void onBackgroundPressed(final MouseEvent event, final int sourcePressX, final int sourcePressY)
+    public void onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY)
     {
         if (event.getButton() != MouseButton.PRIMARY) return;
+
+        final int sourcePressXInt = (int)sourcePressX;
+        final int sourcePressYInt = (int)sourcePressY;
 
         if (drawingPolygon == null)
         {
             final GenericPolygon polygon = polygonDelegator.create();
-            polygon.setBoundingBoxLeft(sourcePressX);
-            polygon.setBoundingBoxRight(sourcePressX + 1);
-            polygon.setBoundingBoxTop(sourcePressY);
-            polygon.setBoundingBoxBottom(sourcePressY + 1);
+            polygon.setBoundingBoxLeft(sourcePressXInt);
+            polygon.setBoundingBoxRight(sourcePressXInt + 1);
+            polygon.setBoundingBoxTop(sourcePressYInt);
+            polygon.setBoundingBoxBottom(sourcePressYInt + 1);
 
-            drawingPolygon = new RenderablePolygon(editor, polygonDelegator,
-                polygon, false, true);
+            drawingPolygon = new RenderablePolygon(editor, polygon);
+            drawingPolygon.setRenderImpliedFinalLine(false);
+            drawingPolygon.setDrawing(true);
         }
 
-        drawingPolygon.addNewVertex(sourcePressX, sourcePressY);
+        drawingPolygon.addNewVertex(sourcePressXInt, sourcePressYInt);
         editor.requestDraw();
     }
 

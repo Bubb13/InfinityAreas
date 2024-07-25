@@ -3,6 +3,7 @@ package com.github.bubb13.infinityareas.gui.pane;
 
 import com.github.bubb13.infinityareas.gui.region.PartiallyRenderedImage;
 import com.github.bubb13.infinityareas.misc.Corners;
+import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -224,6 +225,11 @@ public class ZoomPane extends NotifyingScrollPane
         return partialImage.sourceToAbsoluteCanvasPosition(srcX, srcY);
     }
 
+    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
+    {
+        return partialImage.sourceToAbsoluteCanvasDoublePosition(srcX, srcY);
+    }
+
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
     {
         return partialImage.absoluteToRelativeCanvasPosition(canvasX, canvasY);
@@ -234,6 +240,11 @@ public class ZoomPane extends NotifyingScrollPane
         return partialImage.absoluteCanvasToSourcePosition(canvasX, canvasY);
     }
 
+    public Point2D absoluteCanvasToSourceDoublePosition(final double canvasX, final double canvasY)
+    {
+        return partialImage.absoluteCanvasToSourceDoublePosition(canvasX, canvasY);
+    }
+
     public Rectangle2D getVisibleSourceRect()
     {
         return partialImage.getVisibleSourceRect();
@@ -242,6 +253,11 @@ public class ZoomPane extends NotifyingScrollPane
     public Corners getVisibleSourceCorners()
     {
         return partialImage.getVisibleSourceCorners();
+    }
+
+    public DoubleCorners getVisibleSourceDoubleCorners()
+    {
+        return partialImage.getVisibleSourceDoubleCorners();
     }
 
     private void onZoom(final double deltaY)

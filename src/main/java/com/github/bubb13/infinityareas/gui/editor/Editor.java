@@ -1,10 +1,12 @@
 
 package com.github.bubb13.infinityareas.gui.editor;
 
+import com.github.bubb13.infinityareas.gui.editor.editmode.EditMode;
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.pane.ZoomPane;
-import com.github.bubb13.infinityareas.misc.Corners;
+import com.github.bubb13.infinityareas.misc.DoubleCorners;
+import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
-import com.github.bubb13.infinityareas.misc.QuadTree;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -12,6 +14,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 
 import java.awt.Point;
 import java.util.HashMap;
@@ -28,8 +31,9 @@ public class Editor
     private final HashMap<Class<? extends EditMode>, EditMode> cachedEditModes = new HashMap<>();
     private final Stack<EditMode> previousEditModesStack = new Stack<>();
     private final OrderedInstanceSet<Renderable> selectedObjects = new OrderedInstanceSet<>();
+    private final OrderedInstanceSet<Renderable> zoomFactorListenerObjects = new OrderedInstanceSet<>();
 
-    private QuadTree<Renderable> quadTree = null;
+    private DoubleQuadTree<Renderable> quadTree = null;
 
     private EditMode editMode = null;
 
@@ -49,6 +53,7 @@ public class Editor
         zoomPane.setMousePressedListener(this::onMousePressed);
         zoomPane.setMouseReleasedListener(this::onMouseReleased);
         zoomPane.setMouseClickedListener(this::onMouseClicked);
+        zoomPane.setZoomFactorListener(this::onZoomFactorChanged);
         keyPressedNode.setOnKeyPressed(this::onKeyPressed);
     }
 
@@ -56,12 +61,13 @@ public class Editor
     // Public Methods //
     ////////////////////
 
-    public void reset(final int quadTreeWidth, final int quadTreeHeight)
+    public void reset(final double quadTreeWidth, final double quadTreeHeight)
     {
         previousEditModesStack.clear();
         selectedObjects.clear();
+        zoomFactorListenerObjects.clear();
 
-        quadTree = new QuadTree<>(0, 0, quadTreeWidth, quadTreeHeight, 10);
+        quadTree = new DoubleQuadTree<>(0, 0, quadTreeWidth, quadTreeHeight, 10);
 
         editMode = null;
 
@@ -77,11 +83,19 @@ public class Editor
 
     public void addRenderable(final Renderable renderable)
     {
-        quadTree.add(renderable, renderable.getCorners());
+        if (quadTree.add(renderable, renderable.getCorners()))
+        {
+            // New renderable
+            if (renderable.listensToZoomFactorChanges())
+            {
+                zoomFactorListenerObjects.addTail(renderable);
+            }
+        }
     }
 
     public void removeRenderable(final Renderable renderable)
     {
+        zoomFactorListenerObjects.remove(renderable);
         selectedObjects.remove(renderable);
         quadTree.remove(renderable);
     }
@@ -104,12 +118,12 @@ public class Editor
     public void select(final Renderable renderable)
     {
         selectedObjects.addTail(renderable);
-        renderable.selected();
+        renderable.onSelected();
     }
 
     public void unselect(final Renderable renderable)
     {
-        renderable.unselected();
+        renderable.onUnselected();
         selectedObjects.remove(renderable);
     }
 
@@ -117,7 +131,7 @@ public class Editor
     {
         for (final Renderable renderable : selectedObjects)
         {
-            renderable.unselected();
+            renderable.onUnselected();
         }
         selectedObjects.clear();
     }
@@ -132,6 +146,11 @@ public class Editor
         return zoomPane.sourceToAbsoluteCanvasPosition(srcX, srcY);
     }
 
+    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
+    {
+        return zoomPane.sourceToAbsoluteCanvasDoublePosition(srcX, srcY);
+    }
+
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
     {
         return zoomPane.absoluteToRelativeCanvasPosition(canvasX, canvasY);
@@ -142,6 +161,11 @@ public class Editor
         return zoomPane.absoluteCanvasToSourcePosition(canvasX, canvasY);
     }
 
+    public double getZoomFactor()
+    {
+        return zoomPane.getZoomFactor();
+    }
+
     public Point getEventSourcePosition(final MouseEvent event)
     {
         final int absoluteCanvasX = (int)event.getX();
@@ -149,13 +173,13 @@ public class Editor
         return absoluteCanvasToSourcePosition(absoluteCanvasX, absoluteCanvasY);
     }
 
-    public boolean objectInArea(final Renderable renderable, final Corners corners)
+    public boolean objectInArea(final Renderable renderable, final DoubleCorners corners)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
             && renderable.getCorners().intersect(corners) != null;
     }
 
-    public boolean pointInObject(final Point point, final Renderable renderable, final int fudgeAmount)
+    public boolean pointInObject(final Point2D point, final Renderable renderable, final double fudgeAmount)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
             && renderable.getCorners().contains(point, fudgeAmount);
@@ -171,7 +195,7 @@ public class Editor
         pressButton = button;
     }
 
-    public Iterable<Renderable> iterableNear(final Corners corners)
+    public Iterable<Renderable> iterableNear(final DoubleCorners corners)
     {
         return quadTree.iterableNear(corners);
     }
@@ -218,18 +242,32 @@ public class Editor
         editMode.onEnterMode();
     }
 
+    public void debugRenderCorners(final GraphicsContext canvasContext, final DoubleCorners corners)
+    {
+        canvasContext.setStroke(Color.rgb(0, 255, 0));
+        canvasContext.setLineWidth(1);
+
+        final Point2D t1 = sourceToAbsoluteCanvasDoublePosition(corners.topLeftX(), corners.topLeftY());
+        final Point2D t2 = sourceToAbsoluteCanvasDoublePosition(
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+
+        canvasContext.strokeRect(t1.getX(), t1.getY(),
+            t2.getX() - t1.getX(),
+            t2.getY() - t1.getY());
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
 
     private void onDraw(final GraphicsContext canvasContext)
     {
-        final Corners visibleSourceCorners = zoomPane.getVisibleSourceCorners();
+        final DoubleCorners visibleSourceCorners = zoomPane.getVisibleSourceDoubleCorners();
         quadTree.iterateNear(visibleSourceCorners, (renderable) ->
         {
             if (objectInArea(renderable, visibleSourceCorners))
             {
-                renderable.render(canvasContext);
+                renderable.onRender(canvasContext);
             }
         });
 
@@ -249,15 +287,15 @@ public class Editor
             return;
         }
 
-        final int absoluteCanvasX = (int)event.getX();
-        final int absoluteCanvasY = (int)event.getY();
+        final double absoluteCanvasX = event.getX();
+        final double absoluteCanvasY = event.getY();
 
-        final Point sourcePressPos = zoomPane.absoluteCanvasToSourcePosition(absoluteCanvasX, absoluteCanvasY);
-        final int sourcePressX = sourcePressPos.x;
-        final int sourcePressY = sourcePressPos.y;
+        final Point2D sourcePressPos = zoomPane.absoluteCanvasToSourceDoublePosition(absoluteCanvasX, absoluteCanvasY);
+        final double sourcePressX = sourcePressPos.getX();
+        final double sourcePressY = sourcePressPos.getY();
 
-        final int fudgeAmount = (int)(10 / zoomPane.getZoomFactor());
-        final Corners fudgeCorners = new Corners(
+        final double fudgeAmount = 10 / zoomPane.getZoomFactor();
+        final DoubleCorners fudgeCorners = new DoubleCorners(
             sourcePressX - fudgeAmount, sourcePressY - fudgeAmount,
             sourcePressX + fudgeAmount + 1, sourcePressY + fudgeAmount + 1
         );
@@ -338,10 +376,10 @@ public class Editor
         {
             if (dragObject == null)
             {
-                final Point sourcePoint = zoomPane.absoluteCanvasToSourcePosition((int)event.getX(), (int)event.getY());
+                final Point2D sourcePoint = zoomPane.absoluteCanvasToSourceDoublePosition(event.getX(), event.getY());
                 if (pressObject.getCorners().contains(sourcePoint))
                 {
-                    pressObject.clicked(event);
+                    pressObject.onClicked(event);
                 }
             }
             pressButton = null;
@@ -353,6 +391,14 @@ public class Editor
     private void onMouseClicked(final MouseEvent event)
     {
         event.consume();
+    }
+
+    private void onZoomFactorChanged(final double zoomFactor)
+    {
+        for (final Renderable renderable : zoomFactorListenerObjects)
+        {
+            renderable.onZoomFactorChanged(zoomFactor);
+        }
     }
 
     private void onKeyPressed(final KeyEvent event)

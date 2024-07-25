@@ -1,7 +1,10 @@
 
-package com.github.bubb13.infinityareas.gui.editor;
+package com.github.bubb13.infinityareas.gui.editor.renderable;
 
-import com.github.bubb13.infinityareas.misc.Corners;
+import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
+import com.github.bubb13.infinityareas.gui.editor.GenericVertex;
+import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
@@ -14,24 +17,24 @@ public class RenderablePolygon extends AbstractRenderable
     ////////////////////
 
     private final Editor editor;
-    private final PolygonDelegator polygonDelegator;
     private final GenericPolygon polygon;
     private final SimpleLinkedList<RenderableVertex> renderableVertices = new SimpleLinkedList<>();
-    private final Corners corners = new Corners();
+    private final DoubleCorners corners = new DoubleCorners();
 
-    private boolean renderImpliedFinalLine;
+    private boolean renderFill = false;
+    private boolean renderImpliedFinalLine = true;
     private boolean drawing = false;
+
+    private double[] fillXPointsArray;
+    private double[] fillYPointsArray;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public RenderablePolygon(
-        final Editor editor, final PolygonDelegator polygonDelegator, final GenericPolygon polygon,
-        final boolean renderImpliedFinalLine, final boolean drawing)
+    public RenderablePolygon(final Editor editor, final GenericPolygon polygon)
     {
         this.editor = editor;
-        this.polygonDelegator = polygonDelegator;
         this.polygon = polygon;
 
         for (final GenericVertex vertex : polygon.getVertices())
@@ -39,16 +42,8 @@ public class RenderablePolygon extends AbstractRenderable
             addNewRenderableVertex(vertex);
         }
 
-        this.renderImpliedFinalLine = renderImpliedFinalLine;
-        this.drawing = drawing;
         calculateCorners();
         editor.addRenderable(this);
-    }
-
-    public RenderablePolygon(
-        final Editor editor, final PolygonDelegator polygonDelegator, final GenericPolygon polygon)
-    {
-        this(editor, polygonDelegator, polygon, true, false);
     }
 
     ////////////////////
@@ -101,44 +96,30 @@ public class RenderablePolygon extends AbstractRenderable
         this.renderImpliedFinalLine = renderImpliedFinalLine;
     }
 
-    public PolygonDelegator getPolygonDelegator()
+    public void setRenderFill(boolean renderFill)
     {
-        return polygonDelegator;
+        this.renderFill = renderFill;
     }
 
     @Override
     public boolean isEnabled()
     {
-        return polygonDelegator.enabled();
+        return true;
     }
 
     @Override
-    public void render(final GraphicsContext canvasContext)
+    public void onRender(final GraphicsContext canvasContext)
     {
-        final SimpleLinkedList<GenericVertex> vertices = polygon.getVertices();
-        final int limit = vertices.size() - 1;
-
-        canvasContext.setLineWidth(1D);
-        canvasContext.setStroke(Color.WHITE);
-
-        var curNode = vertices.getFirstNode();
-        for (int i = 0; i < limit; ++i)
+        if (renderFill)
         {
-            final var nextNode = curNode.next();
-            renderLine(canvasContext, curNode.value(), nextNode.value());
-            curNode = nextNode;
+            renderFill(canvasContext);
         }
 
-        if (renderImpliedFinalLine)
-        {
-            final GenericVertex vFirst = vertices.getFirst();
-            final GenericVertex vLast = vertices.getLast();
-            renderLine(canvasContext, vFirst, vLast);
-        }
+        renderOutline(canvasContext);
     }
 
     @Override
-    public Corners getCorners()
+    public DoubleCorners getCorners()
     {
         return corners;
     }
@@ -151,9 +132,20 @@ public class RenderablePolygon extends AbstractRenderable
             editor.removeRenderable(renderable);
         }
         editor.removeRenderable(this);
-        polygonDelegator.delete(polygon);
+        deleteBackingObject();
         editor.requestDraw();
     }
+
+    ///////////////////////
+    // Protected Methods //
+    ///////////////////////
+
+    protected Color getLineColor()
+    {
+        return Color.WHITE;
+    }
+
+    protected void deleteBackingObject() {}
 
     /////////////////////
     // Private Methods //
@@ -181,5 +173,55 @@ public class RenderablePolygon extends AbstractRenderable
         final Point2D p1 = editor.sourceToAbsoluteCanvasPosition(v1.x(), v1.y());
         final Point2D p2 = editor.sourceToAbsoluteCanvasPosition(v2.x(), v2.y());
         canvasContext.strokeLine(p1.getX(), p1.getY(), p2.getX(), p2.getY());
+    }
+
+    private void renderFill(final GraphicsContext canvasContext)
+    {
+        final SimpleLinkedList<GenericVertex> vertices = polygon.getVertices();
+        if (fillXPointsArray == null || fillXPointsArray.length != vertices.size())
+        {
+            fillXPointsArray = new double[vertices.size()];
+            fillYPointsArray = new double[vertices.size()];
+        }
+
+        int i = 0;
+        for (final RenderableVertex renderableVertex : renderableVertices)
+        {
+            final GenericVertex vertex = renderableVertex.getVertex();
+            final Point2D canvasPos = editor.sourceToAbsoluteCanvasDoublePosition(vertex.x(), vertex.y());
+            fillXPointsArray[i] = canvasPos.getX();
+            fillYPointsArray[i] = canvasPos.getY();
+            ++i;
+        }
+
+        final Color lineColor = getLineColor();
+        final Color fillColor = Color.color(lineColor.getRed(), lineColor.getGreen(), lineColor.getBlue(), 0.25);
+
+        canvasContext.setFill(fillColor);
+        canvasContext.fillPolygon(fillXPointsArray, fillYPointsArray, vertices.size());
+    }
+
+    private void renderOutline(final GraphicsContext canvasContext)
+    {
+        final SimpleLinkedList<GenericVertex> vertices = polygon.getVertices();
+        final int limit = vertices.size() - 1;
+
+        canvasContext.setLineWidth(1D);
+        canvasContext.setStroke(getLineColor());
+
+        var curNode = vertices.getFirstNode();
+        for (int i = 0; i < limit; ++i)
+        {
+            final var nextNode = curNode.next();
+            renderLine(canvasContext, curNode.value(), nextNode.value());
+            curNode = nextNode;
+        }
+
+        if (renderImpliedFinalLine)
+        {
+            final GenericVertex vFirst = vertices.getFirst();
+            final GenericVertex vLast = vertices.getLast();
+            renderLine(canvasContext, vFirst, vLast);
+        }
     }
 }

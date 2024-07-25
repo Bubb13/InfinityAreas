@@ -1,7 +1,11 @@
 
-package com.github.bubb13.infinityareas.gui.editor;
+package com.github.bubb13.infinityareas.gui.editor.editmode;
 
-import com.github.bubb13.infinityareas.misc.Corners;
+import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
+import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
@@ -89,7 +93,7 @@ public class QuickSelectEditMode extends LabeledEditMode
                 editor.unselectAll();
             }
 
-            final Corners selectionCorners = quickSelectRectangle.getCorners();
+            final DoubleCorners selectionCorners = quickSelectRectangle.getCorners();
             for (final Renderable renderable : editor.iterableNear(selectionCorners))
             {
                 if (!editor.objectInArea(renderable, selectionCorners))
@@ -144,7 +148,7 @@ public class QuickSelectEditMode extends LabeledEditMode
         // Private Fields //
         ////////////////////
 
-        private final Corners corners = new Corners();
+        private final DoubleCorners corners = new DoubleCorners();
         private int originX;
         private int originY;
 
@@ -202,16 +206,16 @@ public class QuickSelectEditMode extends LabeledEditMode
         }
 
         @Override
-        public void render(final GraphicsContext canvasContext)
+        public void onRender(final GraphicsContext canvasContext)
         {
             canvasContext.setLineWidth(1D);
             canvasContext.setStroke(Color.rgb(0, 255, 0));
 
             final Point2D absoluteTopLeft = editor.sourceToAbsoluteCanvasPosition(
-                corners.topLeftX(), corners.topLeftY());
+                (int)corners.topLeftX(), (int)corners.topLeftY());
 
             final Point2D absoluteBottomRightExclusive = editor.sourceToAbsoluteCanvasPosition(
-                corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+                (int)corners.bottomRightExclusiveX(), (int)corners.bottomRightExclusiveY());
 
             canvasContext.strokeRect(absoluteTopLeft.getX(), absoluteTopLeft.getY(),
                 absoluteBottomRightExclusive.getX() - absoluteTopLeft.getX(),
@@ -219,7 +223,7 @@ public class QuickSelectEditMode extends LabeledEditMode
         }
 
         @Override
-        public Corners getCorners()
+        public DoubleCorners getCorners()
         {
             return corners;
         }

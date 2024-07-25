@@ -5,10 +5,10 @@ import java.awt.Point;
 
 public class Corners
 {
-    int topLeftX;
-    int topLeftY;
-    int bottomRightExclusiveX;
-    int bottomRightExclusiveY;
+    private int topLeftX;
+    private int topLeftY;
+    private int bottomRightExclusiveX;
+    private int bottomRightExclusiveY;
 
     public Corners(
         final int topLeftX, final int topLeftY,
@@ -30,7 +30,7 @@ public class Corners
         return topLeftX;
     }
 
-    public void setTopLeftX(int topLeftX)
+    public void setTopLeftX(final int topLeftX)
     {
         this.topLeftX = topLeftX;
     }
@@ -40,7 +40,7 @@ public class Corners
         return topLeftY;
     }
 
-    public void setTopLeftY(int topLeftY)
+    public void setTopLeftY(final int topLeftY)
     {
         this.topLeftY = topLeftY;
     }
@@ -50,7 +50,7 @@ public class Corners
         return bottomRightExclusiveX;
     }
 
-    public void setBottomRightExclusiveX(int bottomRightExclusiveX)
+    public void setBottomRightExclusiveX(final int bottomRightExclusiveX)
     {
         this.bottomRightExclusiveX = bottomRightExclusiveX;
     }
@@ -60,7 +60,7 @@ public class Corners
         return bottomRightExclusiveY;
     }
 
-    public void setBottomRightExclusiveY(int bottomRightExclusiveY)
+    public void setBottomRightExclusiveY(final int bottomRightExclusiveY)
     {
         this.bottomRightExclusiveY = bottomRightExclusiveY;
     }

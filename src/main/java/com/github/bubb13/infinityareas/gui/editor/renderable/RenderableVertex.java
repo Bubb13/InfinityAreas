@@ -1,7 +1,10 @@
 
-package com.github.bubb13.infinityareas.gui.editor;
+package com.github.bubb13.infinityareas.gui.editor.renderable;
 
-import com.github.bubb13.infinityareas.misc.Corners;
+import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
+import com.github.bubb13.infinityareas.gui.editor.GenericVertex;
+import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
@@ -20,7 +23,7 @@ public class RenderableVertex extends AbstractRenderable
     private final RenderablePolygon renderablePolygon;
     private final GenericVertex vertex;
     private final SimpleLinkedList<RenderableVertex>.Node renderableVertexNode;
-    private final Corners corners = new Corners();
+    private final DoubleCorners corners = new DoubleCorners();
 
     private boolean selected = false;
 
@@ -106,11 +109,11 @@ public class RenderableVertex extends AbstractRenderable
     @Override
     public boolean isEnabled()
     {
-        return renderablePolygon.getPolygonDelegator().enabled();
+        return renderablePolygon.isEnabled();
     }
 
     @Override
-    public void render(final GraphicsContext canvasContext)
+    public void onRender(final GraphicsContext canvasContext)
     {
         Color color = selected ? Color.BLUE : Color.TEAL;
         if (renderablePolygon.isDrawing() && renderableVertexNode.next() == null)
@@ -120,6 +123,7 @@ public class RenderableVertex extends AbstractRenderable
                 : Color.rgb(0, 127, 0);
         }
 
+        canvasContext.setLineWidth(1);
         canvasContext.setStroke(color);
         final Point2D p1 = editor.sourceToAbsoluteCanvasPosition(vertex.x() - 1, vertex.y() - 1);
         final Point2D p2 = editor.sourceToAbsoluteCanvasPosition(vertex.x() + 1, vertex.y() + 1);
@@ -127,13 +131,13 @@ public class RenderableVertex extends AbstractRenderable
     }
 
     @Override
-    public Corners getCorners()
+    public DoubleCorners getCorners()
     {
         return corners;
     }
 
     @Override
-    public void clicked(final MouseEvent event)
+    public void onClicked(final MouseEvent event)
     {
         if (!event.isShiftDown() && !event.isControlDown())
         {
@@ -193,14 +197,14 @@ public class RenderableVertex extends AbstractRenderable
     }
 
     @Override
-    public void selected()
+    public void onSelected()
     {
         selected = true;
         editor.requestDraw();
     }
 
     @Override
-    public void unselected()
+    public void onUnselected()
     {
         selected = false;
         editor.requestDraw();

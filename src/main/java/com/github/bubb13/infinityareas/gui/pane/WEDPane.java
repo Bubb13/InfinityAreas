@@ -6,15 +6,17 @@ import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.control.UnderlinedButton;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
-import com.github.bubb13.infinityareas.gui.editor.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
-import com.github.bubb13.infinityareas.gui.editor.NormalEditMode;
-import com.github.bubb13.infinityareas.gui.editor.QuickSelectEditMode;
-import com.github.bubb13.infinityareas.gui.editor.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.editor.WEDPolygonDelegator;
+import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
+import com.github.bubb13.infinityareas.gui.editor.editmode.NormalEditMode;
+import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.ReadOnlyReference;
+import com.github.bubb13.infinityareas.misc.Reference;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.ImageUtil;
@@ -41,14 +43,14 @@ public class WEDPane extends StackPane
     // Private Fields //
     ////////////////////
 
+    // Data
+    private final Reference<WED> wedRef = new Reference<>();
+
     // GUI
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
     private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Polygons");
-
-    // Data
-    private final WEDPolygonDelegator wedPolygonDelegator = new WEDPolygonDelegator(renderPolygonsCheckbox::isSelected);
-    private WED wed;
+    private final WEDPolygonDelegator wedPolygonDelegator = new WEDPolygonDelegator(new ReadOnlyReference<>(wedRef));
 
     /////////////////////////
     // Public Constructors //
@@ -77,9 +79,9 @@ public class WEDPane extends StackPane
     {
         editor.enterEditMode(NormalEditMode.class);
 
-        for (final WED.Polygon polygon : wed.getPolygons())
+        for (final WED.Polygon polygon : wedRef.get().getPolygons())
         {
-            new RenderablePolygon(editor, wedPolygonDelegator, polygon);
+            new WallPolygon(polygon);
         }
     }
 
@@ -178,6 +180,8 @@ public class WEDPane extends StackPane
             ErrorAlert.openAndWait("Failed to save WED", e);
         }
 
+        final WED wed = wedRef.get();
+
         final FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Output File");
         fileChooser.setInitialDirectory(overridePath.toFile());
@@ -200,6 +204,7 @@ public class WEDPane extends StackPane
 
     private void onSelectReplaceOverlayTileset()
     {
+        final WED wed = wedRef.get();
         final ReplaceOverlayTilesetStage stage = new ReplaceOverlayTilesetStage(wed);
         GlobalState.registerStage(stage);
         stage.showAndWait();
@@ -224,13 +229,52 @@ public class WEDPane extends StackPane
     // Private Classes //
     /////////////////////
 
+    private class WallPolygon extends RenderablePolygon
+    {
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        private final WED.Polygon wedPolygon;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public WallPolygon(final WED.Polygon wedPolygon)
+        {
+            super(editor, wedPolygon);
+            this.wedPolygon = wedPolygon;
+        }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
+
+        @Override
+        public boolean isEnabled()
+        {
+            return renderPolygonsCheckbox.isSelected();
+        }
+
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected void deleteBackingObject()
+        {
+            wedPolygon.delete();
+        }
+    }
+
     private class SetWEDTask extends TrackedTask<Void>
     {
         ////////////////////
         // Private Fields //
         ////////////////////
 
-        final Game.ResourceSource source;
+        private final Game.ResourceSource source;
 
         /////////////////////////
         // Public Constructors //
@@ -254,14 +298,13 @@ public class WEDPane extends StackPane
 
             final WED wed = new WED(source);
             wed.load(getTracker());
-            WEDPane.this.wed = wed;
+            wedRef.set(wed);
 
             final WED.Graphics wedGraphics = wed.newGraphics();
             wedGraphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
             final BufferedImage image = ImageUtil.copyArgb(wedGraphics.getImage());
 
             editor.reset(image.getWidth(), image.getHeight());
-            wedPolygonDelegator.setWED(wed);
             reset();
 
             waitForFxThreadToExecute(() -> zoomPane.setImage(image));

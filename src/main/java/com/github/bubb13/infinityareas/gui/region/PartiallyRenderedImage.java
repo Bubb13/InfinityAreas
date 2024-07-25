@@ -4,6 +4,7 @@ package com.github.bubb13.infinityareas.gui.region;
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.gui.misc.VisibleNotifiable;
 import com.github.bubb13.infinityareas.misc.Corners;
+import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Bounds;
@@ -137,6 +138,12 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return new Point2D((int)(srcX * zoomFactor - renderX), (int)(srcY * zoomFactor - renderY));
     }
 
+    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        return new Point2D(srcX * zoomFactor - layout.getMinX(), srcY * zoomFactor - layout.getMinY());
+    }
+
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
     {
         final Bounds layout = canvas.getBoundsInParent();
@@ -148,6 +155,11 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
     public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
     {
         return new Point((int)(canvasX / zoomFactor), (int)(canvasY / zoomFactor));
+    }
+
+    public Point2D absoluteCanvasToSourceDoublePosition(final double canvasX, final double canvasY)
+    {
+        return new Point2D(canvasX / zoomFactor, canvasY / zoomFactor);
     }
 
     public Rectangle2D getVisibleSourceRect()
@@ -173,6 +185,21 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return new Corners(
             (int)(renderTopLeftX / zoomFactor), (int)(renderTopLeftY / zoomFactor),
             (int)(renderBottomRightExclusiveX / zoomFactor), (int)(renderBottomRightExclusiveY / zoomFactor)
+        );
+    }
+
+    public DoubleCorners getVisibleSourceDoubleCorners()
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        final double renderTopLeftX = layout.getMinX();
+        final double renderTopLeftY = layout.getMinY();
+        final double renderBottomRightExclusiveX = layout.getMaxX();
+        final double renderBottomRightExclusiveY = layout.getMaxY();
+        return new DoubleCorners(
+            renderTopLeftX / zoomFactor,
+            renderTopLeftY / zoomFactor,
+            renderBottomRightExclusiveX / zoomFactor,
+            renderBottomRightExclusiveY / zoomFactor
         );
     }
 

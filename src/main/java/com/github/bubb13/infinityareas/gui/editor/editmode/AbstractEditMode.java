@@ -1,6 +1,7 @@
 
-package com.github.bubb13.infinityareas.gui.editor;
+package com.github.bubb13.infinityareas.gui.editor.editmode;
 
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -31,7 +32,7 @@ public class AbstractEditMode implements EditMode
         return false;
     }
 
-    public void onBackgroundPressed(final MouseEvent event, final int sourcePressX, final int sourcePressY) {}
+    public void onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY) {}
 
     public boolean customOnMouseDragged(final MouseEvent event)
     {
