@@ -8,15 +8,14 @@ import com.github.bubb13.infinityareas.gui.control.UnderlinedButton;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
-import com.github.bubb13.infinityareas.gui.editor.WEDPolygonDelegator;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.NormalEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
-import com.github.bubb13.infinityareas.misc.ReadOnlyReference;
 import com.github.bubb13.infinityareas.misc.Reference;
+import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.ImageUtil;
@@ -25,6 +24,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -50,7 +51,6 @@ public class WEDPane extends StackPane
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
     private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Polygons");
-    private final WEDPolygonDelegator wedPolygonDelegator = new WEDPolygonDelegator(new ReadOnlyReference<>(wedRef));
 
     /////////////////////////
     // Public Constructors //
@@ -164,7 +164,7 @@ public class WEDPane extends StackPane
         getChildren().add(mainHBox);
 
         editor.registerEditMode(NormalEditMode.class, () -> new NormalEditMode(editor));
-        editor.registerEditMode(DrawPolygonEditMode.class, () -> new DrawPolygonEditMode(editor, wedPolygonDelegator));
+        editor.registerEditMode(DrawPolygonEditMode.class, DrawWallPolygonEditMode::new);
         editor.registerEditMode(QuickSelectEditMode.class, () -> new QuickSelectEditMode(editor));
     }
 
@@ -229,14 +229,65 @@ public class WEDPane extends StackPane
     // Private Classes //
     /////////////////////
 
-    private class WallPolygon extends RenderablePolygon
+    private class DrawWallPolygonEditMode extends DrawPolygonEditMode<WED.Polygon>
     {
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public DrawWallPolygonEditMode()
+        {
+            super(WEDPane.this.editor);
+        }
+
         ////////////////////
-        // Private Fields //
+        // Public Methods //
         ////////////////////
 
-        private final WED.Polygon wedPolygon;
+        @Override
+        public void onKeyPressed(final KeyEvent event)
+        {
+            if (event.getCode() == KeyCode.Q)
+            {
+                event.consume();
+                editor.enterEditMode(QuickSelectEditMode.class);
+            }
+            else
+            {
+                super.onKeyPressed(event);
+            }
+        }
 
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected WED.Polygon createBackingPolygon()
+        {
+            return new WED.Polygon(
+                (byte)0, (byte)0,
+                (short)0, (short)0,
+                (short)0, (short)0,
+                new SimpleLinkedList<>()
+            );
+        }
+
+        @Override
+        protected RenderablePolygon<WED.Polygon> createRenderablePolygon(final WED.Polygon backingPolygon)
+        {
+            return new WallPolygon(backingPolygon);
+        }
+
+        @Override
+        protected void saveBackingPolygon(final WED.Polygon polygon)
+        {
+            wedRef.get().addPolygon(polygon);
+        }
+    }
+
+    private class WallPolygon extends RenderablePolygon<WED.Polygon>
+    {
         /////////////////////////
         // Public Constructors //
         /////////////////////////
@@ -244,7 +295,6 @@ public class WEDPane extends StackPane
         public WallPolygon(final WED.Polygon wedPolygon)
         {
             super(editor, wedPolygon);
-            this.wedPolygon = wedPolygon;
         }
 
         ////////////////////
@@ -264,7 +314,7 @@ public class WEDPane extends StackPane
         @Override
         protected void deleteBackingObject()
         {
-            wedPolygon.delete();
+            getPolygon().delete();
         }
     }
 

@@ -284,23 +284,39 @@ public class ZoomPane extends NotifyingScrollPane
         final double xLeft = hRel * (imageViewWidth - viewportWidth) / zoomFactor;
         final double yTop = vRel * (imageViewHeight - viewportHeight) / zoomFactor;
 
+        double newZoomFactor = zoomFactor;
         if (deltaY > 0)
         {
-            setZoomFactor(zoomFactor * 1.1);
+            newZoomFactor *= 1.1;
         }
         else if (deltaY < 0)
         {
-            setZoomFactor(zoomFactor * 0.9);
+            newZoomFactor *= 0.9;
         }
 
         final BufferedImage image = partialImage.getSourceImage();
-        final double newImageViewWidth = image.getWidth() * zoomFactor;
-        final double newImageViewHeight = image.getHeight() * zoomFactor;
+        final double imageWidth = image.getWidth();
+        final double imageHeight = image.getHeight();
+
+        final double fitZoomFactorX = viewportWidth / imageWidth;
+        final double fitZoomFactorY = viewportHeight / imageHeight;
+        final double fitZoomFactor = Math.min(fitZoomFactorX, fitZoomFactorY);
+
+        newZoomFactor = Math.max(fitZoomFactor, newZoomFactor);
+
+        if (newZoomFactor == zoomFactor)
+        {
+            blockDraw(false);
+            return;
+        }
+
+        setZoomFactor(partialImage.setZoomFactor(newZoomFactor));
+        layout();
+
+        final double newImageViewWidth = imageWidth * zoomFactor;
+        final double newImageViewHeight = imageHeight * zoomFactor;
         final double newViewportEffectiveWidth = viewportWidth / zoomFactor;
         final double newViewportEffectiveHeight = viewportHeight / zoomFactor;
-
-        partialImage.setZoomFactor(zoomFactor);
-        layout();
 
         final double targetCenterX = xLeft + (viewportEffectiveWidth / 2);
         final double targetCenterY = yTop + (viewportEffectiveHeight / 2);

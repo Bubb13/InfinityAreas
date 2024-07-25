@@ -244,7 +244,7 @@ public class AreaPane extends StackPane
         // Private Classes //
         /////////////////////
 
-        private class TrapPolygon extends RenderablePolygon
+        private class TrapPolygon extends RenderablePolygon<GenericPolygon>
         {
             /////////////////////////
             // Public Constructors //
@@ -274,6 +274,12 @@ public class AreaPane extends StackPane
             protected Color getLineColor()
             {
                 return Color.RED;
+            }
+
+            @Override
+            protected void deleteBackingObject()
+            {
+
             }
         }
     }

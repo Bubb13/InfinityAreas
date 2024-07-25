@@ -5,11 +5,19 @@ import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 
 public class GenericPolygon
 {
+    ////////////////////
+    // Private Fields //
+    ////////////////////
+
     private int boundingBoxLeft;
     private int boundingBoxRight;
     private int boundingBoxTop;
     private int boundingBoxBottom;
     private final SimpleLinkedList<GenericVertex> vertices;
+
+    /////////////////////////
+    // Public Constructors //
+    /////////////////////////
 
     public GenericPolygon(
         final int boundingBoxLeft, final int boundingBoxRight,
@@ -22,6 +30,10 @@ public class GenericPolygon
         this.boundingBoxBottom = boundingBoxBottom;
         this.vertices = vertices;
     }
+
+    ////////////////////
+    // Public Methods //
+    ////////////////////
 
     public GenericVertex addVertex(final int x, final int y)
     {

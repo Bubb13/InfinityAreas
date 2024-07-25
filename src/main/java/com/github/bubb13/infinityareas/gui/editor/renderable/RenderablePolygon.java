@@ -10,14 +10,14 @@ import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
-public class RenderablePolygon extends AbstractRenderable
+public abstract class RenderablePolygon<PolygonType extends GenericPolygon> extends AbstractRenderable
 {
     ////////////////////
     // Private Fields //
     ////////////////////
 
     private final Editor editor;
-    private final GenericPolygon polygon;
+    private final PolygonType polygon;
     private final SimpleLinkedList<RenderableVertex> renderableVertices = new SimpleLinkedList<>();
     private final DoubleCorners corners = new DoubleCorners();
 
@@ -32,7 +32,7 @@ public class RenderablePolygon extends AbstractRenderable
     // Public Constructors //
     /////////////////////////
 
-    public RenderablePolygon(final Editor editor, final GenericPolygon polygon)
+    public RenderablePolygon(final Editor editor, final PolygonType polygon)
     {
         this.editor = editor;
         this.polygon = polygon;
@@ -71,7 +71,7 @@ public class RenderablePolygon extends AbstractRenderable
         return renderableVertices.getLast();
     }
 
-    public GenericPolygon getPolygon()
+    public PolygonType getPolygon()
     {
         return polygon;
     }
@@ -145,7 +145,11 @@ public class RenderablePolygon extends AbstractRenderable
         return Color.WHITE;
     }
 
-    protected void deleteBackingObject() {}
+    ////////////////////////////////
+    // Protected Abstract Methods //
+    ////////////////////////////////
+
+    protected abstract void deleteBackingObject();
 
     /////////////////////
     // Private Methods //

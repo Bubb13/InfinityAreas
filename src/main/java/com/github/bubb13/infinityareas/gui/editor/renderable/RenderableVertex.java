@@ -20,7 +20,7 @@ public class RenderableVertex extends AbstractRenderable
     ////////////////////
 
     private final Editor editor;
-    private final RenderablePolygon renderablePolygon;
+    private final RenderablePolygon<? extends GenericPolygon> renderablePolygon;
     private final GenericVertex vertex;
     private final SimpleLinkedList<RenderableVertex>.Node renderableVertexNode;
     private final DoubleCorners corners = new DoubleCorners();
@@ -33,7 +33,7 @@ public class RenderableVertex extends AbstractRenderable
 
     public RenderableVertex(
         final Editor editor,
-        final RenderablePolygon renderablePolygon,
+        final RenderablePolygon<? extends GenericPolygon> renderablePolygon,
         final GenericVertex vertex,
         final SimpleLinkedList<RenderableVertex>.Node renderableVertexNode)
     {
@@ -96,7 +96,7 @@ public class RenderableVertex extends AbstractRenderable
         return nextNode == null ? renderablePolygon.getFirstVertex() : nextNode.value();
     }
 
-    public RenderablePolygon getRenderablePolygon()
+    public RenderablePolygon<? extends GenericPolygon> getRenderablePolygon()
     {
         return renderablePolygon;
     }

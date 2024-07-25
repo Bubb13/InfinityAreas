@@ -42,6 +42,15 @@ import java.util.function.Consumer;
  */
 public class PartiallyRenderedImage extends Region implements VisibleNotifiable
 {
+    ///////////////////////////
+    // Private Static Fields //
+    ///////////////////////////
+
+    /**
+     * Single-pixel canvas drawing starts breaking down after this value
+     */
+    final double MAX_ZOOM_FACTOR = 2500;
+
     ////////////////////
     // Private Fields //
     ////////////////////
@@ -114,10 +123,11 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return sourceImage;
     }
 
-    public void setZoomFactor(double zoomFactor)
+    public double setZoomFactor(double newZoomFactor)
     {
-        this.zoomFactor = zoomFactor;
+        this.zoomFactor = Math.min(newZoomFactor, MAX_ZOOM_FACTOR);
         requestLayout();
+        return zoomFactor;
     }
 
     public GraphicsContext getGraphics()
@@ -276,11 +286,10 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
             return;
         }
 
-        final Bounds layout = canvas.getBoundsInParent();
-        final int renderX = (int)layout.getMinX();
-        final int renderY = (int)layout.getMinY();
-        final int renderW = (int)layout.getWidth();
-        final int renderH = (int)layout.getHeight();
+        final int renderX = (int)(canvas.getLayoutX() + canvas.getTranslateX());
+        final int renderY = (int)(canvas.getLayoutY() + canvas.getTranslateY());
+        final int renderW = (int)canvas.getWidth();
+        final int renderH = (int)canvas.getHeight();
 
         if (renderW <= 0 || renderH <= 0)
         {

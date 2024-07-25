@@ -5,7 +5,6 @@ import com.github.bubb13.infinityareas.gui.dialog.WarningAlertTwoOptions;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
-import com.github.bubb13.infinityareas.gui.editor.Delegator;
 import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
@@ -14,23 +13,21 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
-public class DrawPolygonEditMode extends LabeledEditMode
+public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPolygon> extends LabeledEditMode
 {
     ////////////////////
     // Private Fields //
     ////////////////////
 
-    private final Delegator<GenericPolygon> polygonDelegator;
-    private RenderablePolygon drawingPolygon;
+    private RenderablePolygon<BackingPolygonType> drawingPolygon;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public DrawPolygonEditMode(final Editor editor, final Delegator<GenericPolygon> polygonDelegator)
+    public DrawPolygonEditMode(final Editor editor)
     {
         super(editor, "Draw Polygon Mode");
-        this.polygonDelegator = polygonDelegator;
     }
 
     ////////////////////
@@ -59,13 +56,13 @@ public class DrawPolygonEditMode extends LabeledEditMode
 
         if (drawingPolygon == null)
         {
-            final GenericPolygon polygon = polygonDelegator.create();
+            final BackingPolygonType polygon = createBackingPolygon();
             polygon.setBoundingBoxLeft(sourcePressXInt);
             polygon.setBoundingBoxRight(sourcePressXInt + 1);
             polygon.setBoundingBoxTop(sourcePressYInt);
             polygon.setBoundingBoxBottom(sourcePressYInt + 1);
 
-            drawingPolygon = new RenderablePolygon(editor, polygon);
+            drawingPolygon = createRenderablePolygon(polygon);
             drawingPolygon.setRenderImpliedFinalLine(false);
             drawingPolygon.setDrawing(true);
         }
@@ -126,11 +123,6 @@ public class DrawPolygonEditMode extends LabeledEditMode
                 event.consume();
                 EditorCommons.onBisectLine(editor);
             }
-            case Q ->
-            {
-                event.consume();
-                editor.enterEditMode(QuickSelectEditMode.class);
-            }
             case DELETE ->
             {
                 event.consume();
@@ -138,6 +130,14 @@ public class DrawPolygonEditMode extends LabeledEditMode
             }
         }
     }
+
+    ////////////////////////////////
+    // Protected Abstract Methods //
+    ////////////////////////////////
+
+    protected abstract BackingPolygonType createBackingPolygon();
+    protected abstract RenderablePolygon<BackingPolygonType> createRenderablePolygon(BackingPolygonType backingPolygon);
+    protected abstract void saveBackingPolygon(BackingPolygonType polygon);
 
     /////////////////////
     // Private Methods //
@@ -156,7 +156,7 @@ public class DrawPolygonEditMode extends LabeledEditMode
 
         if (drawingPolygon != null)
         {
-            final GenericPolygon polygon = drawingPolygon.getPolygon();
+            final BackingPolygonType polygon = drawingPolygon.getPolygon();
 
             // Detect invalid polygon and warn that it will be deleted
             if (polygon.getVertices().size() < 3)
@@ -185,7 +185,7 @@ public class DrawPolygonEditMode extends LabeledEditMode
                 drawingPolygon.setDrawing(false);
                 drawingPolygon.setRenderImpliedFinalLine(true);
                 drawingPolygon = null;
-                polygonDelegator.add(polygon);
+                saveBackingPolygon(polygon);
             }
         }
 
