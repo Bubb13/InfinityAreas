@@ -4,7 +4,6 @@ package com.github.bubb13.infinityareas.gui.editor;
 import com.github.bubb13.infinityareas.misc.ReferenceHolder;
 import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
 import com.github.bubb13.infinityareas.misc.ReferenceTracker;
-import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 
 public class TrackedGenericPolygon extends GenericPolygon implements ReferenceTrackable
 {
@@ -12,10 +11,9 @@ public class TrackedGenericPolygon extends GenericPolygon implements ReferenceTr
 
     public TrackedGenericPolygon(
         final int boundingBoxLeft, final int boundingBoxRight,
-        final int boundingBoxTop, final int boundingBoxBottom,
-        final SimpleLinkedList<GenericVertex> vertices)
+        final int boundingBoxTop, final int boundingBoxBottom)
     {
-        super(boundingBoxLeft, boundingBoxRight, boundingBoxTop, boundingBoxBottom, vertices);
+        super(boundingBoxLeft, boundingBoxRight, boundingBoxTop, boundingBoxBottom);
     }
 
     @Override

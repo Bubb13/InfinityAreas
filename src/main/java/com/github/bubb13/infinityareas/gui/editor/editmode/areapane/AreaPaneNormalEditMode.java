@@ -5,6 +5,7 @@ import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.editmode.AbstractEditMode;
 import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActorOrientationHandle;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -34,7 +35,8 @@ public class AreaPaneNormalEditMode extends AbstractEditMode
     public boolean shouldCaptureObjectPress(final MouseEvent event, final Renderable renderable)
     {
         return renderable instanceof RenderableVertex
-            || renderable instanceof RenderableActorOrientationHandle;
+            || renderable instanceof RenderableActorOrientationHandle
+            || renderable instanceof RenderablePolygon<?>;
     }
 
     @Override

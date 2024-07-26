@@ -8,21 +8,21 @@ import com.github.bubb13.infinityareas.gui.control.UnderlinedButton;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
-import com.github.bubb13.infinityareas.gui.editor.Delegator;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.AreaPaneNormalEditMode;
-import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
+import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.TrapRegionOptionsPane;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActor;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
-import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.ImageUtil;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -43,6 +43,11 @@ public class AreaPane extends StackPane
 
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
+
+    private final StackPane rightPane = new StackPane();
+    private Node curRightNode;
+
+    private TrapRegionOptionsPane trapRegionOptionsPane = new TrapRegionOptionsPane(editor);
 
     private Area area;
 
@@ -154,10 +159,22 @@ public class AreaPane extends StackPane
 
             sidePaneVBox.getChildren().addAll(renderRegionsCheckbox);
 
-        mainHBox.getChildren().addAll(mainVBox, sidePaneVBox);
+        changeRightNode(sidePaneVBox);
+        mainHBox.getChildren().addAll(mainVBox, rightPane);
         getChildren().add(mainHBox);
 
         editor.registerEditMode(AreaPaneNormalEditMode.class, () -> new AreaPaneNormalEditMode(editor));
+    }
+
+    private void changeRightNode(final Node newNode)
+    {
+        if (newNode != curRightNode)
+        {
+            curRightNode = newNode;
+            final ObservableList<Node> children = rightPane.getChildren();
+            children.clear();
+            children.add(newNode);
+        }
     }
 
     private void onRenderRegionsChanged(final boolean newValue)
@@ -165,39 +182,22 @@ public class AreaPane extends StackPane
         editor.requestDraw();
     }
 
+    private void openTrapRegionPanel()
+    {
+
+    }
+
     /////////////////////
     // Private Classes //
     /////////////////////
 
-    private class TrapRegion extends AbstractRenderable
+    private class TrapRegion
     {
         ////////////////////
         // Private Fields //
         ////////////////////
 
         private final Area.Region region;
-        private final RenderablePolygon trapPolygon;
-
-        private Delegator<TrapPolygon> trapPolygonDelegator = new Delegator<>()
-        {
-            @Override
-            public TrapPolygon create()
-            {
-                return null;
-            }
-
-            @Override
-            public void add(TrapPolygon genericPolygon)
-            {
-
-            }
-
-            @Override
-            public void delete(TrapPolygon genericPolygon)
-            {
-
-            }
-        };
 
         /////////////////////////
         // Public Constructors //
@@ -206,38 +206,7 @@ public class AreaPane extends StackPane
         public TrapRegion(final Area.Region region)
         {
             this.region = region;
-
-            final GenericPolygon polygon = new GenericPolygon(
-                region.getBoundingBoxLeft(),
-                region.getBoundingBoxRight(),
-                region.getBoundingBoxTop(),
-                region.getBoundingBoxBottom(),
-                region.getVertices()
-            );
-
-            this.trapPolygon = new TrapPolygon(polygon);
-        }
-
-        ///////////////////////
-        // Protected Methods //
-        ///////////////////////
-
-        @Override
-        public void onRender(GraphicsContext canvasContext)
-        {
-
-        }
-
-        @Override
-        public DoubleCorners getCorners()
-        {
-            return null;
-        }
-
-        @Override
-        public boolean isEnabled()
-        {
-            return renderRegionsCheckbox.isSelected();
+            new TrapPolygon(region.getPolygon());
         }
 
         /////////////////////
@@ -266,6 +235,13 @@ public class AreaPane extends StackPane
                 return renderRegionsCheckbox.isSelected();
             }
 
+            @Override
+            public void onClicked(final MouseEvent mouseEvent)
+            {
+                trapRegionOptionsPane.setRegion(region);
+                changeRightNode(trapRegionOptionsPane);
+            }
+
             ///////////////////////
             // Protected Methods //
             ///////////////////////
@@ -279,7 +255,7 @@ public class AreaPane extends StackPane
             @Override
             protected void deleteBackingObject()
             {
-
+                region.delete();
             }
         }
     }

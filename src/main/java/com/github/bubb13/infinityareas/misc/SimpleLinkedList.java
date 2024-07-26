@@ -151,7 +151,7 @@ public class SimpleLinkedList<T> implements Iterable<T>
 
     protected void onAdd(final Node node) {}
 
-    protected void onRemove(final T value) {}
+    protected void onRemove(final Node value) {}
 
     protected Node addAfter(final Node node, final T value)
     {
@@ -218,10 +218,10 @@ public class SimpleLinkedList<T> implements Iterable<T>
 
         public void remove()
         {
+            onRemove(this);
             previous.next = next;
             next.previous = previous;
             --size;
-            onRemove(value);
         }
 
         public Node addAfter(final T value)

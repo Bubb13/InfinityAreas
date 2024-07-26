@@ -3,12 +3,13 @@ package com.github.bubb13.infinityareas.gui.editor.renderable;
 
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
-import com.github.bubb13.infinityareas.gui.editor.GenericVertex;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Affine;
 
 public abstract class RenderablePolygon<PolygonType extends GenericPolygon> extends AbstractRenderable
 {
@@ -25,9 +26,6 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     private boolean renderImpliedFinalLine = true;
     private boolean drawing = false;
 
-    private double[] fillXPointsArray;
-    private double[] fillYPointsArray;
-
     /////////////////////////
     // Public Constructors //
     /////////////////////////
@@ -37,7 +35,7 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
         this.editor = editor;
         this.polygon = polygon;
 
-        for (final GenericVertex vertex : polygon.getVertices())
+        for (final GenericPolygon.Vertex vertex : polygon.getVertices())
         {
             addNewRenderableVertex(vertex);
         }
@@ -125,6 +123,12 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     }
 
     @Override
+    public boolean contains(final Point2D point)
+    {
+        return polygon.contains(point.getX(), point.getY());
+    }
+
+    @Override
     public void delete()
     {
         for (final RenderableVertex renderable : renderableVertices)
@@ -155,7 +159,7 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     // Private Methods //
     /////////////////////
 
-    private RenderableVertex addNewRenderableVertex(final GenericVertex vertex)
+    private RenderableVertex addNewRenderableVertex(final GenericPolygon.Vertex vertex)
     {
         final RenderableVertex newRenderableVertex = renderableVertices.addTail((node)
             -> new RenderableVertex(editor, this, vertex, node)).value();
@@ -172,7 +176,8 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
         corners.setBottomRightExclusiveY(polygon.getBoundingBoxBottom());
     }
 
-    private void renderLine(final GraphicsContext canvasContext, final GenericVertex v1, final GenericVertex v2)
+    private void renderLine(
+        final GraphicsContext canvasContext, final GenericPolygon.Vertex v1, final GenericPolygon.Vertex v2)
     {
         final Point2D p1 = editor.sourceToAbsoluteCanvasPosition(v1.x(), v1.y());
         final Point2D p2 = editor.sourceToAbsoluteCanvasPosition(v2.x(), v2.y());
@@ -181,33 +186,26 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
 
     private void renderFill(final GraphicsContext canvasContext)
     {
-        final SimpleLinkedList<GenericVertex> vertices = polygon.getVertices();
-        if (fillXPointsArray == null || fillXPointsArray.length != vertices.size())
-        {
-            fillXPointsArray = new double[vertices.size()];
-            fillYPointsArray = new double[vertices.size()];
-        }
-
-        int i = 0;
-        for (final RenderableVertex renderableVertex : renderableVertices)
-        {
-            final GenericVertex vertex = renderableVertex.getVertex();
-            final Point2D canvasPos = editor.sourceToAbsoluteCanvasDoublePosition(vertex.x(), vertex.y());
-            fillXPointsArray[i] = canvasPos.getX();
-            fillYPointsArray[i] = canvasPos.getY();
-            ++i;
-        }
-
         final Color lineColor = getLineColor();
         final Color fillColor = Color.color(lineColor.getRed(), lineColor.getGreen(), lineColor.getBlue(), 0.25);
 
+        final Bounds canvasBounds = editor.getCanvasBounds();
+        final double zoomFactor = editor.getZoomFactor();
+
+        final Affine savedAffine = canvasContext.getTransform();
+
+        canvasContext.translate(-canvasBounds.getMinX(), -canvasBounds.getMinY());
+        canvasContext.scale(zoomFactor, zoomFactor);
+
         canvasContext.setFill(fillColor);
-        canvasContext.fillPolygon(fillXPointsArray, fillYPointsArray, vertices.size());
+        canvasContext.fillPolygon(polygon.xArray(), polygon.yArray(), polygon.getVertices().size());
+
+        canvasContext.setTransform(savedAffine);
     }
 
     private void renderOutline(final GraphicsContext canvasContext)
     {
-        final SimpleLinkedList<GenericVertex> vertices = polygon.getVertices();
+        final SimpleLinkedList<GenericPolygon.Vertex> vertices = polygon.getVertices();
         final int limit = vertices.size() - 1;
 
         canvasContext.setLineWidth(1D);
@@ -223,9 +221,31 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
 
         if (renderImpliedFinalLine)
         {
-            final GenericVertex vFirst = vertices.getFirst();
-            final GenericVertex vLast = vertices.getLast();
+            final GenericPolygon.Vertex vFirst = vertices.getFirst();
+            final GenericPolygon.Vertex vLast = vertices.getLast();
             renderLine(canvasContext, vFirst, vLast);
         }
+
+//        final Bounds canvasBounds = editor.getCanvasBounds();
+//        final double zoomFactor = editor.getZoomFactor();
+//
+//        final Affine savedAffine = canvasContext.getTransform();
+//
+//        canvasContext.setLineWidth(1 / zoomFactor);
+//        canvasContext.setStroke(getLineColor());
+//
+//        canvasContext.translate(-canvasBounds.getMinX(), -canvasBounds.getMinY());
+//        canvasContext.scale(zoomFactor, zoomFactor);
+//
+//        if (renderImpliedFinalLine)
+//        {
+//            canvasContext.strokePolygon(polygon.xArray(), polygon.yArray(), polygon.getVertices().size());
+//        }
+//        else
+//        {
+//            canvasContext.strokePolyline(polygon.xArray(), polygon.yArray(), polygon.getVertices().size());
+//        }
+//
+//        canvasContext.setTransform(savedAffine);
     }
 }

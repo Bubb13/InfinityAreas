@@ -90,8 +90,8 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
     }
 
     @Override
-    protected void onRemove(final T value)
+    protected void onRemove(final Node node)
     {
-        valueToNode.remove(value);
+        valueToNode.remove(node.value);
     }
 }

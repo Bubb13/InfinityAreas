@@ -15,7 +15,6 @@ import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.Reference;
-import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.ImageUtil;
@@ -268,8 +267,7 @@ public class WEDPane extends StackPane
             return new WED.Polygon(
                 (byte)0, (byte)0,
                 (short)0, (short)0,
-                (short)0, (short)0,
-                new SimpleLinkedList<>()
+                (short)0, (short)0
             );
         }
 

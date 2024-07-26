@@ -245,6 +245,11 @@ public class ZoomPane extends NotifyingScrollPane
         return partialImage.absoluteCanvasToSourceDoublePosition(canvasX, canvasY);
     }
 
+    public Bounds getCanvasBounds()
+    {
+        return partialImage.getCanvasBounds();
+    }
+
     public Rectangle2D getVisibleSourceRect()
     {
         return partialImage.getVisibleSourceRect();
@@ -294,15 +299,7 @@ public class ZoomPane extends NotifyingScrollPane
             newZoomFactor *= 0.9;
         }
 
-        final BufferedImage image = partialImage.getSourceImage();
-        final double imageWidth = image.getWidth();
-        final double imageHeight = image.getHeight();
-
-        final double fitZoomFactorX = viewportWidth / imageWidth;
-        final double fitZoomFactorY = viewportHeight / imageHeight;
-        final double fitZoomFactor = Math.min(fitZoomFactorX, fitZoomFactorY);
-
-        newZoomFactor = Math.max(fitZoomFactor, newZoomFactor);
+        newZoomFactor = Math.max(calculateFitZoomFactor(), newZoomFactor);
 
         if (newZoomFactor == zoomFactor)
         {
@@ -313,8 +310,9 @@ public class ZoomPane extends NotifyingScrollPane
         setZoomFactor(partialImage.setZoomFactor(newZoomFactor));
         layout();
 
-        final double newImageViewWidth = imageWidth * zoomFactor;
-        final double newImageViewHeight = imageHeight * zoomFactor;
+        final BufferedImage image = partialImage.getSourceImage();
+        final double newImageViewWidth = image.getWidth() * zoomFactor;
+        final double newImageViewHeight = image.getHeight() * zoomFactor;
         final double newViewportEffectiveWidth = viewportWidth / zoomFactor;
         final double newViewportEffectiveHeight = viewportHeight / zoomFactor;
 
@@ -334,6 +332,15 @@ public class ZoomPane extends NotifyingScrollPane
         // Release the notify+draw block so that the `setVvalue()` call triggers those events
         blockDraw(false);
         setVvalue(newVVal);
+    }
+
+    private double calculateFitZoomFactor()
+    {
+        final Bounds viewportBounds = getViewportBounds();
+        final BufferedImage image = partialImage.getSourceImage();
+        final double fitZoomFactorX = viewportBounds.getWidth() / image.getWidth();
+        final double fitZoomFactorY = viewportBounds.getHeight() / image.getHeight();
+        return Math.min(fitZoomFactorX, fitZoomFactorY);
     }
 
     private void blockDraw(final boolean newValue)

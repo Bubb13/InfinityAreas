@@ -56,8 +56,8 @@ public final class EditorCommons
             return;
         }
 
-        final GenericVertex vertex1 = renderableVertex1.getVertex();
-        final GenericVertex vertex2 = renderableVertex2.getVertex();
+        final GenericPolygon.Vertex vertex1 = renderableVertex1.getVertex();
+        final GenericPolygon.Vertex vertex2 = renderableVertex2.getVertex();
 
         final int finalX = vertex2.x() - (vertex2.x() - vertex1.x()) / 2;
         final int finalY = vertex2.y() - (vertex2.y() - vertex1.y()) / 2;

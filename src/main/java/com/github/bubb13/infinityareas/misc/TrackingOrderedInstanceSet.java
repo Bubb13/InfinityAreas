@@ -12,10 +12,10 @@ public class TrackingOrderedInstanceSet<T extends ReferenceTrackable>
     }
 
     @Override
-    protected void onRemove(final T value)
+    protected void onRemove(final Node node)
     {
-        super.onRemove(value);
-        value.removedFrom(this);
+        super.onRemove(node);
+        node.value.removedFrom(this);
     }
 
     @Override

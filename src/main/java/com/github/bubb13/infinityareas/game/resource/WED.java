@@ -3,13 +3,12 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
-import com.github.bubb13.infinityareas.gui.editor.GenericVertex;
+import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
 import com.github.bubb13.infinityareas.gui.editor.TrackedGenericPolygon;
 import com.github.bubb13.infinityareas.misc.AppendOnlyOrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
-import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
@@ -399,10 +398,9 @@ public class WED
         public Polygon(
             final byte flags, final byte height,
             final short boundingBoxLeft, final short boundingBoxRight,
-            final short boundingBoxTop, final short boundingBoxBottom,
-            final SimpleLinkedList<GenericVertex> vertices)
+            final short boundingBoxTop, final short boundingBoxBottom)
         {
-            super(boundingBoxLeft, boundingBoxRight, boundingBoxTop, boundingBoxBottom, vertices);
+            super(boundingBoxLeft, boundingBoxRight, boundingBoxTop, boundingBoxBottom);
             this.flags = flags;
             this.height = height;
         }
@@ -625,7 +623,11 @@ public class WED
         final short boundingBoxTop = buffer.getShort();
         final short boundingBoxBottom = buffer.getShort();
 
-        final SimpleLinkedList<GenericVertex> vertices = new SimpleLinkedList<>();
+        final Polygon polygon = new Polygon(
+            flags, height,
+            boundingBoxLeft, boundingBoxRight,
+            boundingBoxTop, boundingBoxBottom
+        );
 
         // Read vertices
         mark();
@@ -634,16 +636,11 @@ public class WED
         {
             final short vertexX = buffer.getShort();
             final short vertexY = buffer.getShort();
-            vertices.addTail((node) -> new GenericVertex(node, vertexX, vertexY));
+            polygon.addVertex(vertexX, vertexY);
         }
         reset();
 
-        return new Polygon(
-            flags, height,
-            boundingBoxLeft, boundingBoxRight,
-            boundingBoxTop, boundingBoxBottom,
-            vertices
-        );
+        return polygon;
     }
 
     private WallGroupsInfo parseWallGroups(
@@ -1663,7 +1660,7 @@ public class WED
 
             for (final Polygon polygon : polygonsArray)
             {
-                for (final GenericVertex vertex : polygon.getVertices())
+                for (final GenericPolygon.Vertex vertex : polygon.getVertices())
                 {
                     buffer.putShort((short)vertex.x());
                     buffer.putShort((short)vertex.y());

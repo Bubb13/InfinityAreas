@@ -3,7 +3,6 @@ package com.github.bubb13.infinityareas.gui.editor.renderable;
 
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
-import com.github.bubb13.infinityareas.gui.editor.GenericVertex;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import javafx.geometry.Point2D;
@@ -21,7 +20,7 @@ public class RenderableVertex extends AbstractRenderable
 
     private final Editor editor;
     private final RenderablePolygon<? extends GenericPolygon> renderablePolygon;
-    private final GenericVertex vertex;
+    private final GenericPolygon.Vertex vertex;
     private final SimpleLinkedList<RenderableVertex>.Node renderableVertexNode;
     private final DoubleCorners corners = new DoubleCorners();
 
@@ -34,7 +33,7 @@ public class RenderableVertex extends AbstractRenderable
     public RenderableVertex(
         final Editor editor,
         final RenderablePolygon<? extends GenericPolygon> renderablePolygon,
-        final GenericVertex vertex,
+        final GenericPolygon.Vertex vertex,
         final SimpleLinkedList<RenderableVertex>.Node renderableVertexNode)
     {
         this.editor = editor;
@@ -51,8 +50,8 @@ public class RenderableVertex extends AbstractRenderable
 
     public RenderableVertex addNewVertexAfter(final int x, final int y)
     {
-        final GenericVertex addedVertex = vertex.getNode().addAfter(
-            (node)-> new GenericVertex(node, x, y)).value();
+        final GenericPolygon.Vertex addedVertex = vertex.getNode().addAfter(
+            (node) -> renderablePolygon.getPolygon().newVertex(node, x, y)).value();
 
         final RenderableVertex addedRenderableVertex = renderableVertexNode.addAfter(
             (node) -> new RenderableVertex(editor, renderablePolygon, addedVertex, node)).value();
@@ -101,7 +100,7 @@ public class RenderableVertex extends AbstractRenderable
         return renderablePolygon;
     }
 
-    public GenericVertex getVertex()
+    public GenericPolygon.Vertex getVertex()
     {
         return vertex;
     }
@@ -182,7 +181,7 @@ public class RenderableVertex extends AbstractRenderable
                 continue;
             }
 
-            final GenericVertex movingVertex = movingRenderableVertex.getVertex();
+            final GenericPolygon.Vertex movingVertex = movingRenderableVertex.getVertex();
             final int newX = movingVertex.x() + deltaX;
             final int newY = movingVertex.y() + deltaY;
 

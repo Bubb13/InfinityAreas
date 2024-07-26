@@ -172,6 +172,11 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return new Point2D(canvasX / zoomFactor, canvasY / zoomFactor);
     }
 
+    public Bounds getCanvasBounds()
+    {
+        return canvas.getBoundsInParent();
+    }
+
     public Rectangle2D getVisibleSourceRect()
     {
         final Bounds layout = canvas.getBoundsInParent();

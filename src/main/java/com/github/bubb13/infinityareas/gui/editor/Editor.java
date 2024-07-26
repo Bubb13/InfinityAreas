@@ -8,6 +8,7 @@ import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.MiscUtil;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.canvas.GraphicsContext;
@@ -161,6 +162,11 @@ public class Editor
         return zoomPane.absoluteCanvasToSourcePosition(canvasX, canvasY);
     }
 
+    public Bounds getCanvasBounds()
+    {
+        return zoomPane.getCanvasBounds();
+    }
+
     public double getZoomFactor()
     {
         return zoomPane.getZoomFactor();
@@ -179,10 +185,15 @@ public class Editor
             && renderable.getCorners().intersect(corners) != null;
     }
 
-    public boolean pointInObject(final Point2D point, final Renderable renderable, final double fudgeAmount)
+    public boolean pointInObjectFudge(final Point2D point, final Renderable renderable, final double fudgeAmount)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
             && renderable.getCorners().contains(point, fudgeAmount);
+    }
+
+    public boolean pointInObjectExact(final Point2D point, final Renderable renderable)
+    {
+        return (editMode.forceEnableObject(renderable) || renderable.isEnabled()) && renderable.contains(point);
     }
 
     public MouseButton getPressButton()
@@ -304,7 +315,7 @@ public class Editor
 
         for (final Renderable renderable : quadTree.iterableNear(fudgeCorners))
         {
-            if (!pointInObject(sourcePressPos, renderable, fudgeAmount))
+            if (!pointInObjectFudge(sourcePressPos, renderable, fudgeAmount))
             {
                 continue;
             }
@@ -377,7 +388,7 @@ public class Editor
             if (dragObject == null)
             {
                 final Point2D sourcePoint = zoomPane.absoluteCanvasToSourceDoublePosition(event.getX(), event.getY());
-                if (pressObject.getCorners().contains(sourcePoint))
+                if (pointInObjectExact(sourcePoint, pressObject))
                 {
                     pressObject.onClicked(event);
                 }

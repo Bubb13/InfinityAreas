@@ -3,12 +3,15 @@ package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
-import com.github.bubb13.infinityareas.gui.editor.GenericVertex;
+import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
 import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
-import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
+import com.github.bubb13.infinityareas.misc.ReferenceHolder;
+import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
+import com.github.bubb13.infinityareas.misc.ReferenceTracker;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 
@@ -26,7 +29,7 @@ public class Area
 
     private final Game.ResourceSource source;
     private final ArrayList<Actor> actors = new ArrayList<>();
-    private final SimpleLinkedList<Region> regions = new SimpleLinkedList<>();
+    private final TrackingOrderedInstanceSet<Region> regions = new TrackingOrderedInstanceSet<>();
     private final Stack<Integer> bufferMarks = new Stack<>();
 
     private ByteBuffer buffer;
@@ -226,14 +229,19 @@ public class Area
 
         region.setName(BufferUtil.readLUTF8(buffer, 32));
         region.setType(buffer.getShort());
-        region.setBoundingBoxLeft(buffer.getShort());
-        region.setBoundingBoxTop(buffer.getShort());
-        region.setBoundingBoxRight(buffer.getShort());
-        region.setBoundingBoxBottom(buffer.getShort());
-
+        final short boundingBoxLeft = buffer.getShort();
+        final short boundingBoxTop = buffer.getShort();
+        final short boundingBoxRight = buffer.getShort();
+        final short boundingBoxBottom = buffer.getShort();
         final short numVertices = buffer.getShort();
         final int firstVertexIndex = buffer.getInt();
-        region.setVertices(parseVertices(verticesOffset, firstVertexIndex, numVertices));
+
+        final GenericPolygon polygon = new GenericPolygon(
+            boundingBoxLeft, boundingBoxRight,
+            boundingBoxTop, boundingBoxBottom
+        );
+        parseVertices(polygon, verticesOffset, firstVertexIndex, numVertices);
+        region.setPolygon(polygon);
 
         region.setTriggerValue(buffer.getInt());
         region.setCursorIndex(buffer.getInt());
@@ -257,11 +265,11 @@ public class Area
         return region;
     }
 
-    private SimpleLinkedList<GenericVertex> parseVertices(
+    private void parseVertices(
+        final GenericPolygon polygon,
         final int verticesOffset, final int firstVertexIndex, final short numVertices)
     {
         final int firstVertexOffset = verticesOffset + 4 * firstVertexIndex;
-        final SimpleLinkedList<GenericVertex> vertices = new SimpleLinkedList<>();
 
         mark();
         position(firstVertexOffset);
@@ -269,11 +277,9 @@ public class Area
         {
             final short x = buffer.getShort();
             final short y = buffer.getShort();
-            vertices.addTail((node) -> new GenericVertex(node, x, y));
+            polygon.addVertex(x, y);
         }
         reset();
-
-        return vertices;
     }
 
     private void parse_V9_1(final TaskTrackerI tracker) throws Exception
@@ -466,32 +472,40 @@ public class Area
         }
     }
 
-    public class Region
+    public class Region implements ReferenceTrackable
     {
-        String name;
-        short type;
-        short boundingBoxLeft;
-        short boundingBoxTop;
-        short boundingBoxRight;
-        short boundingBoxBottom;
-        SimpleLinkedList<GenericVertex> vertices;
-        int triggerValue;
-        int cursorIndex; // CURSORS.BAM
-        String destAreaResref; // For type=2
-        String entranceNameInDestArea; // For type=2
-        int flags;
-        int infoStrref; // For type=1
-        short trapDetectionDifficulty;
-        short trapDisarmDifficulty;
-        short bTrapped; // 0 = No, 1 = Yes
-        short bTrapDetected; // 0 = No, 1 = Yes
-        short trapLaunchPointX;
-        short trapLaunchPointY;
-        String keyResref; // For type=?
-        String scriptResref; // For type=?
-        short activationPointX;
-        short activationPointY;
-        byte[] unknown;
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        // Mirrors in-file data
+        private String name;
+        private short type;
+        private GenericPolygon polygon;
+        private int triggerValue;
+        private int cursorIndex; // CURSORS.BAM
+        private String destAreaResref; // For type=2
+        private String entranceNameInDestArea; // For type=2
+        private int flags;
+        private int infoStrref; // For type=1
+        private short trapDetectionDifficulty;
+        private short trapDisarmDifficulty;
+        private short bTrapped; // 0 = No, 1 = Yes
+        private short bTrapDetected; // 0 = No, 1 = Yes
+        private short trapLaunchPointX;
+        private short trapLaunchPointY;
+        private String keyResref; // For type=?
+        private String scriptResref; // For type=?
+        private short activationPointX;
+        private short activationPointY;
+        private byte[] unknown;
+
+        // Extra
+        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
 
         public String getName()
         {
@@ -513,54 +527,14 @@ public class Area
             this.type = type;
         }
 
-        public short getBoundingBoxLeft()
+        public GenericPolygon getPolygon()
         {
-            return boundingBoxLeft;
+            return polygon;
         }
 
-        public void setBoundingBoxLeft(final short boundingBoxLeft)
+        public void setPolygon(GenericPolygon polygon)
         {
-            this.boundingBoxLeft = boundingBoxLeft;
-        }
-
-        public short getBoundingBoxTop()
-        {
-            return boundingBoxTop;
-        }
-
-        public void setBoundingBoxTop(final short boundingBoxTop)
-        {
-            this.boundingBoxTop = boundingBoxTop;
-        }
-
-        public short getBoundingBoxRight()
-        {
-            return boundingBoxRight;
-        }
-
-        public void setBoundingBoxRight(final short boundingBoxRight)
-        {
-            this.boundingBoxRight = boundingBoxRight;
-        }
-
-        public short getBoundingBoxBottom()
-        {
-            return boundingBoxBottom;
-        }
-
-        public void setBoundingBoxBottom(final short boundingBoxBottom)
-        {
-            this.boundingBoxBottom = boundingBoxBottom;
-        }
-
-        public SimpleLinkedList<GenericVertex> getVertices()
-        {
-            return vertices;
-        }
-
-        public void setVertices(final SimpleLinkedList<GenericVertex> vertices)
-        {
-            this.vertices = vertices;
+            this.polygon = polygon;
         }
 
         public int getTriggerValue()
@@ -731,6 +705,24 @@ public class Area
         public void setUnknown(final byte[] unknown)
         {
             this.unknown = unknown;
+        }
+
+        @Override
+        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        {
+            referenceTracker.addedTo(referenceHolder);
+        }
+
+        @Override
+        public void removedFrom(final ReferenceHolder<?> referenceHolder)
+        {
+            referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void delete()
+        {
+            referenceTracker.delete();
         }
     }
 }
