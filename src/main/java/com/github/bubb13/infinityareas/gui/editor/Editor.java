@@ -18,6 +18,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
 import java.awt.Point;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Stack;
 import java.util.function.Supplier;
@@ -35,6 +36,8 @@ public class Editor
     private final OrderedInstanceSet<Renderable> zoomFactorListenerObjects = new OrderedInstanceSet<>();
 
     private DoubleQuadTree<Renderable> quadTree = null;
+    private Comparator<Renderable> renderingComparator;
+    private Comparator<Renderable> interactionComparator;
 
     private EditMode editMode = null;
 
@@ -267,6 +270,16 @@ public class Editor
             t2.getY() - t1.getY());
     }
 
+    public void setRenderingComparator(final Comparator<Renderable> comparator)
+    {
+        this.renderingComparator = comparator;
+    }
+
+    public void setInteractionComparator(final Comparator<Renderable> comparator)
+    {
+        this.interactionComparator = comparator;
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -274,13 +287,11 @@ public class Editor
     private void onDraw(final GraphicsContext canvasContext)
     {
         final DoubleCorners visibleSourceCorners = zoomPane.getVisibleSourceDoubleCorners();
-        quadTree.iterateNear(visibleSourceCorners, (renderable) ->
+        for (final Renderable renderable : quadTree.listNear(visibleSourceCorners, renderingComparator,
+            (renderable) -> objectInArea(renderable, visibleSourceCorners)))
         {
-            if (objectInArea(renderable, visibleSourceCorners))
-            {
-                renderable.onRender(canvasContext);
-            }
-        });
+            renderable.onRender(canvasContext);
+        }
 
         editMode.onDraw(canvasContext);
     }
@@ -313,13 +324,9 @@ public class Editor
 
         boolean pressedSomething = false;
 
-        for (final Renderable renderable : quadTree.iterableNear(fudgeCorners))
+        for (final Renderable renderable : quadTree.listNear(fudgeCorners, interactionComparator,
+            (renderable) -> pointInObjectFudge(sourcePressPos, renderable, fudgeAmount)))
         {
-            if (!pointInObjectFudge(sourcePressPos, renderable, fudgeAmount))
-            {
-                continue;
-            }
-
             if (editMode.shouldCaptureObjectPress(event, renderable))
             {
                 pressObject = renderable;

@@ -2,11 +2,14 @@
 package com.github.bubb13.infinityareas.misc;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class DoubleQuadTree<ElementType>
 {
@@ -27,6 +30,7 @@ public class DoubleQuadTree<ElementType>
         elementHolderToNodes = new HashMap<>();
 
     private final ElementHolder<ElementType> tempHolder = new ElementHolder<>();
+    private Comparator<ElementType> comparator;
 
     /////////////////////////
     // Public Constructors //
@@ -130,6 +134,43 @@ public class DoubleQuadTree<ElementType>
         return iterableNear(
             corners.topLeftX(), corners.topLeftY(),
             corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY()
+        );
+    }
+
+    public List<ElementType> listNear(
+        final double topLeftX, final double topLeftY,
+        final double bottomRightExclusiveX, final double bottomRightExclusiveY,
+        final Comparator<ElementType> comparator, final Function<ElementType, Boolean> filter)
+    {
+        final HashSet<ElementHolder<ElementType>> seen = new HashSet<>();
+        root.iterate(topLeftX, topLeftY, bottomRightExclusiveX, bottomRightExclusiveY, seen, null);
+
+        final ArrayList<ElementType> list = new ArrayList<>(seen.size());
+        for (final ElementHolder<ElementType> elementHolder : seen)
+        {
+            final ElementType element = elementHolder.element;
+            if (filter.apply(element))
+            {
+                list.add(elementHolder.element);
+            }
+        }
+
+        if (comparator != null)
+        {
+            list.sort(comparator);
+        }
+
+        return list;
+    }
+
+    public List<ElementType> listNear(
+        final DoubleCorners corners,
+        final Comparator<ElementType> comparator, final Function<ElementType, Boolean> filter)
+    {
+        return listNear(
+            corners.topLeftX(), corners.topLeftY(),
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY(),
+            comparator, filter
         );
     }
 

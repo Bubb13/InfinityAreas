@@ -70,6 +70,12 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
     }
 
     @Override
+    public int sortWeight()
+    {
+        return renderableActor.sortWeight() + 1;
+    }
+
+    @Override
     public void onRender(final GraphicsContext canvasContext)
     {
         canvasContext.setStroke(Color.MAGENTA);
@@ -94,12 +100,6 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
     }
 
     @Override
-    public void onClicked(final MouseEvent mouseEvent)
-    {
-
-    }
-
-    @Override
     public void onDragged(final MouseEvent event)
     {
         final Area.Actor actor = renderableActor.getActor();
@@ -111,33 +111,9 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
     }
 
     @Override
-    public void onSelected()
-    {
-
-    }
-
-    @Override
-    public void onUnselected()
-    {
-
-    }
-
-    @Override
-    public void delete()
-    {
-
-    }
-
-    @Override
     public boolean listensToZoomFactorChanges()
     {
         return true;
-    }
-
-    @Override
-    public void onZoomFactorChanged(final double zoomFactor)
-    {
-        recalculateCorners();
     }
 
     /////////////////////

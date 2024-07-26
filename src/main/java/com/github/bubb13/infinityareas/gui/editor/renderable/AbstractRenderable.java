@@ -6,6 +6,8 @@ import javafx.scene.input.MouseEvent;
 
 public abstract class AbstractRenderable implements Renderable
 {
+    @Override public int sortWeight() { return 0; }
+
     @Override
     public boolean contains(final Point2D point)
     {

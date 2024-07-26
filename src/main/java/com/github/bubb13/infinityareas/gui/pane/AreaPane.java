@@ -12,6 +12,7 @@ import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.AreaPaneNormalEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.TrapRegionOptionsPane;
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActor;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
@@ -31,6 +32,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
 import java.awt.image.BufferedImage;
+import java.util.Comparator;
 
 public class AreaPane extends StackPane
 {
@@ -43,6 +45,11 @@ public class AreaPane extends StackPane
 
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
+    {
+        final Comparator<Renderable> renderingComparator = Comparator.comparingInt(Renderable::sortWeight);
+        editor.setRenderingComparator(renderingComparator);
+        editor.setInteractionComparator(renderingComparator.reversed());
+    }
 
     private final StackPane rightPane = new StackPane();
     private Node curRightNode;
@@ -80,7 +87,7 @@ public class AreaPane extends StackPane
 
         for (final Area.Actor actor : area.actors())
         {
-            new RenderableActor(editor, actor);
+            new AreaActor(actor);
         }
 
         for (final Area.Region region : area.regions())
@@ -182,14 +189,31 @@ public class AreaPane extends StackPane
         editor.requestDraw();
     }
 
-    private void openTrapRegionPanel()
-    {
-
-    }
-
     /////////////////////
     // Private Classes //
     /////////////////////
+
+    private class AreaActor extends RenderableActor
+    {
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public AreaActor(final Area.Actor actor)
+        {
+            super(editor, actor);
+        }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
+
+        @Override
+        public int sortWeight()
+        {
+            return 2;
+        }
+    }
 
     private class TrapRegion
     {

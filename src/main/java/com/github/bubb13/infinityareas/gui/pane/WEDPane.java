@@ -11,6 +11,7 @@ import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.NormalEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
+import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
@@ -36,6 +37,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 
 public class WEDPane extends StackPane
 {
@@ -49,6 +51,11 @@ public class WEDPane extends StackPane
     // GUI
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
+    {
+        final Comparator<Renderable> renderingComparator = Comparator.comparingInt(Renderable::sortWeight);
+        editor.setRenderingComparator(renderingComparator);
+        editor.setInteractionComparator(renderingComparator.reversed());
+    }
     private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Polygons");
 
     /////////////////////////

@@ -200,6 +200,12 @@ public class QuickSelectEditMode extends LabeledEditMode
         }
 
         @Override
+        public int sortWeight()
+        {
+            return 9999;
+        }
+
+        @Override
         public boolean isEnabled()
         {
             return quickSelectRender;

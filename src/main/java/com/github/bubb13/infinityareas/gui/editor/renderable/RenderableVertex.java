@@ -106,6 +106,12 @@ public class RenderableVertex extends AbstractRenderable
     }
 
     @Override
+    public int sortWeight()
+    {
+        return renderablePolygon.sortWeight() + 1;
+    }
+
+    @Override
     public boolean isEnabled()
     {
         return renderablePolygon.isEnabled();

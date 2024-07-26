@@ -8,6 +8,7 @@ import javafx.scene.input.MouseEvent;
 
 public interface Renderable
 {
+    int sortWeight();
     void onRender(GraphicsContext canvasContext);
     DoubleCorners getCorners();
     boolean contains(Point2D point);
