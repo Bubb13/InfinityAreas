@@ -1337,7 +1337,7 @@ public class WED
             // Write Header Array //
             ////////////////////////
 
-            position(offset);
+            buffer.position(offset);
             buffer.put("WED ".getBytes(StandardCharsets.UTF_8));
             buffer.put("V1.3".getBytes(StandardCharsets.UTF_8));
             buffer.putInt(overlays.size());
@@ -1359,7 +1359,7 @@ public class WED
             // 0x0010  4 (dword)   Offset to tilemap array
             // 0x0014  4 (dword)   Offset to TIS tile indices lookup array
 
-            position(offset);
+            buffer.position(offset);
             int curTilemapArrayOffset = tilemapArraysOffset;
             int curTisTileIndicesLookupArrayOffset = tisTileIndicesLookupArraysOffset;
 
@@ -1408,7 +1408,7 @@ public class WED
             // 0x000C  4 (dword)  Offset to wall groups array
             // 0x0010  4 (dword)  Offset to wall group polygon indices lookup table
 
-            position(offset);
+            buffer.position(offset);
             buffer.putInt(polygonsArray.size());
             buffer.putInt(polygonsArrayOffset);
             buffer.putInt(verticesArrayOffset);
@@ -1427,7 +1427,7 @@ public class WED
             // 0x0012  4 (dword)       Offset to primary polygons
             // 0x0016  4 (dword)       Offset to secondary polygons
 
-            position(offset);
+            buffer.position(offset);
             short curFirstTilemapLookupArrayIndex = 0;
 
             ///////////////////////////////
@@ -1474,7 +1474,7 @@ public class WED
             // 0x0007  1 (byte)  Animation speed
             // 0x0008  2 (word)  Extra flags
 
-            position(offset);
+            buffer.position(offset);
 
             //////////////////////////
             // Write Tilemap Arrays //
@@ -1514,7 +1514,7 @@ public class WED
 
         private void saveTiledObjectTilemapIndices(final int offset)
         {
-            position(offset);
+            buffer.position(offset);
 
             /////////////////////////////////////////////////////
             // Write Tiled Object Tilemap Indices Lookup Array //
@@ -1531,7 +1531,7 @@ public class WED
 
         private void saveTisTileIndicesLookupTable(final int offset)
         {
-            position(offset);
+            buffer.position(offset);
 
             /////////////////////////////////////////////////
             // Write Tilemap TIS Tile Indices Lookup Array //
@@ -1554,7 +1554,7 @@ public class WED
             // 0x0000  2 (word)  First wall group polygon lookup array index
             // 0x0002  2 (word)  Number of wall group polygon lookup array indices
 
-            position(offset);
+            buffer.position(offset);
             short curFirstWallgroupPolygonLookupArrayIndex = 0;
 
             /////////////////////////////
@@ -1593,7 +1593,7 @@ public class WED
             // 0x000E  2 (word)           Minimum Y coordinate of bounding box
             // 0x0010  2 (word)           Maximum Y coordinate of bounding box
 
-            position(offset);
+            buffer.position(offset);
             int curFirstVertexIndex = 0;
 
             //////////////////////////
@@ -1627,7 +1627,7 @@ public class WED
 
         private void savePolygonIndicesArray(final int offset)
         {
-            position(offset);
+            buffer.position(offset);
 
             ///////////////////////////////////////////////////
             // Write Wall Group Polygon Indices Lookup Array //
@@ -1652,7 +1652,7 @@ public class WED
             // 0x0000  2 (word)  X coordinate
             // 0x0002  2 (word)  Y coordinate
 
-            position(offset);
+            buffer.position(offset);
 
             //////////////////////////
             // Write Vertices Array //

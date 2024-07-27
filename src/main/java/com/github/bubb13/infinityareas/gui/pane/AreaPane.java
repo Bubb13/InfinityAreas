@@ -1,10 +1,12 @@
 
 package com.github.bubb13.infinityareas.gui.pane;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.Area;
 import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.control.UnderlinedButton;
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
@@ -15,6 +17,7 @@ import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.TrapRegionOp
 import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActor;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
+import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.ImageUtil;
@@ -30,8 +33,12 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 
 public class AreaPane extends StackPane
@@ -123,7 +130,7 @@ public class AreaPane extends StackPane
                 toolbar.setPadding(new Insets(0, 0, 5, 0));
 
                 final Button saveButton = new Button("Save");
-                //saveButton.setOnAction((ignored) -> this.onSave());
+                saveButton.setOnAction((ignored) -> this.onSave());
 
                 final Region padding1 = new Region();
                 padding1.setPadding(new Insets(0, 0, 0, 5));
@@ -171,6 +178,38 @@ public class AreaPane extends StackPane
         getChildren().add(mainHBox);
 
         editor.registerEditMode(AreaPaneNormalEditMode.class, () -> new AreaPaneNormalEditMode(editor));
+    }
+
+    private void onSave()
+    {
+        final Path overridePath = GlobalState.getGame().getRoot().resolve("override");
+        try
+        {
+            Files.createDirectories(overridePath);
+        }
+        catch (final Exception e)
+        {
+            ErrorAlert.openAndWait("Failed to save area", e);
+        }
+
+        final FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select Output File");
+        fileChooser.setInitialDirectory(overridePath.toFile());
+        fileChooser.setInitialFileName(area.getSource().getIdentifier().resref() + ".ARE");
+
+        GlobalState.pushModalStage(null);
+        final File selectedFile = fileChooser.showSaveDialog(null);
+        GlobalState.popModalStage(null);
+
+        if (selectedFile == null)
+        {
+            return;
+        }
+
+        area.saveTask(selectedFile.toPath())
+            .trackWith(new LoadingStageTracker())
+            .onFailed((e) -> ErrorAlert.openAndWait("Failed to save area", e))
+            .start();
     }
 
     private void changeRightNode(final Node newNode)
