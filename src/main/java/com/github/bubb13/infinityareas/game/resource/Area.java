@@ -53,6 +53,7 @@ public class Area
     private final TrackingOrderedInstanceSet<TiledObject> tiledObjects = new TrackingOrderedInstanceSet<>();
     private SongEntries songEntries;
     private RestInterruptions restInterruptions;
+    private int specialPSTField;
     private final TrackingOrderedInstanceSet<MapNote> mapNotes = new TrackingOrderedInstanceSet<>();
     private final TrackingOrderedInstanceSet<ProjectileTrap> projectileTraps = new TrackingOrderedInstanceSet<>();
     private byte[] unimplemented2;
@@ -235,24 +236,45 @@ public class Area
         final int tiledObjectsOffset = buffer.getInt();
         final int songEntriesOffset = buffer.getInt();
         final int restInterruptionsOffset = buffer.getInt();
-        final int mapNotesOffset = buffer.getInt();
-        final int numMapNotes = buffer.getInt();
-        final int projectileTrapsOffset;
-        final int numProjectileTraps;
+
+        int unimplementedSize;
+        if (GlobalState.getGame().getEngineType() == Game.Type.PST)
+        {
+            specialPSTField = buffer.getInt();
+            unimplementedSize = 0x44;
+        }
+        else
+        {
+            unimplementedSize = 0x48;
+        }
+
+        final boolean hasMapNotes = hasMapNotes();
+        int mapNotesOffset = 0;
+        int numMapNotes = 0;
+        if (hasMapNotes)
+        {
+            mapNotesOffset = buffer.getInt();
+            numMapNotes = buffer.getInt();
+        }
+        else
+        {
+            unimplementedSize += 8;
+        }
 
         final boolean hasProjectileTraps = hasProjectileTraps();
+        int projectileTrapsOffset = 0;
+        int numProjectileTraps = 0;
         if (hasProjectileTraps)
         {
             projectileTrapsOffset = buffer.getInt();
             numProjectileTraps = buffer.getInt();
-            unimplemented2 = new byte[0x48]; buffer.get(unimplemented2);
         }
         else
         {
-            projectileTrapsOffset = 0;
-            numProjectileTraps = 0;
-            unimplemented2 = new byte[0x50]; buffer.get(unimplemented2);
+            unimplementedSize += 8;
         }
+
+        unimplemented2 = new byte[unimplementedSize]; buffer.get(unimplemented2);
 
         parseActors(tracker, actorsOffset, numActors);
         parseRegions(tracker, regionsOffset, numRegions, verticesOffset);
@@ -267,12 +289,25 @@ public class Area
         parseTiledObjects(tiledObjectsOffset, numTiledObjects);
         parseSongEntries(songEntriesOffset);
         parseRestInterruptions(restInterruptionsOffset);
-        parseMapNotes(mapNotesOffset, numMapNotes);
+
+        if (hasMapNotes)
+        {
+            parseMapNotes(mapNotesOffset, numMapNotes);
+        }
 
         if (hasProjectileTraps && numProjectileTraps > 0)
         {
             parseProjectileTraps(projectileTrapsOffset, numProjectileTraps);
         }
+    }
+
+    private boolean hasMapNotes()
+    {
+        return switch (GlobalState.getGame().getEngineType())
+        {
+            case PST, SOA, TOB, BGEE, BG2EE, IWDEE, PSTEE -> true;
+            default -> false;
+        };
     }
 
     private boolean hasProjectileTraps()
@@ -1962,8 +1997,13 @@ public class Area
             saveSongEntries(songEntriesOffset);
             saveRestInterruptions(restInterruptionsOffset);
             saveExploredBitmask(exploredBitmaskOffset);
-            saveProjectileTrapEffectsArray(projectileTrapEffectsArrayOffset);
-            saveProjectileTrapsArray(projectileTrapsArrayOffset);
+
+            if (hasProjectileTraps())
+            {
+                saveProjectileTrapEffectsArray(projectileTrapEffectsArrayOffset);
+                saveProjectileTrapsArray(projectileTrapsArrayOffset);
+            }
+
             saveAnimationsArray(animationsArrayOffset);
             saveAmbientsArray(ambientsArrayOffset);
             saveSpawnPointsArray(spawnPointsArrayOffset);
@@ -1976,7 +2016,11 @@ public class Area
             saveContainersArray(containersArrayOffset);
             saveVariablesArray(variablesArrayOffset);
             saveEntrancesArray(entrancesArrayOffset);
-            saveMapNotesArray(mapNotesArrayOffset);
+
+            if (hasMapNotes())
+            {
+                saveMapNotesArray(mapNotesArrayOffset);
+            }
 
             Files.write(path, buffer.array());
         }
@@ -2059,8 +2103,16 @@ public class Area
             buffer.putInt(songEntriesOffset);
             buffer.putInt(restInterruptionsOffset);
 
-            buffer.putInt(mapNotesArrayOffset);
-            buffer.putInt(mapNotes.size());
+            if (GlobalState.getGame().getEngineType() == Game.Type.PST)
+            {
+                buffer.putInt(specialPSTField);
+            }
+
+            if (hasMapNotes())
+            {
+                buffer.putInt(mapNotesArrayOffset);
+                buffer.putInt(mapNotes.size());
+            }
 
             if (hasProjectileTraps())
             {
