@@ -10,6 +10,7 @@ import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
@@ -43,6 +44,7 @@ public class Editor
 
     private MouseButton pressButton = null;
     private Renderable pressObject = null;
+    private boolean dragOccurred = false;
     private Renderable dragObject = null;
 
     /////////////////////////
@@ -121,8 +123,13 @@ public class Editor
 
     public void select(final Renderable renderable)
     {
+        for (final Renderable selectedObject : selectedObjects)
+        {
+            selectedObject.onAdditionalObjectSelected(renderable);
+        }
+
+        renderable.onBeforeSelected();
         selectedObjects.addTail(renderable);
-        renderable.onSelected();
     }
 
     public void unselect(final Renderable renderable)
@@ -165,9 +172,27 @@ public class Editor
         return zoomPane.absoluteCanvasToSourcePosition(canvasX, canvasY);
     }
 
+    public Point2D absoluteCanvasToSourceDoublePosition(final double canvasX, final double canvasY)
+    {
+        return zoomPane.absoluteCanvasToSourceDoublePosition(canvasX, canvasY);
+    }
+
     public Bounds getCanvasBounds()
     {
         return zoomPane.getCanvasBounds();
+    }
+
+    public Rectangle2D cornersToAbsoluteCanvasRectangle(final DoubleCorners corners)
+    {
+        final Point2D canvasPointTopLeft = sourceToAbsoluteCanvasDoublePosition(
+            corners.topLeftX(), corners.topLeftY());
+
+        final Point2D canvasPointBottomRight = sourceToAbsoluteCanvasDoublePosition(
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+
+        return new Rectangle2D(canvasPointTopLeft.getX(), canvasPointTopLeft.getY(),
+            canvasPointBottomRight.getX() - canvasPointTopLeft.getX(),
+            canvasPointBottomRight.getY() - canvasPointTopLeft.getY());
     }
 
     public double getZoomFactor()
@@ -327,7 +352,7 @@ public class Editor
         for (final Renderable renderable : quadTree.listNear(fudgeCorners, interactionComparator,
             (renderable) -> pointInObjectFudge(sourcePressPos, renderable, fudgeAmount)))
         {
-            if (editMode.shouldCaptureObjectPress(event, renderable))
+            if (editMode.shouldCaptureObjectPress(event, renderable) && renderable.offerPressCapture(event))
             {
                 pressObject = renderable;
                 pressButton = event.getButton();
@@ -346,6 +371,7 @@ public class Editor
 
     private void onMouseDragged(final MouseEvent event)
     {
+        dragOccurred = true;
         if (editMode.customOnMouseDragged(event))
         {
             return;
@@ -367,7 +393,8 @@ public class Editor
             return;
         }
 
-        if (dragObject == null && editMode.shouldCaptureObjectDrag(event, pressObject))
+        if (dragObject == null && editMode.shouldCaptureObjectDrag(event, pressObject)
+            && pressObject.offerDragCapture(event))
         {
             dragObject = pressObject;
         }
@@ -392,7 +419,7 @@ public class Editor
 
         if (button == pressButton)
         {
-            if (dragObject == null)
+            if (!dragOccurred)
             {
                 final Point2D sourcePoint = zoomPane.absoluteCanvasToSourceDoublePosition(event.getX(), event.getY());
                 if (pointInObjectExact(sourcePoint, pressObject))
@@ -404,6 +431,7 @@ public class Editor
             pressObject = null;
             dragObject = null;
         }
+        dragOccurred = false;
     }
 
     private void onMouseClicked(final MouseEvent event)
@@ -422,5 +450,20 @@ public class Editor
     private void onKeyPressed(final KeyEvent event)
     {
         editMode.onKeyPressed(event);
+
+        if (event.isConsumed())
+        {
+            return;
+        }
+
+        for (final Renderable renderable : selectedObjects)
+        {
+            renderable.onReceiveKeyPress(event);
+
+            if (event.isConsumed())
+            {
+                break;
+            }
+        }
     }
 }

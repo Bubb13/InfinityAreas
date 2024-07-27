@@ -8,6 +8,7 @@ import com.github.bubb13.infinityareas.util.MathUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
@@ -95,6 +96,18 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
 
     @Override
     public boolean isEnabled()
+    {
+        return true;
+    }
+
+    @Override
+    public boolean offerPressCapture(final MouseEvent event)
+    {
+        return event.getButton() == MouseButton.PRIMARY;
+    }
+
+    @Override
+    public boolean offerDragCapture(final MouseEvent event)
     {
         return true;
     }

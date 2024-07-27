@@ -97,7 +97,7 @@ public class RenderableActor extends AbstractRenderable
     }
 
     @Override
-    public void onSelected()
+    public void onBeforeSelected()
     {
 
     }

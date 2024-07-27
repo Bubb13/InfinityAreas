@@ -67,14 +67,14 @@ public final class MiscUtil
         return ((int) b3 & 0xFF) << 24 | ((int) b2 & 0xFF) << 16 | ((int) b1 & 0xFF) << 8 | ((int) b0 & 0xFF);
     }
 
-    public static short toUnsignedByte(final byte b)
+    public static short toUnsignedByte(final byte val)
     {
-        return (short)(b & 0xFF);
+        return (short)(val & 0xFF);
     }
 
-    public static short toUnsignedShort(final short b)
+    public static int toUnsignedShort(final short val)
     {
-        return (short)(b & 0xFFFF);
+        return val & 0xFFFF;
     }
 
     public static void printHierarchy(final Parent parent, final String indent, final String special)

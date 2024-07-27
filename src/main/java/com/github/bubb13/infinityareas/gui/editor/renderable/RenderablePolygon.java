@@ -8,6 +8,8 @@ import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Affine;
 
@@ -37,11 +39,10 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
 
         for (final GenericPolygon.Vertex vertex : polygon.getVertices())
         {
-            addNewRenderableVertex(vertex);
+            addNewRenderableVertexInternal(vertex);
         }
 
-        calculateCorners();
-        editor.addRenderable(this);
+        updateCornersFromPolygonBounds();
     }
 
     ////////////////////
@@ -50,12 +51,43 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
 
     public RenderableVertex addNewVertex(final int x, final int y)
     {
-        return addNewRenderableVertex(polygon.addVertex(x, y));
+        final RenderableVertex newVertex = addNewRenderableVertexInternal(polygon.addVertex(x, y));
+        updateCornersFromPolygonBounds();
+        return newVertex;
     }
 
-    public void recalculateCorners()
+    public void recalculateBoundsAndCornersFromVertices()
     {
-        calculateCorners();
+        int topLeftX = Integer.MAX_VALUE;
+        int topLeftY = Integer.MAX_VALUE;
+        int bottomRightExclusiveX = Integer.MIN_VALUE;
+        int bottomRightExclusiveY = Integer.MIN_VALUE;
+
+        // TODO: Potentially expensive
+        for (final RenderableVertex renderableVertex : renderableVertices)
+        {
+            final GenericPolygon.Vertex vertex = renderableVertex.getVertex();
+            final int x = vertex.x();
+            final int y = vertex.y();
+            if (x < topLeftX) topLeftX = x;
+            if (y < topLeftY) topLeftY = y;
+            if (x > bottomRightExclusiveX) bottomRightExclusiveX = x;
+            if (y > bottomRightExclusiveY) bottomRightExclusiveY = y;
+        }
+
+        polygon.setBoundingBoxLeft(topLeftX);
+        polygon.setBoundingBoxRight(bottomRightExclusiveX);
+        polygon.setBoundingBoxTop(topLeftY);
+        polygon.setBoundingBoxBottom(bottomRightExclusiveY);
+        updateCornersFromPolygonBounds();
+    }
+
+    public void updateCornersFromPolygonBounds()
+    {
+        corners.setTopLeftX(polygon.getBoundingBoxLeft());
+        corners.setTopLeftY(polygon.getBoundingBoxTop());
+        corners.setBottomRightExclusiveX(polygon.getBoundingBoxRight());
+        corners.setBottomRightExclusiveY(polygon.getBoundingBoxBottom());
         editor.addRenderable(this);
     }
 
@@ -123,6 +155,12 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     }
 
     @Override
+    public boolean offerPressCapture(final MouseEvent event)
+    {
+        return event.getButton() == MouseButton.PRIMARY;
+    }
+
+    @Override
     public boolean contains(final Point2D point)
     {
         return polygon.contains(point.getX(), point.getY());
@@ -159,21 +197,13 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     // Private Methods //
     /////////////////////
 
-    private RenderableVertex addNewRenderableVertex(final GenericPolygon.Vertex vertex)
+    private RenderableVertex addNewRenderableVertexInternal(final GenericPolygon.Vertex vertex)
     {
         final RenderableVertex newRenderableVertex = renderableVertices.addTail((node)
             -> new RenderableVertex(editor, this, vertex, node)).value();
 
-        newRenderableVertex.recalculatePolygonCorners();
+        newRenderableVertex.checkExpandPolygonBounds();
         return newRenderableVertex;
-    }
-
-    private void calculateCorners()
-    {
-        corners.setTopLeftX(polygon.getBoundingBoxLeft());
-        corners.setTopLeftY(polygon.getBoundingBoxTop());
-        corners.setBottomRightExclusiveX(polygon.getBoundingBoxRight());
-        corners.setBottomRightExclusiveY(polygon.getBoundingBoxBottom());
     }
 
     private void renderLine(

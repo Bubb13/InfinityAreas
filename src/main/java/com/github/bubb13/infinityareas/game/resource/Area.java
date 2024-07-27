@@ -4,7 +4,9 @@ package com.github.bubb13.infinityareas.game.resource;
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
+import com.github.bubb13.infinityareas.misc.IntPoint;
 import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
+import com.github.bubb13.infinityareas.misc.IntPointImpl;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.ReferenceHolder;
 import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
@@ -409,8 +411,9 @@ public class Area
         region.setTrapDisarmDifficulty(buffer.getShort());
         region.setbTrapped(buffer.getShort());
         region.setbTrapDetected(buffer.getShort());
-        region.setTrapLaunchPointX(buffer.getShort());
-        region.setTrapLaunchPointY(buffer.getShort());
+        final int trapLaunchPointX = MiscUtil.toUnsignedShort(buffer.getShort());
+        final int trapLaunchPointY = MiscUtil.toUnsignedShort(buffer.getShort());
+        region.setTrapLaunchPoint(new IntPointImpl(trapLaunchPointX, trapLaunchPointY));
         region.setKeyResref(BufferUtil.readLUTF8(buffer, 8));
         region.setScriptResref(BufferUtil.readLUTF8(buffer, 8));
         region.setActivationPointX(buffer.getShort());
@@ -1011,8 +1014,7 @@ public class Area
         private short trapDisarmDifficulty;
         private short bTrapped; // 0 = No, 1 = Yes
         private short bTrapDetected; // 0 = No, 1 = Yes
-        private short trapLaunchPointX;
-        private short trapLaunchPointY;
+        private IntPoint trapLaunchPoint;
         private String keyResref; // For type=?
         private String scriptResref; // For type=?
         private short activationPointX;
@@ -1153,24 +1155,14 @@ public class Area
             this.bTrapDetected = bTrapDetected;
         }
 
-        public short getTrapLaunchPointX()
+        public IntPoint getTrapLaunchPoint()
         {
-            return trapLaunchPointX;
+            return trapLaunchPoint;
         }
 
-        public void setTrapLaunchPointX(final short trapLaunchPointX)
+        public void setTrapLaunchPoint(final IntPoint trapLaunchPoint)
         {
-            this.trapLaunchPointX = trapLaunchPointX;
-        }
-
-        public short getTrapLaunchPointY()
-        {
-            return trapLaunchPointY;
-        }
-
-        public void setTrapLaunchPointY(final short trapLaunchPointY)
-        {
-            this.trapLaunchPointY = trapLaunchPointY;
+            this.trapLaunchPoint = trapLaunchPoint;
         }
 
         public String getKeyResref()
@@ -2310,8 +2302,9 @@ public class Area
                 buffer.putShort(region.getTrapDisarmDifficulty());
                 buffer.putShort(region.getbTrapped());
                 buffer.putShort(region.getbTrapDetected());
-                buffer.putShort(region.getTrapLaunchPointX());
-                buffer.putShort(region.getTrapLaunchPointY());
+                final IntPoint trapLaunchPoint = region.getTrapLaunchPoint();
+                buffer.putShort((short)trapLaunchPoint.getX());
+                buffer.putShort((short)trapLaunchPoint.getY());
                 BufferUtil.writeLUTF8(buffer, 8, region.getKeyResref());
                 BufferUtil.writeLUTF8(buffer, 8, region.getScriptResref());
                 buffer.putShort(region.getActivationPointX());

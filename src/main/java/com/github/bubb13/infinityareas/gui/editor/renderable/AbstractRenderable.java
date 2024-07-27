@@ -2,6 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor.renderable;
 
 import javafx.geometry.Point2D;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 public abstract class AbstractRenderable implements Renderable
@@ -14,8 +15,12 @@ public abstract class AbstractRenderable implements Renderable
         return getCorners().contains(point);
     }
 
+    @Override public boolean offerPressCapture(final MouseEvent event) { return false; }
     @Override public void onClicked(final MouseEvent mouseEvent) {}
-    @Override public void onSelected() {}
+    @Override public boolean offerDragCapture(final MouseEvent event) { return false; }
+    @Override public void onBeforeSelected() {}
+    @Override public void onAdditionalObjectSelected(final Renderable renderable) {}
+    @Override public void onReceiveKeyPress(final KeyEvent event) {}
     @Override public void onUnselected() {}
     @Override public void delete() {}
     @Override public void onDragged(final MouseEvent event) {}

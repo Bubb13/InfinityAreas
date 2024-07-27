@@ -7,6 +7,7 @@ import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
@@ -40,8 +41,7 @@ public class RenderableVertex extends AbstractRenderable
         this.renderablePolygon = renderablePolygon;
         this.vertex = vertex;
         this.renderableVertexNode = renderableVertexNode;
-        calculateCorners();
-        editor.addRenderable(this);
+        recalculateCorners();
     }
 
     ////////////////////
@@ -56,31 +56,29 @@ public class RenderableVertex extends AbstractRenderable
         final RenderableVertex addedRenderableVertex = renderableVertexNode.addAfter(
             (node) -> new RenderableVertex(editor, renderablePolygon, addedVertex, node)).value();
 
-        addedRenderableVertex.recalculatePolygonCorners();
+        checkExpandPolygonBounds();
+        renderablePolygon.updateCornersFromPolygonBounds();
         return addedRenderableVertex;
     }
 
-    public void recalculatePolygonCorners()
+    public void checkExpandPolygonBounds()
     {
+        final GenericPolygon polygon = renderablePolygon.getPolygon();
         final int x = vertex.x();
         final int y = vertex.y();
-
-        final GenericPolygon polygon = renderablePolygon.getPolygon();
         if (x < polygon.getBoundingBoxLeft()) polygon.setBoundingBoxLeft(x);
         if (y < polygon.getBoundingBoxTop()) polygon.setBoundingBoxTop(y);
         if (x > polygon.getBoundingBoxRight()) polygon.setBoundingBoxRight(x);
         if (y > polygon.getBoundingBoxBottom()) polygon.setBoundingBoxBottom(y);
-
-        renderablePolygon.recalculateCorners();
     }
 
     public void move(final int x, final int y)
     {
         vertex.setX(x);
         vertex.setY(y);
-        calculateCorners();
-        editor.addRenderable(this);
-        recalculatePolygonCorners();
+        recalculateCorners();
+        renderablePolygon.recalculateBoundsAndCornersFromVertices();
+        editor.requestDraw();
     }
 
     public RenderableVertex previous()
@@ -142,6 +140,12 @@ public class RenderableVertex extends AbstractRenderable
     }
 
     @Override
+    public boolean offerPressCapture(final MouseEvent event)
+    {
+        return event.getButton() == MouseButton.PRIMARY;
+    }
+
+    @Override
     public void onClicked(final MouseEvent event)
     {
         if (!event.isShiftDown() && !event.isControlDown())
@@ -164,6 +168,12 @@ public class RenderableVertex extends AbstractRenderable
         {
             editor.select(this);
         }
+    }
+
+    @Override
+    public boolean offerDragCapture(final MouseEvent event)
+    {
+        return true;
     }
 
     @Override
@@ -192,7 +202,6 @@ public class RenderableVertex extends AbstractRenderable
             final int newY = movingVertex.y() + deltaY;
 
             movingRenderableVertex.move(newX, newY);
-            editor.requestDraw();
         }
 
         if (wasNotSelected)
@@ -202,7 +211,7 @@ public class RenderableVertex extends AbstractRenderable
     }
 
     @Override
-    public void onSelected()
+    public void onBeforeSelected()
     {
         selected = true;
         editor.requestDraw();
@@ -221,6 +230,7 @@ public class RenderableVertex extends AbstractRenderable
         editor.removeRenderable(this);
         renderableVertexNode.remove();
         vertex.getNode().remove();
+        renderablePolygon.recalculateBoundsAndCornersFromVertices();
         editor.requestDraw();
     }
 
@@ -228,7 +238,7 @@ public class RenderableVertex extends AbstractRenderable
     // Private Methods //
     /////////////////////
 
-    private void calculateCorners()
+    private void recalculateCorners()
     {
         final int x = vertex.x();
         final int y = vertex.y();
@@ -236,5 +246,6 @@ public class RenderableVertex extends AbstractRenderable
         corners.setTopLeftY(y - 1);
         corners.setBottomRightExclusiveX(x + 1);
         corners.setBottomRightExclusiveY(y + 1);
+        editor.addRenderable(this);
     }
 }
