@@ -1,7 +1,7 @@
 
 package com.github.bubb13.infinityareas.gui.editor.gui;
 
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.AbstractFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.AbstractFieldOptions;
 
 public class FieldDefinition<FieldsEnum extends Enum<?>>
 {

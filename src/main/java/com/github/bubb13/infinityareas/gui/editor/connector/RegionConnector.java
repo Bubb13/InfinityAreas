@@ -91,20 +91,28 @@ public class RegionConnector implements Connector<RegionFields>
         }
     }
 
-    public String getString(final RegionFields field)
+    public String getString(final RegionFields value)
     {
-        return switch (field)
+        return switch (value)
         {
             case NAME -> region.getName();
+            case DESTINATION_AREA -> region.getDestAreaResref();
+            case DESTINATION_ENTRANCE_NAME -> region.getEntranceNameInDestArea();
+            case KEY -> region.getKeyResref();
+            case SCRIPT -> region.getScriptResref();
             default -> throw new IllegalArgumentException();
         };
     }
 
-    public void setString(final RegionFields field, final String name)
+    public void setString(final RegionFields field, final String value)
     {
         switch (field)
         {
-            case NAME -> region.setName(name);
+            case NAME -> region.setName(value);
+            case DESTINATION_AREA -> region.setDestAreaResref(value);
+            case DESTINATION_ENTRANCE_NAME -> region.setEntranceNameInDestArea(value);
+            case KEY -> region.setKeyResref(value);
+            case SCRIPT -> region.setScriptResref(value);
             default -> throw new IllegalArgumentException();
         }
     }

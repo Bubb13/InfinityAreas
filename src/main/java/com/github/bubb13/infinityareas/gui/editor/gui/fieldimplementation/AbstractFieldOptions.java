@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield;
+package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation;
 
 public abstract class AbstractFieldOptions<ActualType extends AbstractFieldOptions<?>>
 {

@@ -16,6 +16,7 @@ import javafx.scene.layout.Pane;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class ZoomPane extends NotifyingScrollPane
 {
@@ -47,16 +48,6 @@ public class ZoomPane extends NotifyingScrollPane
     // Public Methods //
     ////////////////////
 
-    public void setZoomFactorListener(final Consumer<Double> zoomFactorListener)
-    {
-        this.zoomFactorListener = zoomFactorListener;
-    }
-
-    public double getZoomFactor()
-    {
-        return zoomFactor;
-    }
-
     public void setImage(final BufferedImage image, final boolean resetZoomFactor)
     {
         final BufferedImage previousImage = partialImage.getSourceImage();
@@ -83,10 +74,29 @@ public class ZoomPane extends NotifyingScrollPane
         setImage(image, true);
     }
 
+    public void setZoomFactorListener(final Consumer<Double> zoomFactorListener)
+    {
+        this.zoomFactorListener = zoomFactorListener;
+    }
+
+    public double getZoomFactor()
+    {
+        return zoomFactor;
+    }
+
     public GraphicsContext getGraphics()
     {
         return partialImage.getGraphics();
     }
+
+    public void requestDraw()
+    {
+        partialImage.requestLayout();
+    }
+
+    //-----------//
+    // Listeners //
+    //-----------//
 
     public void setDrawCallback(final Consumer<GraphicsContext> drawCallback)
     {
@@ -123,26 +133,186 @@ public class ZoomPane extends NotifyingScrollPane
         this.dragDetectedListener = dragDetectedListener;
     }
 
-    public void requestDraw()
+    //------------------//
+    // Position Helpers //
+    //------------------//
+
+    public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
     {
-        partialImage.requestLayout();
+        return partialImage.sourceToAbsoluteCanvasPosition(srcX, srcY);
+    }
+
+    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
+    {
+        return partialImage.sourceToAbsoluteCanvasDoublePosition(srcX, srcY);
+    }
+
+    public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
+    {
+        return partialImage.absoluteToRelativeCanvasPosition(canvasX, canvasY);
+    }
+
+    public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
+    {
+        return partialImage.absoluteCanvasToSourcePosition(canvasX, canvasY);
+    }
+
+    public Point2D absoluteCanvasToSourceDoublePosition(final double canvasX, final double canvasY)
+    {
+        return partialImage.absoluteCanvasToSourceDoublePosition(canvasX, canvasY);
+    }
+
+    public Bounds getCanvasBounds()
+    {
+        return partialImage.getCanvasBounds();
+    }
+
+    public Rectangle2D getVisibleSourceRect()
+    {
+        return partialImage.getVisibleSourceRect();
+    }
+
+    public Corners getVisibleSourceCorners()
+    {
+        return partialImage.getVisibleSourceCorners();
+    }
+
+    public DoubleCorners getVisibleSourceDoubleCorners()
+    {
+        return partialImage.getVisibleSourceDoubleCorners();
+    }
+
+    //-------//
+    // Other //
+    //-------//
+
+    public void doOperationMaintainViewportCenter(final Supplier<Boolean> operation)
+    {
+        final BufferedImage image = partialImage.getSourceImage();
+
+        if (image == null)
+        {
+            operation.get();
+            return;
+        }
+
+        // Block notify+draw events until positioning is done
+        blockDraw(true);
+
+        final Bounds viewportBounds = getViewportBounds();
+        final double viewportWidth = viewportBounds.getWidth();
+        final double viewportHeight = viewportBounds.getHeight();
+        final double viewportEffectiveWidth = viewportWidth / zoomFactor;
+        final double viewportEffectiveHeight = viewportHeight / zoomFactor;
+
+        final Bounds imageViewBounds = partialImage.getBoundsInLocal();
+        final double imageViewWidth = imageViewBounds.getWidth();
+        final double imageViewHeight = imageViewBounds.getHeight();
+
+        final double hMax = getHmax();
+        final double vMax = getVmax();
+
+        final double hRel = getHvalue() / hMax;
+        final double vRel = getVvalue() / vMax;
+
+        final double xLeft = hRel * (imageViewWidth - viewportWidth) / zoomFactor;
+        final double yTop = vRel * (imageViewHeight - viewportHeight) / zoomFactor;
+
+        if (operation.get())
+        {
+            blockDraw(false);
+            return;
+        }
+
+        //layout();
+
+        final Bounds newViewportBounds = getViewportBounds();
+        final double newViewportWidth = newViewportBounds.getWidth();
+        final double newViewportHeight = newViewportBounds.getHeight();
+        final double newViewportEffectiveWidth = newViewportWidth / zoomFactor;
+        final double newViewportEffectiveHeight = newViewportHeight / zoomFactor;
+
+        final double newImageViewWidth = image.getWidth() * zoomFactor;
+        final double newImageViewHeight = image.getHeight() * zoomFactor;
+
+        final double targetCenterX = xLeft + (viewportEffectiveWidth / 2);
+        final double targetCenterY = yTop + (viewportEffectiveHeight / 2);
+
+        final double targetXLeft = targetCenterX - (newViewportEffectiveWidth / 2);
+        final double targetYLeft = targetCenterY - (newViewportEffectiveHeight / 2);
+
+        final double newHRel = targetXLeft * zoomFactor / (newImageViewWidth - newViewportWidth);
+        final double newVRel = targetYLeft * zoomFactor / (newImageViewHeight - newViewportHeight);
+
+        final double newHVal = newHRel * hMax;
+        final double newVVal = newVRel * vMax;
+
+        setHvalue(newHVal);
+        // Release the notify+draw block so that the `setVvalue()` call triggers those events
+        blockDraw(false);
+        setVvalue(newVVal);
+    }
+
+    public void doOperationMaintainViewportLeft(final Supplier<Boolean> operation)
+    {
+        final BufferedImage image = partialImage.getSourceImage();
+
+        if (image == null)
+        {
+            operation.get();
+            return;
+        }
+
+        // Block notify+draw events until positioning is done
+        blockDraw(true);
+
+        final Bounds viewportBounds = getViewportBounds();
+        final double viewportWidth = viewportBounds.getWidth();
+        final double viewportHeight = viewportBounds.getHeight();
+
+        final Bounds imageViewBounds = partialImage.getBoundsInLocal();
+        final double imageViewWidth = imageViewBounds.getWidth();
+        final double imageViewHeight = imageViewBounds.getHeight();
+
+        final double hMax = getHmax();
+        final double vMax = getVmax();
+
+        final double hRel = getHvalue() / hMax;
+        final double vRel = getVvalue() / vMax;
+
+        final double xLeft = hRel * (imageViewWidth - viewportWidth) / zoomFactor;
+        final double yTop = vRel * (imageViewHeight - viewportHeight) / zoomFactor;
+
+        if (operation.get())
+        {
+            blockDraw(false);
+            return;
+        }
+
+        //layout();
+
+        final Bounds newViewportBounds = getViewportBounds();
+        final double newViewportWidth = newViewportBounds.getWidth();
+        final double newViewportHeight = newViewportBounds.getHeight();
+
+        final double newImageViewWidth = image.getWidth() * zoomFactor;
+        final double newImageViewHeight = image.getHeight() * zoomFactor;
+
+        final double newHRel = xLeft * zoomFactor / (newImageViewWidth - newViewportWidth);
+        final double newVRel = yTop * zoomFactor / (newImageViewHeight - newViewportHeight);
+
+        final double newHVal = newHRel * hMax;
+        final double newVVal = newVRel * vMax;
+
+        setHvalue(newHVal);
+        // Release the notify+draw block so that the `setVvalue()` call triggers those events
+        blockDraw(false);
+        setVvalue(newVVal);
     }
 
     /////////////////////
     // Private Methods //
     /////////////////////
-
-    private void setZoomFactor(final double newValue)
-    {
-        if (zoomFactor != newValue)
-        {
-            zoomFactor = newValue;
-            if (zoomFactorListener != null)
-            {
-                zoomFactorListener.accept(zoomFactor);
-            }
-        }
-    }
 
     private void init()
     {
@@ -161,6 +331,73 @@ public class ZoomPane extends NotifyingScrollPane
         partialImage.setOnMouseReleased(this::onMouseReleased);
         partialImage.setOnKeyPressed(this::onKeyPressed);
         partialImage.setOnDragDetected(this::onDragDetected);
+    }
+
+    private double calculateFitZoomFactor()
+    {
+        final Bounds viewportBounds = getViewportBounds();
+        final BufferedImage image = partialImage.getSourceImage();
+        final double fitZoomFactorX = viewportBounds.getWidth() / image.getWidth();
+        final double fitZoomFactorY = viewportBounds.getHeight() / image.getHeight();
+        return Math.min(fitZoomFactorX, fitZoomFactorY);
+    }
+
+    private void blockDraw(final boolean newValue)
+    {
+        blockNotify(newValue);
+        partialImage.blockDraw(newValue);
+    }
+
+    //-----------//
+    // Listeners //
+    //-----------//
+
+    private void onZoom(final double deltaY)
+    {
+        doOperationMaintainViewportCenter(() ->
+        {
+            double newZoomFactor = zoomFactor;
+            if (deltaY > 0)
+            {
+                newZoomFactor *= 1.1;
+            }
+            else if (deltaY < 0)
+            {
+                newZoomFactor *= 0.9;
+            }
+
+            newZoomFactor = Math.max(calculateFitZoomFactor(), newZoomFactor);
+
+            if (newZoomFactor == zoomFactor)
+            {
+                return true;
+            }
+
+            setZoomFactor(partialImage.setZoomFactor(newZoomFactor));
+            layout();
+            return false;
+        });
+    }
+
+    private void onScrollFilter(final ScrollEvent event)
+    {
+        if (event.isControlDown())
+        {
+            event.consume();
+            onZoom(event.getDeltaY());
+        }
+    }
+
+    private void setZoomFactor(final double newValue)
+    {
+        if (zoomFactor != newValue)
+        {
+            zoomFactor = newValue;
+            if (zoomFactorListener != null)
+            {
+                zoomFactorListener.accept(zoomFactor);
+            }
+        }
     }
 
     private void onMouseClicked(final MouseEvent event)
@@ -209,143 +446,5 @@ public class ZoomPane extends NotifyingScrollPane
         {
             dragDetectedListener.accept(event);
         }
-    }
-
-    private void onScrollFilter(final ScrollEvent event)
-    {
-        if (event.isControlDown())
-        {
-            event.consume();
-            onZoom(event.getDeltaY());
-        }
-    }
-
-    public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
-    {
-        return partialImage.sourceToAbsoluteCanvasPosition(srcX, srcY);
-    }
-
-    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
-    {
-        return partialImage.sourceToAbsoluteCanvasDoublePosition(srcX, srcY);
-    }
-
-    public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
-    {
-        return partialImage.absoluteToRelativeCanvasPosition(canvasX, canvasY);
-    }
-
-    public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
-    {
-        return partialImage.absoluteCanvasToSourcePosition(canvasX, canvasY);
-    }
-
-    public Point2D absoluteCanvasToSourceDoublePosition(final double canvasX, final double canvasY)
-    {
-        return partialImage.absoluteCanvasToSourceDoublePosition(canvasX, canvasY);
-    }
-
-    public Bounds getCanvasBounds()
-    {
-        return partialImage.getCanvasBounds();
-    }
-
-    public Rectangle2D getVisibleSourceRect()
-    {
-        return partialImage.getVisibleSourceRect();
-    }
-
-    public Corners getVisibleSourceCorners()
-    {
-        return partialImage.getVisibleSourceCorners();
-    }
-
-    public DoubleCorners getVisibleSourceDoubleCorners()
-    {
-        return partialImage.getVisibleSourceDoubleCorners();
-    }
-
-    private void onZoom(final double deltaY)
-    {
-        // Block notify+draw events until positioning is done
-        blockDraw(true);
-
-        final Bounds viewportBounds = getViewportBounds();
-        final double viewportWidth = viewportBounds.getWidth();
-        final double viewportHeight = viewportBounds.getHeight();
-        final double viewportEffectiveWidth = viewportWidth / zoomFactor;
-        final double viewportEffectiveHeight = viewportHeight / zoomFactor;
-
-        final Bounds imageViewBounds = partialImage.getBoundsInLocal();
-        final double imageViewWidth = imageViewBounds.getWidth();
-        final double imageViewHeight = imageViewBounds.getHeight();
-
-        final double hMax = getHmax();
-        final double vMax = getVmax();
-
-        final double hRel = getHvalue() / hMax;
-        final double vRel = getVvalue() / vMax;
-
-        final double xLeft = hRel * (imageViewWidth - viewportWidth) / zoomFactor;
-        final double yTop = vRel * (imageViewHeight - viewportHeight) / zoomFactor;
-
-        double newZoomFactor = zoomFactor;
-        if (deltaY > 0)
-        {
-            newZoomFactor *= 1.1;
-        }
-        else if (deltaY < 0)
-        {
-            newZoomFactor *= 0.9;
-        }
-
-        newZoomFactor = Math.max(calculateFitZoomFactor(), newZoomFactor);
-
-        if (newZoomFactor == zoomFactor)
-        {
-            blockDraw(false);
-            return;
-        }
-
-        setZoomFactor(partialImage.setZoomFactor(newZoomFactor));
-        layout();
-
-        final BufferedImage image = partialImage.getSourceImage();
-        final double newImageViewWidth = image.getWidth() * zoomFactor;
-        final double newImageViewHeight = image.getHeight() * zoomFactor;
-        final double newViewportEffectiveWidth = viewportWidth / zoomFactor;
-        final double newViewportEffectiveHeight = viewportHeight / zoomFactor;
-
-        final double targetCenterX = xLeft + (viewportEffectiveWidth / 2);
-        final double targetCenterY = yTop + (viewportEffectiveHeight / 2);
-
-        final double targetXLeft = targetCenterX - (newViewportEffectiveWidth / 2);
-        final double targetYLeft = targetCenterY - (newViewportEffectiveHeight / 2);
-
-        final double newHRel = targetXLeft * zoomFactor / (newImageViewWidth - viewportWidth);
-        final double newVRel = targetYLeft * zoomFactor / (newImageViewHeight - viewportHeight);
-
-        final double newHVal = newHRel * hMax;
-        final double newVVal = newVRel * vMax;
-
-        setHvalue(newHVal);
-        // Release the notify+draw block so that the `setVvalue()` call triggers those events
-        blockDraw(false);
-        setVvalue(newVVal);
-    }
-
-    private double calculateFitZoomFactor()
-    {
-        final Bounds viewportBounds = getViewportBounds();
-        final BufferedImage image = partialImage.getSourceImage();
-        final double fitZoomFactorX = viewportBounds.getWidth() / image.getWidth();
-        final double fitZoomFactorY = viewportBounds.getHeight() / image.getHeight();
-        return Math.min(fitZoomFactorX, fitZoomFactorY);
-    }
-
-    private void blockDraw(final boolean newValue)
-    {
-        blockNotify(newValue);
-        partialImage.blockDraw(newValue);
     }
 }

@@ -3,7 +3,7 @@ package com.github.bubb13.infinityareas.gui.editor.gui;
 
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.FieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldImplementation;
 import javafx.geometry.Insets;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -50,7 +50,7 @@ public class FieldPane extends StackPane
         ///////////////
 
         mainVBox.setFocusTraversable(false);
-        setPadding(new Insets(5, 5, 5, 5));
+        setPadding(new Insets(0, 10, 10, 10));
         getChildren().addAll(mainVBox);
     }
 

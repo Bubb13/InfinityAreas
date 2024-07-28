@@ -3,11 +3,10 @@ package com.github.bubb13.infinityareas.gui.editor.field;
 
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortEnum;
 
-public enum RegionType implements MappedShortEnum
+public enum ShortYesNoType implements MappedShortEnum
 {
-    PROXIMITY_TRIGGER(0, "Proximity trigger"),
-    INFO_POINT(1, "Info point"),
-    TRAVEL_REGION(2, "Travel region");
+    NO(0,"No"),
+    YES(1,"Yes");
 
     public final short value;
     public final String label;
@@ -16,7 +15,7 @@ public enum RegionType implements MappedShortEnum
     // Constructors //
     //////////////////
 
-    RegionType(final int value, final String label)
+    ShortYesNoType(final int value, final String label)
     {
         this.value = (short)value;
         this.label = label;
@@ -26,13 +25,12 @@ public enum RegionType implements MappedShortEnum
     // Public Static Methods //
     ///////////////////////////
 
-    public static RegionType fromValue(final int value)
+    public static ShortYesNoType fromValue(final int value)
     {
         return switch (value)
         {
-            case 0 -> PROXIMITY_TRIGGER;
-            case 1 -> INFO_POINT;
-            case 2 -> TRAVEL_REGION;
+            case 0 -> NO;
+            case 1 -> YES;
             default -> null;
         };
     }

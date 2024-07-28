@@ -2,16 +2,21 @@
 package com.github.bubb13.infinityareas.gui.editor.gui;
 
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.AbstractFieldOptions;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.FieldImplementation;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.MappedIntEnum;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.MappedIntFieldOptions;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.MappedIntImplementation;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.MappedShortEnum;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.MappedShortFieldOptions;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.MappedShortImplementation;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.TextFieldImplementation;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.TextFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.AbstractFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.IntFieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntEnum;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortEnum;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.NumericFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.ResrefFieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.ResrefFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.ShortFieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.TextFieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.TextFieldOptions;
 
 public enum FieldType
 {
@@ -38,7 +43,21 @@ public enum FieldType
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
             final EnumType fieldEnum, final Connector<EnumType> connector, final AbstractFieldOptions<?> options)
         {
-            return null;
+            if (!(options instanceof NumericFieldOptions numericFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+
+            Long minValue = numericFieldOptions.getMinValue();
+            Long maxValue = numericFieldOptions.getMaxValue();
+
+            if (minValue == null) numericFieldOptions.minValue(Short.MIN_VALUE);
+            else if (minValue < Short.MIN_VALUE) throw new IllegalArgumentException();
+
+            if (maxValue == null) numericFieldOptions.maxValue(Short.MAX_VALUE);
+            else if (maxValue > Short.MAX_VALUE) throw new IllegalArgumentException();
+
+            return new ShortFieldImplementation<>(fieldEnum, connector, numericFieldOptions);
         }
     },
 
@@ -47,7 +66,21 @@ public enum FieldType
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
             final EnumType fieldEnum, final Connector<EnumType> connector, final AbstractFieldOptions<?> options)
         {
-            return null;
+            if (!(options instanceof NumericFieldOptions numericFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+
+            Long minValue = numericFieldOptions.getMinValue();
+            Long maxValue = numericFieldOptions.getMaxValue();
+
+            if (minValue == null) numericFieldOptions.minValue(0);
+            else if (minValue < 0) throw new IllegalArgumentException();
+
+            if (maxValue == null) numericFieldOptions.maxValue(65535);
+            else if (maxValue > 65535) throw new IllegalArgumentException();
+
+            return new ShortFieldImplementation<>(fieldEnum, connector, numericFieldOptions);
         }
     },
 
@@ -56,7 +89,21 @@ public enum FieldType
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
             final EnumType fieldEnum, final Connector<EnumType> connector, final AbstractFieldOptions<?> options)
         {
-            return null;
+            if (!(options instanceof NumericFieldOptions numericFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+
+            Long minValue = numericFieldOptions.getMinValue();
+            Long maxValue = numericFieldOptions.getMaxValue();
+
+            if (minValue == null) numericFieldOptions.minValue(Integer.MIN_VALUE);
+            else if (minValue < Integer.MIN_VALUE) throw new IllegalArgumentException();
+
+            if (maxValue == null) numericFieldOptions.maxValue(Integer.MAX_VALUE);
+            else if (maxValue > Integer.MAX_VALUE) throw new IllegalArgumentException();
+
+            return new IntFieldImplementation<>(fieldEnum, connector, numericFieldOptions);
         }
     },
 
@@ -65,7 +112,21 @@ public enum FieldType
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
             final EnumType fieldEnum, final Connector<EnumType> connector, final AbstractFieldOptions<?> options)
         {
-            return null;
+            if (!(options instanceof NumericFieldOptions numericFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+
+            Long minValue = numericFieldOptions.getMinValue();
+            Long maxValue = numericFieldOptions.getMaxValue();
+
+            if (minValue == null) numericFieldOptions.minValue(0L);
+            else if (minValue < 0) throw new IllegalArgumentException();
+
+            if (maxValue == null) numericFieldOptions.maxValue(4294967295L);
+            else if (maxValue > 4294967295L) throw new IllegalArgumentException();
+
+            return new IntFieldImplementation<>(fieldEnum, connector, numericFieldOptions);
         }
     },
 
@@ -87,7 +148,11 @@ public enum FieldType
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
             final EnumType fieldEnum, final Connector<EnumType> connector, final AbstractFieldOptions<?> options)
         {
-            return null;
+            if (!(options instanceof ResrefFieldOptions resrefFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+            return new ResrefFieldImplementation<>(fieldEnum, connector, resrefFieldOptions);
         }
     },
 

@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield;
+package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation;
 
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import com.github.bubb13.infinityareas.gui.pane.LabeledNode;

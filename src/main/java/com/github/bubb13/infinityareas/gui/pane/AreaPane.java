@@ -33,6 +33,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -42,7 +43,6 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -125,52 +125,33 @@ public class AreaPane extends StackPane
     private void init()
     {
         ///////////////
-        // Main HBox //
+        // Main VBox //
         ///////////////
 
-            final HBox mainHBox = new HBox();
+        final VBox mainVBox = new VBox();
+        mainVBox.setFocusTraversable(false);
+        mainVBox.setPadding(new Insets(5, 0, 0, 10));
 
-            ///////////////
-            // Main VBox //
-            ///////////////
+            //////////////////
+            // Toolbar HBox //
+            //////////////////
 
-            final VBox mainVBox = new VBox();
-            mainVBox.setFocusTraversable(false);
-            mainVBox.setPadding(new Insets(5, 0, 0, 10));
+            final HBox toolbar = new HBox(5);
+            toolbar.setPadding(new Insets(0, 0, 5, 0));
 
-                //////////////////
-                // Toolbar HBox //
-                //////////////////
+            final Button saveButton = new Button("Save");
+            saveButton.setOnAction((ignored) -> this.onSave());
 
-                final HBox toolbar = new HBox();
-                toolbar.setPadding(new Insets(0, 0, 5, 0));
+            final Button drawPolygonButton = new UnderlinedButton("Draw Polygon");
+            drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
 
-                final Button saveButton = new Button("Save");
-                saveButton.setOnAction((ignored) -> this.onSave());
+            final Button bisectLine = new UnderlinedButton("Bisect Line");
+            bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
 
-                final Region padding1 = new Region();
-                padding1.setPadding(new Insets(0, 0, 0, 5));
+            final Button quickSelect = new UnderlinedButton("Quick Select");
+            quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
 
-                final Button drawPolygonButton = new UnderlinedButton("Draw Polygon");
-                drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
-
-                final Region padding2 = new Region();
-                padding2.setPadding(new Insets(0, 0, 0, 5));
-
-                final Button bisectLine = new UnderlinedButton("Bisect Line");
-                bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
-
-                final Region padding3 = new Region();
-                padding3.setPadding(new Insets(0, 0, 0, 5));
-
-                final Button quickSelect = new UnderlinedButton("Quick Select");
-                quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
-
-                toolbar.getChildren().addAll(saveButton, padding1, drawPolygonButton,
-                    padding2, bisectLine, padding3, quickSelect);
-
-            VBox.setVgrow(zoomPane, Priority.ALWAYS);
-            mainVBox.getChildren().addAll(toolbar, zoomPane);
+            toolbar.getChildren().addAll(saveButton, drawPolygonButton, bisectLine, quickSelect);
 
             ////////////////////
             // Side Pane VBox //
@@ -178,7 +159,7 @@ public class AreaPane extends StackPane
 
             defaultRightNode = new VBox();
             defaultRightNode.setMinWidth(150);
-            defaultRightNode.setPadding(new Insets(5, 10, 10, 10));
+            defaultRightNode.setPadding(new Insets(0, 10, 10, 10));
 
                 //////////////////////////////
                 // Render Polygons Checkbox //
@@ -189,9 +170,27 @@ public class AreaPane extends StackPane
 
             defaultRightNode.getChildren().addAll(renderRegionsCheckbox);
 
-        changeRightNode(defaultRightNode);
-        mainHBox.getChildren().addAll(mainVBox, rightPane);
-        getChildren().add(mainHBox);
+            ///////////////////////////////
+            // ZoomPane + Side Pane HBox //
+            ///////////////////////////////
+
+            final HBox zoomPaneSidePaneHBox = new HBox();
+            zoomPaneSidePaneHBox.getChildren().addAll(zoomPane, rightPane);
+
+                //////////////
+                // ZoomPane //
+                //////////////
+
+                VBox.setVgrow(zoomPane, Priority.ALWAYS);
+
+                ///////////////
+                // Side Pane //
+                ///////////////
+
+                changeRightNode(defaultRightNode);
+
+        mainVBox.getChildren().addAll(toolbar, zoomPaneSidePaneHBox);
+        getChildren().add(mainVBox);
 
         editor.registerEditMode(AreaPaneNormalEditMode.class, () -> new AreaPaneNormalEditMode(editor));
     }
@@ -228,30 +227,30 @@ public class AreaPane extends StackPane
             .start();
     }
 
-    private void changeRightNode(final Node newNode)
+    private void changeRightNode(final Parent newNode)
     {
         if (newNode != curRightNode)
         {
-            curRightNode = newNode;
-            final ObservableList<Node> children = rightPane.getChildren();
-            children.clear();
-            children.add(newNode);
+            editor.doOperationMaintainViewportLeft(() ->
+            {
+                curRightNode = newNode;
+                final ObservableList<Node> children = rightPane.getChildren();
+                children.clear();
+                children.add(newNode);
+
+                // Ensure child Control classes have assigned their skins for proper layout calculations
+                newNode.applyCss();
+                //newNode.requestLayout();
+                // Layout the entire panel so that the underlying ZoomPane calculates its new viewport width
+                layout();
+
+                return false;
+            });
         }
     }
 
     private void onRenderRegionsChanged(final boolean newValue)
     {
-//        if (!newValue)
-//        {
-//            for (final Renderable renderable : editor.selectedObjects())
-//            {
-//                if (renderable instanceof TrapRegion.TrapPolygon)
-//                {
-//                    editor.unselect(renderable);
-//                }
-//            }
-//        }
-
         editor.requestDraw();
     }
 

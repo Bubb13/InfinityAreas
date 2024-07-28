@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield;
+package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation;
 
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import javafx.collections.ObservableList;
@@ -7,10 +7,10 @@ import javafx.scene.control.ComboBox;
 
 import java.util.Arrays;
 
-public class MappedIntImplementation
+public class MappedShortImplementation
     <
     FieldEnumType extends Enum<?>,
-    MappedEnumType extends MappedIntEnum
+    MappedEnumType extends MappedShortEnum
     >
     extends FieldImplementation<FieldEnumType>
 {
@@ -18,19 +18,17 @@ public class MappedIntImplementation
     // Private Fields //
     ////////////////////
 
-    private final MappedIntFieldOptions<MappedEnumType> options;
-
-    private int specialTypeIndex;
-
+    private final MappedShortFieldOptions<MappedEnumType> options;
     private final ComboBox<TypeHolder> typeDropdown = new ComboBox<>();
+    private int specialTypeIndex = -1;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public MappedIntImplementation(
+    public MappedShortImplementation(
         final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector,
-        final MappedIntFieldOptions<MappedEnumType> options)
+        final MappedShortFieldOptions<MappedEnumType> options)
     {
         super(fieldEnum, connector, options.getLabel());
         this.options = options;
@@ -39,12 +37,20 @@ public class MappedIntImplementation
             Arrays.stream(options.getEnumValues()).map((type) -> new TypeHolder(type.getValue())).toList()
         );
 
+        typeDropdown.getSelectionModel().selectedItemProperty().addListener(
+            (observable, oldValue, newValue) -> onNewValue(newValue.value));
+
         init();
     }
 
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    private void onNewValue(final short newValue)
+    {
+        connector.setShort(fieldEnum, newValue);
+    }
 
     private void init()
     {
@@ -55,14 +61,14 @@ public class MappedIntImplementation
             specialTypeIndex = -1;
         }
 
-        final int type = connector.getInt(fieldEnum);
+        final short type = connector.getShort(fieldEnum);
         final int numTypeHolders = typeHolders.size();
 
         boolean selected = false;
 
         for (int i = 0; i < numTypeHolders; ++i)
         {
-            final int typeHolderValue = typeHolders.get(i).value;
+            final short typeHolderValue = typeHolders.get(i).value;
 
             if (type == typeHolderValue)
             {
@@ -101,13 +107,13 @@ public class MappedIntImplementation
         ///////////////////
 
         public final MappedEnumType type;
-        public final int value;
+        public final short value;
 
         /////////////////////////
         // Public Constructors //
         /////////////////////////
 
-        public TypeHolder(final int value)
+        public TypeHolder(final short value)
         {
             this.type = options.getEnumFromValue(value);
             this.value = value;

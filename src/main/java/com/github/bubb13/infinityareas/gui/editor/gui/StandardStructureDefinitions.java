@@ -1,98 +1,124 @@
 
 package com.github.bubb13.infinityareas.gui.editor.gui;
 
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.editor.field.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.field.RegionType;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.FieldOptions;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.MappedShortFieldOptions;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.TextFieldOptions;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.textfield.UnmappedFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.field.ShortYesNoType;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortEnum;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.NumericFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.ResrefFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.TextFieldOptions;
+
+import java.util.function.Function;
 
 public final class StandardStructureDefinitions
 {
+    /////////////////
+    // Definitions //
+    /////////////////
+
     public static final StructureDefinition<RegionFields> REGION = new StructureDefinition<>(
-
-        new FieldDefinition<>(RegionFields.NAME, FieldType.TEXT, new TextFieldOptions()
-            .label("Name")
-            .characterLimit(32)),
-
-        new FieldDefinition<>(RegionFields.TYPE, FieldType.MAPPED_SHORT, new MappedShortFieldOptions<>()
-            .label("Type")
-            .enumFromValueFunction(RegionType::fromValue)
-            .enumValues(RegionType.values())),
-
-        new FieldDefinition<>(RegionFields.BOUNDING_BOX_LEFT, FieldType.SIGNED_SHORT, new FieldOptions()
-            .label("Bounding Box Left")),
-
-        new FieldDefinition<>(RegionFields.BOUNDING_BOX_TOP, FieldType.SIGNED_SHORT, new FieldOptions()
-            .label("Bounding Box Top")),
-
-        new FieldDefinition<>(RegionFields.BOUNDING_BOX_RIGHT, FieldType.SIGNED_SHORT, new FieldOptions()
-            .label("Bounding Box Right")),
-
-        new FieldDefinition<>(RegionFields.BOUNDING_BOX_BOTTOM, FieldType.SIGNED_SHORT, new FieldOptions()
-            .label("Bounding Box Bottom")),
-
-        new FieldDefinition<>(RegionFields.VERTICES_COUNT, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("# Vertices")),
-
-        new FieldDefinition<>(RegionFields.FIRST_VERTEX_INDEX, FieldType.UNSIGNED_INT, new FieldOptions()
-            .label("First Vertex Index")),
-
-        new FieldDefinition<>(RegionFields.TRIGGER_VALUE, FieldType.UNSIGNED_INT, new FieldOptions()
-            .label("Trigger Value")),
-
-        new FieldDefinition<>(RegionFields.CURSOR_INDEX, FieldType.UNSIGNED_INT, new FieldOptions()
-            .label("Cursor Index")),
-
-        new FieldDefinition<>(RegionFields.DESTINATION_AREA, FieldType.RESREF, new FieldOptions()
-            .label("Destination Area")),
-
+        limitedText(RegionFields.NAME, "Name", 32),
+        mappedShort(RegionFields.TYPE, "Type", RegionType::fromValue, RegionType.values()),
+        unsignedInt(RegionFields.TRIGGER_VALUE, "Trigger Value"),
+        unsignedInt(RegionFields.CURSOR_INDEX, "Cursor Index"),
+        resref(RegionFields.DESTINATION_AREA, "Destination Area", KeyFile.NumericResourceType.ARE),
         // TODO
-        new FieldDefinition<>(RegionFields.DESTINATION_ENTRANCE_NAME, FieldType.RESREF, new TextFieldOptions()
-            .label("Destination Entrance Name")
-            .characterLimit(32)),
-
-        new FieldDefinition<>(RegionFields.FLAGS, FieldType.UNSIGNED_INT, new FieldOptions()
-            .label("Flags")),
-
-        new FieldDefinition<>(RegionFields.INFO_TEXT, FieldType.UNSIGNED_INT, new FieldOptions()
-            .label("Info Strref")),
-
-        new FieldDefinition<>(RegionFields.TRAP_DETECTION_DIFFICULTY, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Trap Detection Difficulty")),
-
-        new FieldDefinition<>(RegionFields.TRAP_DISARM_DIFFICULTY, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Trap Disarm Difficulty")),
-
-        new FieldDefinition<>(RegionFields.TRAPPED, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Trapped")),
-
-        new FieldDefinition<>(RegionFields.DETECTED, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Detected")),
-
-        new FieldDefinition<>(RegionFields.TRAP_LAUNCH_X, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Trap Launch X")),
-
-        new FieldDefinition<>(RegionFields.TRAP_LAUNCH_Y, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Trap Launch Y")),
-
-        new FieldDefinition<>(RegionFields.KEY, FieldType.RESREF, new FieldOptions()
-            .label("Key")),
-
-        new FieldDefinition<>(RegionFields.SCRIPT, FieldType.RESREF, new FieldOptions()
-            .label("Script")),
-
-        new FieldDefinition<>(RegionFields.ACTIVATION_X, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Activation X")),
-
-        new FieldDefinition<>(RegionFields.ACTIVATION_Y, FieldType.UNSIGNED_SHORT, new FieldOptions()
-            .label("Activation Y")),
-
-        new FieldDefinition<>(RegionFields.UNKNOWN, FieldType.UNMAPPED, new UnmappedFieldOptions()
-            .label("Unknown")
-            .size(0x3C))
+        limitedText(RegionFields.DESTINATION_ENTRANCE_NAME, "Destination Entrance Name", 32),
+        unsignedInt(RegionFields.FLAGS, "Flags"),
+        unsignedInt(RegionFields.INFO_TEXT, "Info Strref"),
+        unsignedShort(RegionFields.TRAP_DETECTION_DIFFICULTY, "Trap Detection Difficulty"),
+        unsignedShort(RegionFields.TRAP_DISARM_DIFFICULTY, "Trap Disarm Difficulty"),
+        mappedShortNoYes(RegionFields.TRAPPED, "Trapped"),
+        mappedShortNoYes(RegionFields.DETECTED, "Detected"),
+        unsignedShort(RegionFields.TRAP_LAUNCH_X, "Trap Launch X"),
+        unsignedShort(RegionFields.TRAP_LAUNCH_Y, "Trap Launch Y"),
+        resref(RegionFields.KEY, "Key", KeyFile.NumericResourceType.ITM),
+        resref(RegionFields.SCRIPT, "Script", KeyFile.NumericResourceType.BCS),
+        unsignedShort(RegionFields.ACTIVATION_X, "Activation X"),
+        unsignedShort(RegionFields.ACTIVATION_Y, "Activation Y")
     );
+
+    ///////////////
+    // Shortcuts //
+    ///////////////
+
+    //------//
+    // Text //
+    //------//
+
+    public static <T extends Enum<?>> FieldDefinition<T> limitedText(
+        final T fieldEnum, final String label, final int limit)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.TEXT, new TextFieldOptions()
+            .label(label)
+            .characterLimit(limit));
+    }
+
+    //--------//
+    // Shorts //
+    //--------//
+
+    public static <T extends Enum<?>> FieldDefinition<T> signedShort(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.SIGNED_SHORT, new NumericFieldOptions()
+            .label(label));
+    }
+
+    public static <T extends Enum<?>> FieldDefinition<T> unsignedShort(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.UNSIGNED_SHORT, new NumericFieldOptions()
+            .label(label));
+    }
+
+    public static <T extends Enum<?>, MappedEnumType extends MappedShortEnum> FieldDefinition<T>
+    mappedShort(
+        final T fieldEnum, final String label,
+        final Function<Short, MappedEnumType> enumFromValueFunc, final MappedEnumType[] enumTypes)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.MAPPED_SHORT, new MappedShortFieldOptions<MappedEnumType>()
+            .label(label)
+            .enumFromValueFunction(enumFromValueFunc)
+            .enumValues(enumTypes));
+    }
+
+    public static <T extends Enum<?>> FieldDefinition<T> mappedShortNoYes(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.MAPPED_SHORT, new MappedShortFieldOptions<>()
+            .label(label)
+            .enumFromValueFunction(ShortYesNoType::fromValue)
+            .enumValues(ShortYesNoType.values()));
+    }
+
+    //------//
+    // Ints //
+    //------//
+
+    public static <T extends Enum<?>> FieldDefinition<T> signedInt(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.SIGNED_INT, new NumericFieldOptions()
+            .label(label));
+    }
+
+    public static <T extends Enum<?>> FieldDefinition<T> unsignedInt(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.UNSIGNED_INT, new NumericFieldOptions()
+            .label(label));
+    }
+
+    //-----------------------//
+    // Infinity Engine Types //
+    //-----------------------//
+
+    public static <T extends Enum<?>> FieldDefinition<T> resref(
+        final T fieldEnum, final String label, final KeyFile.NumericResourceType type)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.RESREF, new ResrefFieldOptions()
+            .label(label)
+            .resourceTypes(type));
+    }
 
     //////////////////////////
     // Private Constructors //

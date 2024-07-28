@@ -152,6 +152,16 @@ public class Editor
         return MiscUtil.readOnlyIterable(selectedObjects);
     }
 
+    public void doOperationMaintainViewportCenter(final Supplier<Boolean> operation)
+    {
+        zoomPane.doOperationMaintainViewportCenter(operation);
+    }
+
+    public void doOperationMaintainViewportLeft(final Supplier<Boolean> operation)
+    {
+        zoomPane.doOperationMaintainViewportLeft(operation);
+    }
+
     public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
     {
         return zoomPane.sourceToAbsoluteCanvasPosition(srcX, srcY);
