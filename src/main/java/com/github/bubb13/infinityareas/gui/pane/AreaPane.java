@@ -10,10 +10,12 @@ import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
+import com.github.bubb13.infinityareas.gui.editor.connector.RegionConnector;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.AreaPaneNormalEditMode;
-import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.TrapRegionOptionsPane;
+import com.github.bubb13.infinityareas.gui.editor.gui.FieldPane;
+import com.github.bubb13.infinityareas.gui.editor.gui.StandardStructureDefinitions;
 import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActor;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableClippedLine;
@@ -75,7 +77,7 @@ public class AreaPane extends StackPane
     private Node curRightNode;
 
     private VBox defaultRightNode;
-    private TrapRegionOptionsPane trapRegionOptionsPane = new TrapRegionOptionsPane(editor);
+    private FieldPane fieldPane = new FieldPane(editor);
 
     private Area area;
 
@@ -344,8 +346,8 @@ public class AreaPane extends StackPane
                 editor.unselectAll();
                 editor.requestDraw();
 
-                trapRegionOptionsPane.setRegion(region);
-                changeRightNode(trapRegionOptionsPane);
+                fieldPane.setStructure(StandardStructureDefinitions.REGION, new RegionConnector(region));
+                changeRightNode(fieldPane);
             }
 
             @Override

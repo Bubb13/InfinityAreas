@@ -9,30 +9,57 @@ import javafx.scene.layout.VBox;
 
 public class LabeledNode extends HBox
 {
+    ////////////////////
+    // Private Fields //
+    ////////////////////
+
+    private final Label label = new Label();
+    private final VBox nodeVBox = new VBox();
+
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
     public LabeledNode(final String labelText, final Node node)
     {
-        init(labelText, node);
+        setLabel(labelText);
+        setNode(node);
+        init();
+    }
+
+    public LabeledNode(final String labelText)
+    {
+        setLabel(labelText);
+        init();
+    }
+
+    ////////////////////
+    // Public Methods //
+    ////////////////////
+
+    public void setLabel(final String labelText)
+    {
+        label.setText(labelText + ": ");
+    }
+
+    public void setNode(final Node node)
+    {
+        final var children = nodeVBox.getChildren();
+        children.clear();
+        children.addAll(node);
     }
 
     /////////////////////
     // Private Methods //
     /////////////////////
 
-    private void init(final String labelText, final Node node)
+    private void init()
     {
-        final Label label = new Label(labelText + ": ");
-
         final VBox labelVBox = new VBox();
         labelVBox.setAlignment(Pos.CENTER);
         labelVBox.getChildren().addAll(label);
 
-        final VBox nodeVBox = new VBox();
         nodeVBox.setAlignment(Pos.CENTER);
-        nodeVBox.getChildren().addAll(node);
 
         getChildren().addAll(labelVBox, nodeVBox);
     }

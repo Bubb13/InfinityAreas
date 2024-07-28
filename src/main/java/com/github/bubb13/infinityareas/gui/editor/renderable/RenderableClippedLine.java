@@ -163,6 +163,6 @@ public abstract class RenderableClippedLine<BackingPointType extends ReadableDou
                 throw new IllegalStateException();
             }
         }
-        canvasContext.clip();
+        canvasContext.clip(); // TODO: Clipping is slow; cache result?
     }
 }
