@@ -4,9 +4,9 @@ package com.github.bubb13.infinityareas.gui.editor.gui;
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.AbstractFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldImplementation;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldOptions;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.IntBitfieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.IntBitFieldImplementation;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.IntFieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntBitFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntEnum;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntImplementation;
@@ -175,11 +175,11 @@ public enum FieldType
         public <FieldEnumType extends Enum<?>> FieldImplementation<FieldEnumType> createImplementation(
             final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final AbstractFieldOptions<?> options)
         {
-            if (!(options instanceof FieldOptions fieldOptions))
+            if (!(options instanceof MappedIntBitFieldOptions<? extends MappedIntEnum> bitFieldOptions))
             {
                 throw new IllegalArgumentException();
             }
-            return new IntBitfieldImplementation<>(fieldEnum, connector, fieldOptions);
+            return new IntBitFieldImplementation<>(fieldEnum, connector, bitFieldOptions);
         }
     },
 

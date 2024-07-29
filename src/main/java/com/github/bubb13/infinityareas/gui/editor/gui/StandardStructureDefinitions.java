@@ -3,9 +3,11 @@ package com.github.bubb13.infinityareas.gui.editor.gui;
 
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.editor.field.RegionFields;
+import com.github.bubb13.infinityareas.gui.editor.field.RegionFlags;
 import com.github.bubb13.infinityareas.gui.editor.field.RegionType;
 import com.github.bubb13.infinityareas.gui.editor.field.ShortYesNoType;
-import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntBitFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntEnum;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortEnum;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.NumericFieldOptions;
@@ -28,7 +30,7 @@ public final class StandardStructureDefinitions
         resref(RegionFields.DESTINATION_AREA, "Destination Area", KeyFile.NumericResourceType.ARE),
         // TODO
         limitedText(RegionFields.DESTINATION_ENTRANCE_NAME, "Destination Entrance Name", 32),
-        intBitfield(RegionFields.FLAGS, "Flags"),
+        intBitfield(RegionFields.FLAGS, "Flags", RegionFlags::fromValue, RegionFlags.VALUES),
         unsignedInt(RegionFields.INFO_TEXT, "Info Strref"),
         unsignedShort(RegionFields.TRAP_DETECTION_DIFFICULTY, "Trap Detection Difficulty"),
         unsignedShort(RegionFields.TRAP_DISARM_DIFFICULTY, "Trap Disarm Difficulty"),
@@ -109,10 +111,15 @@ public final class StandardStructureDefinitions
             .label(label));
     }
 
-    public static <T extends Enum<?>> FieldDefinition<T> intBitfield(final T fieldEnum, final String label)
+    public static <T extends Enum<?>, MappedEnumType extends MappedIntEnum> FieldDefinition<T>
+    intBitfield(
+        final T fieldEnum, final String label,
+        final Function<Integer, MappedEnumType> enumFromValueFunc, final MappedEnumType[] enumTypes)
     {
-        return new FieldDefinition<>(fieldEnum, FieldType.INT_BITFIELD, new FieldOptions()
-            .label(label));
+        return new FieldDefinition<>(fieldEnum, FieldType.INT_BITFIELD, new MappedIntBitFieldOptions<MappedEnumType>()
+            .label(label)
+            .enumFromValueFunction(enumFromValueFunc)
+            .enumValues(enumTypes));
     }
 
     //-----------------------//

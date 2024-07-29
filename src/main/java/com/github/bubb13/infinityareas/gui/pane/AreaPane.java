@@ -116,11 +116,13 @@ public class AreaPane extends StackPane
 
         for (final Area.Region region : area.regions())
         {
-            if (region.getType() == 0 && region.getbTrapped() == 1)
-            {
-                new TrapRegion(region);
-            }
+            new TrapRegion(region);
         }
+    }
+
+    private void resetFX()
+    {
+        changeRightNode(defaultRightNode);
     }
 
     private void init()
@@ -408,7 +410,13 @@ public class AreaPane extends StackPane
             @Override
             protected Color getLineColor()
             {
-                return Color.RED;
+                return switch (region.getType())
+                {
+                    case 0 -> Color.RED;
+                    case 1 -> Color.BLUE;
+                    case 2 -> Color.WHITE;
+                    default -> Color.MAGENTA;
+                };
             }
 
             @Override
@@ -648,8 +656,12 @@ public class AreaPane extends StackPane
 
             editor.reset(image.getWidth(), image.getHeight());
             reset();
+            waitForFxThreadToExecute(() ->
+            {
+                resetFX();
+                zoomPane.setImage(image);
+            });
 
-            waitForFxThreadToExecute(() -> zoomPane.setImage(image));
             return null;
         }
     }
