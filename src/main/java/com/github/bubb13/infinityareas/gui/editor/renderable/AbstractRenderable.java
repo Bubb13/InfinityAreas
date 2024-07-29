@@ -19,7 +19,7 @@ public abstract class AbstractRenderable implements Renderable
     @Override public void onClicked(final MouseEvent mouseEvent) {}
     @Override public boolean offerDragCapture(final MouseEvent event) { return false; }
     @Override public void onBeforeSelected() {}
-    @Override public void onAdditionalObjectSelected(final Renderable renderable) {}
+    @Override public void onBeforeAdditionalObjectSelected(final Renderable renderable) {}
     @Override public void onReceiveKeyPress(final KeyEvent event) {}
     @Override public void onUnselected() {}
     @Override public void delete() {}

@@ -79,6 +79,7 @@ public class AreaPane extends StackPane
 
     private VBox defaultRightNode;
     private final FieldPane fieldPane = new FieldPane();
+    private Object fieldPaneOwner = null;
 
     private Area area;
 
@@ -346,16 +347,19 @@ public class AreaPane extends StackPane
             @Override
             public void onBeforeSelected()
             {
+                // Needs to be before the unselectAll() operation to prevent it from
+                // reverting the side pane when deselecting another region
+                fieldPaneOwner = this;
+                fieldPane.setStructure(StandardStructureDefinitions.REGION, regionConnector);
+                changeRightNode(fieldPane);
+
                 selected = true;
                 editor.unselectAll();
                 editor.requestDraw();
-
-                fieldPane.setStructure(StandardStructureDefinitions.REGION, regionConnector);
-                changeRightNode(fieldPane);
             }
 
             @Override
-            public void onAdditionalObjectSelected(final Renderable renderable)
+            public void onBeforeAdditionalObjectSelected(final Renderable renderable)
             {
                 editor.unselect(this);
             }
@@ -373,7 +377,10 @@ public class AreaPane extends StackPane
             @Override
             public void onUnselected()
             {
-                changeRightNode(defaultRightNode);
+                if (fieldPaneOwner == this)
+                {
+                    changeRightNode(defaultRightNode);
+                }
                 selected = false;
                 editor.requestDraw();
             }

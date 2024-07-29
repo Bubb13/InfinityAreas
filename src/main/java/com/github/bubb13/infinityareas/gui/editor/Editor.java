@@ -21,6 +21,7 @@ import javafx.scene.paint.Color;
 import java.awt.Point;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Stack;
 import java.util.function.Supplier;
 
@@ -123,17 +124,28 @@ public class Editor
 
     public void select(final Renderable renderable)
     {
-        for (final Renderable selectedObject : selectedObjects)
+        if (selectedObjects.contains(renderable))
         {
-            selectedObject.onAdditionalObjectSelected(renderable);
+            return;
         }
 
         renderable.onBeforeSelected();
+
+        for (final Renderable selectedObject : selectedObjects)
+        {
+            selectedObject.onBeforeAdditionalObjectSelected(renderable);
+        }
+
         selectedObjects.addTail(renderable);
     }
 
     public void unselect(final Renderable renderable)
     {
+        if (!selectedObjects.contains(renderable))
+        {
+            return;
+        }
+
         renderable.onUnselected();
         selectedObjects.remove(renderable);
     }
@@ -223,7 +235,8 @@ public class Editor
             && renderable.getCorners().intersect(corners) != null;
     }
 
-    public boolean pointInObjectFudge(final Point2D point, final Renderable renderable, final double fudgeAmount)
+    public boolean pointInObjectCornersFudge(
+        final Point2D point, final Renderable renderable, final double fudgeAmount)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
             && renderable.getCorners().contains(point, fudgeAmount);
@@ -359,15 +372,36 @@ public class Editor
 
         boolean pressedSomething = false;
 
-        for (final Renderable renderable : quadTree.listNear(fudgeCorners, interactionComparator,
-            (renderable) -> pointInObjectFudge(sourcePressPos, renderable, fudgeAmount)))
+        // Get all objects with corners within the fudge amount
+        final List<Renderable> fudgedObjects = quadTree.listNear(fudgeCorners, interactionComparator,
+            (renderable) -> pointInObjectCornersFudge(sourcePressPos, renderable, fudgeAmount));
+
+        // Prioritize objects that actually contain the click
+        for (final Renderable renderable : fudgedObjects)
         {
-            if (editMode.shouldCaptureObjectPress(event, renderable) && renderable.offerPressCapture(event))
+            if (pointInObjectExact(sourcePressPos, renderable)
+                && editMode.shouldCaptureObjectPress(event, renderable)
+                && renderable.offerPressCapture(event))
             {
                 pressObject = renderable;
                 pressButton = event.getButton();
                 pressedSomething = true;
                 break;
+            }
+        }
+
+        // If no object that actually contained the click was captured, check if a fudged object can be captured
+        if (!pressedSomething)
+        {
+            for (final Renderable renderable : fudgedObjects)
+            {
+                if (editMode.shouldCaptureObjectPress(event, renderable) && renderable.offerPressCapture(event))
+                {
+                    pressObject = renderable;
+                    pressButton = event.getButton();
+                    pressedSomething = true;
+                    break;
+                }
             }
         }
 

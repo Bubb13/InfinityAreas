@@ -19,7 +19,7 @@ public interface Renderable
     boolean offerDragCapture(MouseEvent event);
     void onDragged(MouseEvent event);
     void onBeforeSelected();
-    void onAdditionalObjectSelected(Renderable renderable);
+    void onBeforeAdditionalObjectSelected(Renderable renderable);
     void onReceiveKeyPress(KeyEvent event);
     void onUnselected();
     void delete();
