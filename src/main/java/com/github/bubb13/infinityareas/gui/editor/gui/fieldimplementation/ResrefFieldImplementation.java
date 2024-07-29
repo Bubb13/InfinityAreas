@@ -8,7 +8,8 @@ import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ComboBox;
 
-public class ResrefFieldImplementation<FieldEnumType extends Enum<?>> extends FieldImplementation<FieldEnumType>
+public class ResrefFieldImplementation<FieldEnumType extends Enum<?>>
+    extends LabeledNodeFieldImplementation<FieldEnumType>
 {
     ////////////////////
     // Private Fields //

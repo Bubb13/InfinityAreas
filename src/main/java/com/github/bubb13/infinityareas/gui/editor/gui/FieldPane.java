@@ -1,32 +1,53 @@
 
 package com.github.bubb13.infinityareas.gui.editor.gui;
 
-import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldImplementation;
 import javafx.geometry.Insets;
-import javafx.scene.layout.StackPane;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 
-public class FieldPane extends StackPane
+import java.util.ArrayList;
+
+public class FieldPane extends ScrollPane
 {
     ////////////////////
     // Private Fields //
     ////////////////////
 
     // Data
-    private final Editor editor;
     private final VBox mainVBox = new VBox(10);
+    private final ArrayList<FieldImplementation<?>> fieldImplementations = new ArrayList<>();
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public FieldPane(final Editor editor)
+    public FieldPane()
     {
-        super();
-        this.editor = editor;
         init();
+    }
+
+    ////////////////////
+    // Public Methods //
+    ////////////////////
+
+    public <FieldsEnum extends Enum<?>> void setStructure(
+        final StructureDefinition<FieldsEnum> structureDefinition, final Connector<FieldsEnum> connector)
+    {
+        mainVBox.getChildren().clear();
+
+        for (final FieldDefinition<FieldsEnum> fieldDefinition : structureDefinition.getFieldDefinitions())
+        {
+            final FieldImplementation<FieldsEnum> fieldImpl = fieldDefinition.getFieldType().createImplementation(
+                fieldDefinition.getFieldEnum(), connector, fieldDefinition.getOptions());
+
+            if (fieldImpl != null)
+            {
+                fieldImplementations.add(fieldImpl);
+                mainVBox.getChildren().add(fieldImpl.getNode());
+            }
+        }
     }
 
     ///////////////////////
@@ -45,29 +66,34 @@ public class FieldPane extends StackPane
 
     private void init()
     {
-        ///////////////
-        // Main VBox //
-        ///////////////
+        setFocusTraversable(false);
+        focusedProperty().addListener((observable, oldValue, newValue) -> mainVBox.requestFocus());
+        setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        setMinViewportWidth(1); // Needed to assume vbar is shown during pref width calculation
+        parentProperty().addListener((observable, oldValue, newValue) ->
+        {
+            if (newValue == null)
+            {
+                onDisconnect();
+            }
+        });
 
-        mainVBox.setFocusTraversable(false);
-        setPadding(new Insets(0, 10, 10, 10));
-        getChildren().addAll(mainVBox);
+            ///////////////
+            // Main VBox //
+            ///////////////
+
+            mainVBox.setPadding(new Insets(10, 10, 10, 10));
+            mainVBox.setFocusTraversable(false);
+
+        setContent(mainVBox);
     }
 
-    public <FieldsEnum extends Enum<?>> void setStructure(
-        final StructureDefinition<FieldsEnum> structureDefinition, final Connector<FieldsEnum> connector)
+    public void onDisconnect()
     {
-        mainVBox.getChildren().clear();
-
-        for (final FieldDefinition<FieldsEnum> fieldDefinition : structureDefinition.getFieldDefinitions())
+        for (final FieldImplementation<?> fieldImplementation : fieldImplementations)
         {
-            final FieldImplementation<FieldsEnum> fieldImpl = fieldDefinition.getFieldType().createImplementation(
-                fieldDefinition.getFieldEnum(), connector, fieldDefinition.getOptions());
-
-            if (fieldImpl != null)
-            {
-                mainVBox.getChildren().add(fieldImpl);
-            }
+            fieldImplementation.disconnect();
         }
     }
 }

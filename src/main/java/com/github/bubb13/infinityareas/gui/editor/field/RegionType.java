@@ -9,12 +9,22 @@ public enum RegionType implements MappedShortEnum
     INFO_POINT(1, "Info point"),
     TRAVEL_REGION(2, "Travel region");
 
-    public final short value;
-    public final String label;
+    //////////////////////////
+    // Public Static Fields //
+    //////////////////////////
 
-    //////////////////
-    // Constructors //
-    //////////////////
+    public static final RegionType[] VALUES = RegionType.values();
+
+    ////////////////////
+    // Private Fields //
+    ////////////////////
+
+    private final short value;
+    private final String label;
+
+    //////////////////////////////////
+    // Package Private Constructors //
+    //////////////////////////////////
 
     RegionType(final int value, final String label)
     {

@@ -4,7 +4,9 @@ package com.github.bubb13.infinityareas.gui.editor.connector;
 import com.github.bubb13.infinityareas.game.resource.Area;
 import com.github.bubb13.infinityareas.gui.editor.field.RegionFields;
 
-public class RegionConnector implements Connector<RegionFields>
+import java.util.function.Consumer;
+
+public class RegionConnector extends AbstractConnector<RegionFields>
 {
     ////////////////////
     // Private Fields //
@@ -18,6 +20,7 @@ public class RegionConnector implements Connector<RegionFields>
 
     public RegionConnector(final Area.Region region)
     {
+        super(RegionFields.VALUES);
         this.region = region;
     }
 
@@ -65,6 +68,7 @@ public class RegionConnector implements Connector<RegionFields>
             case ACTIVATION_Y -> region.setActivationPointY(value);
             default -> throw new IllegalArgumentException();
         }
+        runShortListeners(field, value);
     }
 
     public int getInt(final RegionFields field)
@@ -89,6 +93,7 @@ public class RegionConnector implements Connector<RegionFields>
             case INFO_TEXT -> region.setInfoStrref(value);
             default -> throw new IllegalArgumentException();
         }
+        runIntListeners(field, value);
     }
 
     public String getString(final RegionFields value)
@@ -115,5 +120,41 @@ public class RegionConnector implements Connector<RegionFields>
             case SCRIPT -> region.setScriptResref(value);
             default -> throw new IllegalArgumentException();
         }
+        runStringListeners(field, value);
+    }
+
+    @Override
+    public void addShortListener(RegionFields field, Consumer<Short> consumer)
+    {
+        switch (field)
+        {
+            case TYPE, BOUNDING_BOX_LEFT, BOUNDING_BOX_TOP, BOUNDING_BOX_RIGHT, BOUNDING_BOX_BOTTOM,
+                 TRAP_DETECTION_DIFFICULTY, TRAP_DISARM_DIFFICULTY, TRAPPED, DETECTED, TRAP_LAUNCH_X, TRAP_LAUNCH_Y,
+                 ACTIVATION_X, ACTIVATION_Y -> {}
+            default -> throw new IllegalArgumentException();
+        }
+        super.addShortListener(field, consumer);
+    }
+
+    @Override
+    public void addIntListener(RegionFields field, Consumer<Integer> consumer)
+    {
+        switch (field)
+        {
+            case TRIGGER_VALUE, CURSOR_INDEX, FLAGS, INFO_TEXT -> {}
+            default -> throw new IllegalArgumentException();
+        }
+        super.addIntListener(field, consumer);
+    }
+
+    @Override
+    public void addStringListener(final RegionFields field, final Consumer<String> consumer)
+    {
+        switch (field)
+        {
+            case NAME, DESTINATION_AREA, DESTINATION_ENTRANCE_NAME, KEY, SCRIPT -> {}
+            default -> throw new IllegalArgumentException();
+        }
+        super.addStringListener(field, consumer);
     }
 }

@@ -27,5 +27,7 @@ public enum RegionFields
     SCRIPT,
     ACTIVATION_X,
     ACTIVATION_Y,
-    UNKNOWN,
+    UNKNOWN;
+
+    public static final RegionFields[] VALUES = RegionFields.values();
 }

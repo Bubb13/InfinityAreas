@@ -17,22 +17,26 @@ public class RenderablePoint<BackingObjectType extends IntPoint> extends Abstrac
 
     protected final Editor editor;
     protected final DoubleCorners corners = new DoubleCorners();
-    protected final BackingObjectType backingObject;
+    protected BackingObjectType backingObject;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public RenderablePoint(final Editor editor, final BackingObjectType backingObject)
+    public RenderablePoint(final Editor editor)
     {
         this.editor = editor;
-        this.backingObject = backingObject;
-        recalculateCorners();
     }
 
     ////////////////////
     // Public Methods //
     ////////////////////
+
+    public void setBackingObject(final BackingObjectType backingObject)
+    {
+        this.backingObject = backingObject;
+        recalculateCorners();
+    }
 
     @Override
     public boolean isEnabled()

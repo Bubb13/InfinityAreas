@@ -14,6 +14,7 @@ import com.github.bubb13.infinityareas.gui.editor.connector.RegionConnector;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.AreaPaneNormalEditMode;
+import com.github.bubb13.infinityareas.gui.editor.field.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.gui.FieldPane;
 import com.github.bubb13.infinityareas.gui.editor.gui.StandardStructureDefinitions;
 import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
@@ -77,7 +78,7 @@ public class AreaPane extends StackPane
     private Node curRightNode;
 
     private VBox defaultRightNode;
-    private FieldPane fieldPane = new FieldPane(editor);
+    private final FieldPane fieldPane = new FieldPane();
 
     private Area area;
 
@@ -287,7 +288,8 @@ public class AreaPane extends StackPane
         ////////////////////
 
         private final Area.Region region;
-        private TrapPolygon trapPolygon;
+        private final RegionConnector regionConnector;
+        private final TrapPolygon trapPolygon;
         private boolean selected;
 
         /////////////////////////
@@ -297,8 +299,9 @@ public class AreaPane extends StackPane
         public TrapRegion(final Area.Region region)
         {
             this.region = region;
+            this.regionConnector = new RegionConnector(region);
             trapPolygon = new TrapPolygon(region.getPolygon());
-            new TrapLaunchPosition(region.getTrapLaunchPoint());
+            new TrapLaunchPosition();
         }
 
         /////////////////////
@@ -345,7 +348,7 @@ public class AreaPane extends StackPane
                 editor.unselectAll();
                 editor.requestDraw();
 
-                fieldPane.setStructure(StandardStructureDefinitions.REGION, new RegionConnector(region));
+                fieldPane.setStructure(StandardStructureDefinitions.REGION, regionConnector);
                 changeRightNode(fieldPane);
             }
 
@@ -425,14 +428,19 @@ public class AreaPane extends StackPane
             // Private Fields //
             ////////////////////
 
+            private final TrapLaunchPositionLine launchPositionLine;
+
             /////////////////////////
             // Public Constructors //
             /////////////////////////
 
-            public TrapLaunchPosition(final IntPoint point)
+            public TrapLaunchPosition()
             {
-                super(AreaPane.this.editor, point);
-                new TrapLaunchPositionLine();
+                super(AreaPane.this.editor);
+                setBackingObject(new LaunchPointProxy());
+                regionConnector.addShortListener(RegionFields.TRAP_LAUNCH_X, (ignored) -> update());
+                regionConnector.addShortListener(RegionFields.TRAP_LAUNCH_Y, (ignored) -> update());
+                launchPositionLine = new TrapLaunchPositionLine();
             }
 
             ////////////////////
@@ -467,8 +475,46 @@ public class AreaPane extends StackPane
             public void delete() {}
 
             /////////////////////
+            // Private Methods //
+            /////////////////////
+
+            private void update()
+            {
+                recalculateCorners();
+                launchPositionLine.recalculateCorners();
+                editor.requestDraw();
+            }
+
+            /////////////////////
             // Private Classes //
             /////////////////////
+
+            private class LaunchPointProxy implements IntPoint
+            {
+                @Override
+                public int getX()
+                {
+                    return regionConnector.getShort(RegionFields.TRAP_LAUNCH_X);
+                }
+
+                @Override
+                public void setX(int x)
+                {
+                    regionConnector.setShort(RegionFields.TRAP_LAUNCH_X, (short)x);
+                }
+
+                @Override
+                public int getY()
+                {
+                    return regionConnector.getShort(RegionFields.TRAP_LAUNCH_Y);
+                }
+
+                @Override
+                public void setY(int y)
+                {
+                    regionConnector.setShort(RegionFields.TRAP_LAUNCH_Y, (short)y);
+                }
+            }
 
             private class TrapLaunchPositionLine extends RenderableClippedLine<ReadableDoublePoint>
             {
@@ -512,7 +558,9 @@ public class AreaPane extends StackPane
                 protected Collection<Rectangle2D> getCanvasExclusionRects()
                 {
                     exclusionRectangles.clear();
-                    exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(TrapLaunchPosition.this.getCorners()));
+                    exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(
+                        TrapLaunchPosition.this.getCorners())
+                    );
                     exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(trapPolygon.getCorners()));
                     return exclusionRectangles;
                 }

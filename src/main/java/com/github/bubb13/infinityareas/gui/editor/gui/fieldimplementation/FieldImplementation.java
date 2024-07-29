@@ -2,9 +2,9 @@
 package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation;
 
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
-import com.github.bubb13.infinityareas.gui.pane.LabeledNode;
+import javafx.scene.Node;
 
-public abstract class FieldImplementation<EnumType extends Enum<?>> extends LabeledNode
+public abstract class FieldImplementation<EnumType extends Enum<?>>
 {
     //////////////////////
     // Protected Fields //
@@ -17,10 +17,17 @@ public abstract class FieldImplementation<EnumType extends Enum<?>> extends Labe
     // Package Private Constructors //
     //////////////////////////////////
 
-    FieldImplementation(final EnumType fieldEnum, final Connector<EnumType> connector, final String labelText)
+    FieldImplementation(final EnumType fieldEnum, final Connector<EnumType> connector)
     {
-        super(labelText);
         this.fieldEnum = fieldEnum;
         this.connector = connector;
     }
+
+    ////////////////////
+    // Public Methods //
+    ////////////////////
+
+    public abstract Node getNode();
+
+    public void disconnect() {}
 }

@@ -5,6 +5,7 @@ import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.editor.field.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.field.RegionType;
 import com.github.bubb13.infinityareas.gui.editor.field.ShortYesNoType;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortEnum;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedShortFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.NumericFieldOptions;
@@ -21,13 +22,13 @@ public final class StandardStructureDefinitions
 
     public static final StructureDefinition<RegionFields> REGION = new StructureDefinition<>(
         limitedText(RegionFields.NAME, "Name", 32),
-        mappedShort(RegionFields.TYPE, "Type", RegionType::fromValue, RegionType.values()),
+        mappedShort(RegionFields.TYPE, "Type", RegionType::fromValue, RegionType.VALUES),
         unsignedInt(RegionFields.TRIGGER_VALUE, "Trigger Value"),
         unsignedInt(RegionFields.CURSOR_INDEX, "Cursor Index"),
         resref(RegionFields.DESTINATION_AREA, "Destination Area", KeyFile.NumericResourceType.ARE),
         // TODO
         limitedText(RegionFields.DESTINATION_ENTRANCE_NAME, "Destination Entrance Name", 32),
-        unsignedInt(RegionFields.FLAGS, "Flags"),
+        intBitfield(RegionFields.FLAGS, "Flags"),
         unsignedInt(RegionFields.INFO_TEXT, "Info Strref"),
         unsignedShort(RegionFields.TRAP_DETECTION_DIFFICULTY, "Trap Detection Difficulty"),
         unsignedShort(RegionFields.TRAP_DISARM_DIFFICULTY, "Trap Disarm Difficulty"),
@@ -89,7 +90,7 @@ public final class StandardStructureDefinitions
         return new FieldDefinition<>(fieldEnum, FieldType.MAPPED_SHORT, new MappedShortFieldOptions<>()
             .label(label)
             .enumFromValueFunction(ShortYesNoType::fromValue)
-            .enumValues(ShortYesNoType.values()));
+            .enumValues(ShortYesNoType.VALUES));
     }
 
     //------//
@@ -105,6 +106,12 @@ public final class StandardStructureDefinitions
     public static <T extends Enum<?>> FieldDefinition<T> unsignedInt(final T fieldEnum, final String label)
     {
         return new FieldDefinition<>(fieldEnum, FieldType.UNSIGNED_INT, new NumericFieldOptions()
+            .label(label));
+    }
+
+    public static <T extends Enum<?>> FieldDefinition<T> intBitfield(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.INT_BITFIELD, new FieldOptions()
             .label(label));
     }
 

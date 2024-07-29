@@ -4,7 +4,8 @@ package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation;
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import javafx.scene.control.TextField;
 
-public class TextFieldImplementation<FieldEnumType extends Enum<?>> extends FieldImplementation<FieldEnumType>
+public class TextFieldImplementation<FieldEnumType extends Enum<?>>
+    extends LabeledNodeFieldImplementation<FieldEnumType>
 {
     ////////////////////
     // Private Fields //

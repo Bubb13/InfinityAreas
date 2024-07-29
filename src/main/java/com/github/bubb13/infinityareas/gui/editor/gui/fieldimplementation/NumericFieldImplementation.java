@@ -7,9 +7,10 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 
 import java.awt.Toolkit;
+import java.util.function.Consumer;
 
 public abstract class NumericFieldImplementation<FieldEnumType extends Enum<?>>
-    extends FieldImplementation<FieldEnumType>
+    extends LabeledNodeFieldImplementation<FieldEnumType>
 {
     ////////////////////
     // Private Fields //
@@ -18,6 +19,12 @@ public abstract class NumericFieldImplementation<FieldEnumType extends Enum<?>>
     private final TextField textField = new TextField();
     private final NumericFieldOptions options;
     private String beforeEditValue;
+
+    //////////////////////
+    // Protected Fields //
+    //////////////////////
+
+    protected Consumer<?> connectedValueChangedListener;
 
     /////////////////////////
     // Public Constructors //
@@ -31,12 +38,28 @@ public abstract class NumericFieldImplementation<FieldEnumType extends Enum<?>>
         init();
     }
 
+    ////////////////////
+    // Public Methods //
+    ////////////////////
+
+    @Override
+    public void disconnect()
+    {
+        connector.removeListener(fieldEnum, connectedValueChangedListener);
+    }
+
     ///////////////////////
     // Protected Methods //
     ///////////////////////
 
     abstract protected long getConnectedValue();
     abstract protected void setConnectedValue(final long newValue);
+    abstract protected void addConnectedValueChangedListener();
+
+    protected void onConnectedValueChanged(final long newValue)
+    {
+        textField.setText(String.valueOf(newValue));
+    }
 
     /////////////////////
     // Private Methods //
@@ -44,6 +67,7 @@ public abstract class NumericFieldImplementation<FieldEnumType extends Enum<?>>
 
     private void init()
     {
+        addConnectedValueChangedListener();
         final long currentConnectedValue = getConnectedValue();
         textField.setText(String.valueOf(currentConnectedValue));
 

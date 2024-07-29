@@ -49,6 +49,19 @@ public abstract class RenderableClippedLine<BackingPointType extends ReadableDou
         recalculateCorners();
     }
 
+    public void recalculateCorners()
+    {
+        final double x1 = backingPoint1.getX();
+        final double y1 = backingPoint1.getY();
+        final double x2 = backingPoint2.getX();
+        final double y2 = backingPoint2.getY();
+        corners.setTopLeftX(Math.min(x1, x2));
+        corners.setTopLeftY(Math.min(y1, y2));
+        corners.setBottomRightExclusiveX(Math.max(x1, x2) + 1);
+        corners.setBottomRightExclusiveY(Math.max(y1, y2) + 1);
+        editor.addRenderable(this);
+    }
+
     @Override
     public DoubleCorners getCorners()
     {
@@ -88,19 +101,6 @@ public abstract class RenderableClippedLine<BackingPointType extends ReadableDou
     ///////////////////////
     // Protected Methods //
     ///////////////////////
-
-    protected void recalculateCorners()
-    {
-        final double x1 = backingPoint1.getX();
-        final double y1 = backingPoint1.getY();
-        final double x2 = backingPoint2.getX();
-        final double y2 = backingPoint2.getY();
-        corners.setTopLeftX(Math.min(x1, x2));
-        corners.setTopLeftY(Math.min(y1, y2));
-        corners.setBottomRightExclusiveX(Math.max(x1, x2));
-        corners.setBottomRightExclusiveY(Math.max(y1, y2));
-        editor.addRenderable(this);
-    }
 
     protected Collection<Rectangle2D> getCanvasExclusionRects()
     {

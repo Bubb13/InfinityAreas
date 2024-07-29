@@ -3,6 +3,8 @@ package com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation;
 
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 
+import java.util.function.Consumer;
+
 public class ShortFieldImplementation<FieldEnumType extends Enum<?>> extends NumericFieldImplementation<FieldEnumType>
 {
     /////////////////////////
@@ -29,5 +31,13 @@ public class ShortFieldImplementation<FieldEnumType extends Enum<?>> extends Num
     protected void setConnectedValue(final long newValue)
     {
         connector.setShort(fieldEnum, (short)newValue);
+    }
+
+    @Override
+    protected void addConnectedValueChangedListener()
+    {
+        final Consumer<Short> shortListener = this::onConnectedValueChanged;
+        connectedValueChangedListener = shortListener;
+        connector.addShortListener(fieldEnum, shortListener);
     }
 }

@@ -4,6 +4,8 @@ package com.github.bubb13.infinityareas.gui.editor.gui;
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.AbstractFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.FieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.IntBitfieldImplementation;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.IntFieldImplementation;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntEnum;
 import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.MappedIntFieldOptions;
@@ -20,6 +22,10 @@ import com.github.bubb13.infinityareas.gui.editor.gui.fieldimplementation.TextFi
 
 public enum FieldType
 {
+    //------//
+    // Byte //
+    //------//
+
     SIGNED_BYTE
     {
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
@@ -37,6 +43,10 @@ public enum FieldType
             return null;
         }
     },
+
+    //-------//
+    // Short //
+    //-------//
 
     SIGNED_SHORT
     {
@@ -84,6 +94,23 @@ public enum FieldType
         }
     },
 
+    MAPPED_SHORT
+    {
+        public <FieldEnumType extends Enum<?>> FieldImplementation<FieldEnumType> createImplementation(
+            final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final AbstractFieldOptions<?> options)
+        {
+            if (!(options instanceof MappedShortFieldOptions<? extends MappedShortEnum> mappedShortFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+            return new MappedShortImplementation<>(fieldEnum, connector, mappedShortFieldOptions);
+        }
+    },
+
+    //-----//
+    // Int //
+    //-----//
+
     SIGNED_INT
     {
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
@@ -130,6 +157,36 @@ public enum FieldType
         }
     },
 
+    MAPPED_INT
+    {
+        public <FieldEnumType extends Enum<?>> FieldImplementation<FieldEnumType> createImplementation(
+            final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final AbstractFieldOptions<?> options)
+        {
+            if (!(options instanceof MappedIntFieldOptions<? extends MappedIntEnum> mappedIntFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+            return new MappedIntImplementation<>(fieldEnum, connector, mappedIntFieldOptions);
+        }
+    },
+
+    INT_BITFIELD
+    {
+        public <FieldEnumType extends Enum<?>> FieldImplementation<FieldEnumType> createImplementation(
+            final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final AbstractFieldOptions<?> options)
+        {
+            if (!(options instanceof FieldOptions fieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+            return new IntBitfieldImplementation<>(fieldEnum, connector, fieldOptions);
+        }
+    },
+
+    //--------//
+    // String //
+    //--------//
+
     TEXT
     {
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
@@ -156,6 +213,10 @@ public enum FieldType
         }
     },
 
+    //-----------------//
+    // Infinity Engine //
+    //-----------------//
+
     STRREF
     {
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
@@ -165,31 +226,9 @@ public enum FieldType
         }
     },
 
-    MAPPED_SHORT
-    {
-        public <FieldEnumType extends Enum<?>> FieldImplementation<FieldEnumType> createImplementation(
-            final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final AbstractFieldOptions<?> options)
-        {
-            if (!(options instanceof MappedShortFieldOptions<? extends MappedShortEnum> mappedShortFieldOptions))
-            {
-                throw new IllegalArgumentException();
-            }
-            return new MappedShortImplementation<>(fieldEnum, connector, mappedShortFieldOptions);
-        }
-    },
-
-    MAPPED_INT
-    {
-        public <FieldEnumType extends Enum<?>> FieldImplementation<FieldEnumType> createImplementation(
-            final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final AbstractFieldOptions<?> options)
-        {
-            if (!(options instanceof MappedIntFieldOptions<? extends MappedIntEnum> mappedIntFieldOptions))
-            {
-                throw new IllegalArgumentException();
-            }
-            return new MappedIntImplementation<>(fieldEnum, connector, mappedIntFieldOptions);
-        }
-    },
+    //-------//
+    // Other //
+    //-------//
 
     UNMAPPED
     {

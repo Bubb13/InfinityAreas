@@ -12,7 +12,7 @@ public class MappedIntImplementation
     FieldEnumType extends Enum<?>,
     MappedEnumType extends MappedIntEnum
     >
-    extends FieldImplementation<FieldEnumType>
+    extends LabeledNodeFieldImplementation<FieldEnumType>
 {
     ////////////////////
     // Private Fields //

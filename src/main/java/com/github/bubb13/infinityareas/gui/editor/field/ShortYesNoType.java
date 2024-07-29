@@ -8,8 +8,18 @@ public enum ShortYesNoType implements MappedShortEnum
     NO(0,"No"),
     YES(1,"Yes");
 
-    public final short value;
-    public final String label;
+    //////////////////////////
+    // Public Static Fields //
+    //////////////////////////
+
+    public static final ShortYesNoType[] VALUES = ShortYesNoType.values();
+
+    ////////////////////
+    // Private Fields //
+    ////////////////////
+
+    private final short value;
+    private final String label;
 
     //////////////////
     // Constructors //
