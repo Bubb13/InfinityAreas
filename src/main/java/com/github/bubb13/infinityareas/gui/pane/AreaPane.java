@@ -17,7 +17,7 @@ import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.AreaPaneNorm
 import com.github.bubb13.infinityareas.gui.editor.field.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.gui.FieldPane;
 import com.github.bubb13.infinityareas.gui.editor.gui.StandardStructureDefinitions;
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActor;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableClippedLine;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePoint;
@@ -69,7 +69,7 @@ public class AreaPane extends StackPane
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
     {
-        final Comparator<Renderable> renderingComparator = Comparator.comparingInt(Renderable::sortWeight);
+        final Comparator<AbstractRenderable> renderingComparator = Comparator.comparingInt(AbstractRenderable::sortWeight);
         editor.setRenderingComparator(renderingComparator);
         editor.setInteractionComparator(renderingComparator.reversed());
     }
@@ -117,7 +117,7 @@ public class AreaPane extends StackPane
 
         for (final Area.Region region : area.regions())
         {
-            new TrapRegion(region);
+            new RegionEditorObject(region);
         }
     }
 
@@ -146,7 +146,7 @@ public class AreaPane extends StackPane
             final Button saveButton = new Button("Save");
             saveButton.setOnAction((ignored) -> this.onSave());
 
-            final Button drawPolygonButton = new UnderlinedButton("Draw Polygon");
+            final Button drawPolygonButton = new UnderlinedButton("Draw Region Polygon");
             drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
 
             final Button bisectLine = new UnderlinedButton("Bisect Line");
@@ -197,6 +197,8 @@ public class AreaPane extends StackPane
         getChildren().add(mainVBox);
 
         editor.registerEditMode(AreaPaneNormalEditMode.class, () -> new AreaPaneNormalEditMode(editor));
+        editor.registerEditMode(DrawPolygonEditMode.class, DrawRegionPolygonEditMode::new);
+        editor.registerEditMode(QuickSelectEditMode.class, () -> new QuickSelectEditMode(editor));
     }
 
     private void onSave()
@@ -262,6 +264,99 @@ public class AreaPane extends StackPane
     // Private Classes //
     /////////////////////
 
+    private class DrawRegionPolygonEditMode extends DrawPolygonEditMode<GenericPolygon>
+    {
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        private RegionEditorObject regionEditorObject;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public DrawRegionPolygonEditMode()
+        {
+            super(AreaPane.this.editor);
+        }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
+
+        @Override
+        public void onKeyPressed(final KeyEvent event)
+        {
+            if (event.getCode() == KeyCode.Q)
+            {
+                event.consume();
+                editor.enterEditMode(QuickSelectEditMode.class);
+            }
+            else
+            {
+                super.onKeyPressed(event);
+            }
+        }
+
+        @Override
+        public void onExitMode()
+        {
+            super.onExitMode();
+            regionEditorObject = null;
+        }
+
+        ///////////////////////
+        // Protected Methods //
+        ///////////////////////
+
+        @Override
+        protected GenericPolygon createBackingPolygon()
+        {
+            final Area.Region region = new Area.Region();
+            regionEditorObject = new RegionEditorObject(region);
+            return region.getPolygon();
+        }
+
+        @Override
+        protected RenderablePolygon<GenericPolygon> createRenderablePolygon(final GenericPolygon backingPolygon)
+        {
+            regionEditorObject.setRegionBeingDrawn(true);
+            return regionEditorObject.getRegionEditorObjectPolygon();
+        }
+
+        @Override
+        protected void saveBackingPolygon(final GenericPolygon polygon)
+        {
+            final Area.Region region = regionEditorObject.getRegion();
+
+            final int centerX = (polygon.getBoundingBoxLeft() + polygon.getBoundingBoxRight()) / 2;
+            final int centerY = (polygon.getBoundingBoxTop() + polygon.getBoundingBoxBottom()) / 2;
+
+            final IntPoint launchPoint = region.getTrapLaunchPoint();
+            launchPoint.setX(centerX);
+            launchPoint.setY(centerY);
+
+            final RegionEditorObject.RegionEditorObjectLaunchPosition launchPosition
+                = regionEditorObject.getRegionEditorObjectLaunchPosition();
+
+            launchPosition.recalculateCorners();
+            launchPosition.recalculateLineCorners();
+
+            regionEditorObject.setRegionBeingDrawn(false);
+            area.addRegion(region);
+        }
+
+        @Override
+        protected void cleanUpPolygonDrawingModeRenderObjects()
+        {
+            if (regionEditorObject != null)
+            {
+                regionEditorObject.removeRenderable();
+            }
+        }
+    }
+
     private class AreaActor extends RenderableActor
     {
         /////////////////////////
@@ -284,7 +379,7 @@ public class AreaPane extends StackPane
         }
     }
 
-    private class TrapRegion
+    private class RegionEditorObject
     {
         ////////////////////
         // Private Fields //
@@ -292,34 +387,66 @@ public class AreaPane extends StackPane
 
         private final Area.Region region;
         private final RegionConnector regionConnector;
-        private final TrapPolygon trapPolygon;
+        private final RegionEditorObjectPolygon regionEditorObjectPolygon;
+        private final RegionEditorObjectLaunchPosition regionEditorObjectLaunchPosition;
         private boolean selected;
+        private boolean regionBeingDrawn;
 
         /////////////////////////
         // Public Constructors //
         /////////////////////////
 
-        public TrapRegion(final Area.Region region)
+        public RegionEditorObject(final Area.Region region)
         {
             this.region = region;
             this.regionConnector = new RegionConnector(region);
-            trapPolygon = new TrapPolygon(region.getPolygon());
-            new TrapLaunchPosition();
+            regionEditorObjectPolygon = new RegionEditorObjectPolygon();
+            regionEditorObjectLaunchPosition = new RegionEditorObjectLaunchPosition();
         }
 
-        /////////////////////
-        // Private Classes //
-        /////////////////////
+        ////////////////////
+        // Public Methods //
+        ////////////////////
 
-        public class TrapPolygon extends RenderablePolygon<GenericPolygon>
+        public Area.Region getRegion()
+        {
+            return region;
+        }
+
+        public RegionEditorObjectPolygon getRegionEditorObjectPolygon()
+        {
+            return regionEditorObjectPolygon;
+        }
+
+        public RegionEditorObjectLaunchPosition getRegionEditorObjectLaunchPosition()
+        {
+            return regionEditorObjectLaunchPosition;
+        }
+
+        public void setRegionBeingDrawn(final boolean regionBeingDrawn)
+        {
+            this.regionBeingDrawn = regionBeingDrawn;
+        }
+
+        public void removeRenderable()
+        {
+            regionEditorObjectPolygon.removeRenderable();
+            regionEditorObjectLaunchPosition.removeRenderable();
+        }
+
+        ////////////////////
+        // Public Classes //
+        ////////////////////
+
+        public class RegionEditorObjectPolygon extends RenderablePolygon<GenericPolygon>
         {
             /////////////////////////
             // Public Constructors //
             /////////////////////////
 
-            public TrapPolygon(final GenericPolygon polygon)
+            public RegionEditorObjectPolygon()
             {
-                super(editor, polygon);
+                super(editor, region.getPolygon());
                 setRenderFill(true);
             }
 
@@ -334,13 +461,14 @@ public class AreaPane extends StackPane
             }
 
             @Override
+            public boolean offerPressCapture(final MouseEvent event)
+            {
+                return !regionBeingDrawn && super.offerPressCapture(event);
+            }
+
+            @Override
             public void onClicked(final MouseEvent mouseEvent)
             {
-                if (mouseEvent.getButton() != MouseButton.PRIMARY)
-                {
-                    return;
-                }
-
                 editor.select(this);
             }
 
@@ -359,7 +487,7 @@ public class AreaPane extends StackPane
             }
 
             @Override
-            public void onBeforeAdditionalObjectSelected(final Renderable renderable)
+            public void onBeforeAdditionalObjectSelected(final AbstractRenderable renderable)
             {
                 editor.unselect(this);
             }
@@ -410,6 +538,14 @@ public class AreaPane extends StackPane
                 }
             }
 
+            @Override
+            public void delete()
+            {
+                super.delete();
+                RegionEditorObject.this.removeRenderable();
+                region.delete();
+            }
+
             ///////////////////////
             // Protected Methods //
             ///////////////////////
@@ -425,47 +561,52 @@ public class AreaPane extends StackPane
                     default -> Color.MAGENTA;
                 };
             }
-
-            @Override
-            protected void deleteBackingObject()
-            {
-                region.delete();
-            }
         }
 
         /////////////////////
         // Private Classes //
         /////////////////////
 
-        private class TrapLaunchPosition extends RenderablePoint<IntPoint>
+        private class RegionEditorObjectLaunchPosition extends RenderablePoint<IntPoint>
         {
             ////////////////////
             // Private Fields //
             ////////////////////
 
-            private final TrapLaunchPositionLine launchPositionLine;
+            private final RegionEditorObjectLaunchPositionLine launchPositionLine;
 
             /////////////////////////
             // Public Constructors //
             /////////////////////////
 
-            public TrapLaunchPosition()
+            public RegionEditorObjectLaunchPosition()
             {
                 super(AreaPane.this.editor);
                 setBackingObject(new LaunchPointProxy());
+                launchPositionLine = new RegionEditorObjectLaunchPositionLine();
                 regionConnector.addShortListener(RegionFields.TRAP_LAUNCH_X, (ignored) -> update());
                 regionConnector.addShortListener(RegionFields.TRAP_LAUNCH_Y, (ignored) -> update());
-                launchPositionLine = new TrapLaunchPositionLine();
             }
 
             ////////////////////
             // Public Methods //
             ////////////////////
 
+            public void recalculateLineCorners()
+            {
+                launchPositionLine.recalculateCorners();
+            }
+
+            public void removeRenderable()
+            {
+                editor.removeRenderable(this);
+                editor.removeRenderable(launchPositionLine);
+            }
+
             @Override
             public boolean isEnabled()
             {
-                return renderRegionsCheckbox.isSelected() && TrapRegion.this.selected;
+                return renderRegionsCheckbox.isSelected() && RegionEditorObject.this.selected;
             }
 
             @Override
@@ -486,9 +627,6 @@ public class AreaPane extends StackPane
                 return true;
             }
 
-            @Override
-            public void delete() {}
-
             /////////////////////
             // Private Methods //
             /////////////////////
@@ -496,8 +634,7 @@ public class AreaPane extends StackPane
             private void update()
             {
                 recalculateCorners();
-                launchPositionLine.recalculateCorners();
-                editor.requestDraw();
+                recalculateLineCorners();
             }
 
             /////////////////////
@@ -531,7 +668,7 @@ public class AreaPane extends StackPane
                 }
             }
 
-            private class TrapLaunchPositionLine extends RenderableClippedLine<ReadableDoublePoint>
+            private class RegionEditorObjectLaunchPositionLine extends RenderableClippedLine<ReadableDoublePoint>
             {
                 ////////////////////
                 // Private Fields //
@@ -543,10 +680,10 @@ public class AreaPane extends StackPane
                 // Public Constructors //
                 /////////////////////////
 
-                public TrapLaunchPositionLine()
+                public RegionEditorObjectLaunchPositionLine()
                 {
                     super(AreaPane.this.editor);
-                    setBackingPoints(new BackingObjectPointProxy(), new TrapPolygonCenterProxy());
+                    setBackingPoints(new BackingObjectPointProxy(), new RegionEditorObjectPolygonCenterProxy());
                 }
 
                 ////////////////////
@@ -556,13 +693,13 @@ public class AreaPane extends StackPane
                 @Override
                 public boolean isEnabled()
                 {
-                    return TrapLaunchPosition.this.isEnabled();
+                    return RegionEditorObjectLaunchPosition.this.isEnabled();
                 }
 
                 @Override
                 public int sortWeight()
                 {
-                    return TrapLaunchPosition.this.sortWeight();
+                    return RegionEditorObjectLaunchPosition.this.sortWeight();
                 }
 
                 ///////////////////////
@@ -574,9 +711,11 @@ public class AreaPane extends StackPane
                 {
                     exclusionRectangles.clear();
                     exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(
-                        TrapLaunchPosition.this.getCorners())
+                        RegionEditorObjectLaunchPosition.this.getCorners())
                     );
-                    exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(trapPolygon.getCorners()));
+                    exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(
+                        regionEditorObjectPolygon.getCorners())
+                    );
                     return exclusionRectangles;
                 }
 
@@ -605,19 +744,19 @@ public class AreaPane extends StackPane
                     }
                 }
 
-                private class TrapPolygonCenterProxy implements ReadableDoublePoint
+                private class RegionEditorObjectPolygonCenterProxy implements ReadableDoublePoint
                 {
                     @Override
                     public double getX()
                     {
-                        final DoubleCorners corners = trapPolygon.getCorners();
+                        final DoubleCorners corners = regionEditorObjectPolygon.getCorners();
                         return (corners.topLeftX() + corners.bottomRightExclusiveX()) / 2;
                     }
 
                     @Override
                     public double getY()
                     {
-                        final DoubleCorners corners = trapPolygon.getCorners();
+                        final DoubleCorners corners = regionEditorObjectPolygon.getCorners();
                         return (corners.topLeftY() + corners.bottomRightExclusiveY()) / 2;
                     }
                 }

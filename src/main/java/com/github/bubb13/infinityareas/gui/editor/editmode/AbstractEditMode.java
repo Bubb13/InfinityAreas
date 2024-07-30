@@ -1,7 +1,7 @@
 
 package com.github.bubb13.infinityareas.gui.editor.editmode;
 
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -17,7 +17,7 @@ public class AbstractEditMode implements EditMode
 
     public void onDraw(final GraphicsContext canvasContext) {}
 
-    public boolean forceEnableObject(final Renderable renderable)
+    public boolean forceEnableObject(final AbstractRenderable renderable)
     {
         return false;
     }
@@ -27,7 +27,7 @@ public class AbstractEditMode implements EditMode
         return null;
     }
 
-    public boolean shouldCaptureObjectPress(final MouseEvent event, final Renderable renderable)
+    public boolean shouldCaptureObjectPress(final MouseEvent event, final AbstractRenderable renderable)
     {
         return false;
     }
@@ -39,17 +39,17 @@ public class AbstractEditMode implements EditMode
         return false;
     }
 
-    public Renderable directCaptureDraggedObject(final MouseEvent event)
+    public AbstractRenderable directCaptureDraggedObject(final MouseEvent event)
     {
         return null;
     }
 
-    public boolean shouldCaptureObjectDrag(final MouseEvent event, final Renderable renderable)
+    public boolean shouldCaptureObjectDrag(final MouseEvent event, final AbstractRenderable renderable)
     {
         return false;
     }
 
-    public void onObjectDragged(final MouseEvent event, final Renderable renderable) {}
+    public void onObjectDragged(final MouseEvent event, final AbstractRenderable renderable) {}
 
     public boolean customOnMouseReleased(final MouseEvent event)
     {

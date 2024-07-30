@@ -2,7 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor;
 
 import com.github.bubb13.infinityareas.gui.editor.editmode.EditMode;
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.pane.ZoomPane;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
@@ -34,19 +34,19 @@ public class Editor
     private final ZoomPane zoomPane;
     private final HashMap<Class<? extends EditMode>, EditMode> cachedEditModes = new HashMap<>();
     private final Stack<EditMode> previousEditModesStack = new Stack<>();
-    private final OrderedInstanceSet<Renderable> selectedObjects = new OrderedInstanceSet<>();
-    private final OrderedInstanceSet<Renderable> zoomFactorListenerObjects = new OrderedInstanceSet<>();
+    private final OrderedInstanceSet<AbstractRenderable> selectedObjects = new OrderedInstanceSet<>();
+    private final OrderedInstanceSet<AbstractRenderable> zoomFactorListenerObjects = new OrderedInstanceSet<>();
 
-    private DoubleQuadTree<Renderable> quadTree = null;
-    private Comparator<Renderable> renderingComparator;
-    private Comparator<Renderable> interactionComparator;
+    private DoubleQuadTree<AbstractRenderable> quadTree = null;
+    private Comparator<AbstractRenderable> renderingComparator;
+    private Comparator<AbstractRenderable> interactionComparator;
 
     private EditMode editMode = null;
 
     private MouseButton pressButton = null;
-    private Renderable pressObject = null;
+    private AbstractRenderable pressObject = null;
     private boolean dragOccurred = false;
-    private Renderable dragObject = null;
+    private AbstractRenderable dragObject = null;
 
     /////////////////////////
     // Public Constructors //
@@ -88,7 +88,7 @@ public class Editor
         }
     }
 
-    public void addRenderable(final Renderable renderable)
+    public void addRenderable(final AbstractRenderable renderable)
     {
         if (quadTree.add(renderable, renderable.getCorners()))
         {
@@ -98,13 +98,15 @@ public class Editor
                 zoomFactorListenerObjects.addTail(renderable);
             }
         }
+        requestDraw();
     }
 
-    public void removeRenderable(final Renderable renderable)
+    public void removeRenderable(final AbstractRenderable renderable)
     {
         zoomFactorListenerObjects.remove(renderable);
         selectedObjects.remove(renderable);
         quadTree.remove(renderable);
+        requestDraw();
     }
 
     public void requestDraw()
@@ -112,7 +114,7 @@ public class Editor
         zoomPane.requestDraw();
     }
 
-    public boolean isSelected(final Renderable renderable)
+    public boolean isSelected(final AbstractRenderable renderable)
     {
         return selectedObjects.contains(renderable);
     }
@@ -122,7 +124,7 @@ public class Editor
         return selectedObjects.size();
     }
 
-    public void select(final Renderable renderable)
+    public void select(final AbstractRenderable renderable)
     {
         if (selectedObjects.contains(renderable))
         {
@@ -131,7 +133,7 @@ public class Editor
 
         renderable.onBeforeSelected();
 
-        for (final Renderable selectedObject : selectedObjects)
+        for (final AbstractRenderable selectedObject : selectedObjects)
         {
             selectedObject.onBeforeAdditionalObjectSelected(renderable);
         }
@@ -139,7 +141,7 @@ public class Editor
         selectedObjects.addTail(renderable);
     }
 
-    public void unselect(final Renderable renderable)
+    public void unselect(final AbstractRenderable renderable)
     {
         if (!selectedObjects.contains(renderable))
         {
@@ -152,14 +154,14 @@ public class Editor
 
     public void unselectAll()
     {
-        for (final Renderable renderable : selectedObjects)
+        for (final AbstractRenderable renderable : selectedObjects)
         {
             renderable.onUnselected();
         }
         selectedObjects.clear();
     }
 
-    public Iterable<Renderable> selectedObjects()
+    public Iterable<AbstractRenderable> selectedObjects()
     {
         return MiscUtil.readOnlyIterable(selectedObjects);
     }
@@ -224,25 +226,29 @@ public class Editor
 
     public Point getEventSourcePosition(final MouseEvent event)
     {
-        final int absoluteCanvasX = (int)event.getX();
-        final int absoluteCanvasY = (int)event.getY();
-        return absoluteCanvasToSourcePosition(absoluteCanvasX, absoluteCanvasY);
+        final double x = event.getX();
+        final double y = event.getY();
+        final Point2D sourcePoint = absoluteCanvasToSourceDoublePosition(x, y);
+        return new Point(
+            (int)Math.round(sourcePoint.getX()),
+            (int)Math.round(sourcePoint.getY())
+        );
     }
 
-    public boolean objectInArea(final Renderable renderable, final DoubleCorners corners)
+    public boolean objectInArea(final AbstractRenderable renderable, final DoubleCorners corners)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
             && renderable.getCorners().intersect(corners) != null;
     }
 
     public boolean pointInObjectCornersFudge(
-        final Point2D point, final Renderable renderable, final double fudgeAmount)
+        final Point2D point, final AbstractRenderable renderable, final double fudgeAmount)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
             && renderable.getCorners().contains(point, fudgeAmount);
     }
 
-    public boolean pointInObjectExact(final Point2D point, final Renderable renderable)
+    public boolean pointInObjectExact(final Point2D point, final AbstractRenderable renderable)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled()) && renderable.contains(point);
     }
@@ -257,7 +263,7 @@ public class Editor
         pressButton = button;
     }
 
-    public Iterable<Renderable> iterableNear(final DoubleCorners corners)
+    public Iterable<AbstractRenderable> iterableNear(final DoubleCorners corners)
     {
         return quadTree.iterableNear(corners);
     }
@@ -318,12 +324,12 @@ public class Editor
             t2.getY() - t1.getY());
     }
 
-    public void setRenderingComparator(final Comparator<Renderable> comparator)
+    public void setRenderingComparator(final Comparator<AbstractRenderable> comparator)
     {
         this.renderingComparator = comparator;
     }
 
-    public void setInteractionComparator(final Comparator<Renderable> comparator)
+    public void setInteractionComparator(final Comparator<AbstractRenderable> comparator)
     {
         this.interactionComparator = comparator;
     }
@@ -335,7 +341,7 @@ public class Editor
     private void onDraw(final GraphicsContext canvasContext)
     {
         final DoubleCorners visibleSourceCorners = zoomPane.getVisibleSourceDoubleCorners();
-        for (final Renderable renderable : quadTree.listNear(visibleSourceCorners, renderingComparator,
+        for (final AbstractRenderable renderable : quadTree.listNear(visibleSourceCorners, renderingComparator,
             (renderable) -> objectInArea(renderable, visibleSourceCorners)))
         {
             renderable.onRender(canvasContext);
@@ -373,11 +379,11 @@ public class Editor
         boolean pressedSomething = false;
 
         // Get all objects with corners within the fudge amount
-        final List<Renderable> fudgedObjects = quadTree.listNear(fudgeCorners, interactionComparator,
+        final List<AbstractRenderable> fudgedObjects = quadTree.listNear(fudgeCorners, interactionComparator,
             (renderable) -> pointInObjectCornersFudge(sourcePressPos, renderable, fudgeAmount));
 
         // Prioritize objects that actually contain the click
-        for (final Renderable renderable : fudgedObjects)
+        for (final AbstractRenderable renderable : fudgedObjects)
         {
             if (pointInObjectExact(sourcePressPos, renderable)
                 && editMode.shouldCaptureObjectPress(event, renderable)
@@ -393,7 +399,7 @@ public class Editor
         // If no object that actually contained the click was captured, check if a fudged object can be captured
         if (!pressedSomething)
         {
-            for (final Renderable renderable : fudgedObjects)
+            for (final AbstractRenderable renderable : fudgedObjects)
             {
                 if (editMode.shouldCaptureObjectPress(event, renderable) && renderable.offerPressCapture(event))
                 {
@@ -485,7 +491,7 @@ public class Editor
 
     private void onZoomFactorChanged(final double zoomFactor)
     {
-        for (final Renderable renderable : zoomFactorListenerObjects)
+        for (final AbstractRenderable renderable : zoomFactorListenerObjects)
         {
             renderable.onZoomFactorChanged(zoomFactor);
         }
@@ -500,7 +506,7 @@ public class Editor
             return;
         }
 
-        for (final Renderable renderable : selectedObjects)
+        for (final AbstractRenderable renderable : selectedObjects)
         {
             renderable.onReceiveKeyPress(event);
 

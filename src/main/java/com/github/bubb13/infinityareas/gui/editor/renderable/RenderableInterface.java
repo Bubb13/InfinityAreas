@@ -7,7 +7,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
-public interface Renderable
+public interface RenderableInterface
 {
     DoubleCorners getCorners();
     boolean isEnabled();
@@ -19,10 +19,9 @@ public interface Renderable
     boolean offerDragCapture(MouseEvent event);
     void onDragged(MouseEvent event);
     void onBeforeSelected();
-    void onBeforeAdditionalObjectSelected(Renderable renderable);
+    void onBeforeAdditionalObjectSelected(AbstractRenderable renderable);
     void onReceiveKeyPress(KeyEvent event);
     void onUnselected();
-    void delete();
     boolean listensToZoomFactorChanges();
     void onZoomFactorChanged(double zoomFactor);
 }

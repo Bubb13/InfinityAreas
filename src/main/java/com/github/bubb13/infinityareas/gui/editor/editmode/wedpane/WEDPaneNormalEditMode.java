@@ -1,15 +1,18 @@
 
-package com.github.bubb13.infinityareas.gui.editor.editmode;
+package com.github.bubb13.infinityareas.gui.editor.editmode.wedpane;
 
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.editmode.AbstractEditMode;
+import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
+import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
-public class NormalEditMode extends AbstractEditMode
+public class WEDPaneNormalEditMode extends AbstractEditMode
 {
     ////////////////////
     // Private Fields //
@@ -21,7 +24,7 @@ public class NormalEditMode extends AbstractEditMode
     // Public Constructors //
     /////////////////////////
 
-    public NormalEditMode(Editor editor)
+    public WEDPaneNormalEditMode(Editor editor)
     {
         this.editor = editor;
     }
@@ -31,19 +34,19 @@ public class NormalEditMode extends AbstractEditMode
     ////////////////////
 
     @Override
-    public boolean shouldCaptureObjectPress(final MouseEvent event, final Renderable renderable)
+    public boolean shouldCaptureObjectPress(final MouseEvent event, final AbstractRenderable renderable)
     {
         return renderable instanceof RenderableVertex;
     }
 
     @Override
-    public boolean shouldCaptureObjectDrag(final MouseEvent event, final Renderable renderable)
+    public boolean shouldCaptureObjectDrag(final MouseEvent event, final AbstractRenderable renderable)
     {
         return renderable instanceof RenderableVertex;
     }
 
     @Override
-    public void onObjectDragged(final MouseEvent event, final Renderable renderable)
+    public void onObjectDragged(final MouseEvent event, final AbstractRenderable renderable)
     {
         renderable.onDragged(event);
     }

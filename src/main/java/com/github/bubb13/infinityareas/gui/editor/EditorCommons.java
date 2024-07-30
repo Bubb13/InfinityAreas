@@ -2,7 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor;
 
 import com.github.bubb13.infinityareas.gui.dialog.WarningAlertTwoOptions;
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
@@ -27,7 +27,7 @@ public final class EditorCommons
         final RenderableVertex[] selectedVertices = new RenderableVertex[2];
         int i = 0;
 
-        for (final Renderable renderable : editor.selectedObjects())
+        for (final AbstractRenderable renderable : editor.selectedObjects())
         {
             if (!(renderable instanceof RenderableVertex renderableVertex))
             {
@@ -64,15 +64,14 @@ public final class EditorCommons
 
         renderableVertex1.addNewVertexAfter(finalX, finalY);
         editor.unselectAll();
-        editor.requestDraw();
     }
 
     public static void deleteSelected(final Editor editor)
     {
-        final InstanceHashMap<RenderablePolygon, VerticesDeleteInfo> verticesDeleteInfoMap = new InstanceHashMap<>();
-        final ArrayList<Renderable> otherSelectedObjects = new ArrayList<>();
+        final InstanceHashMap<RenderablePolygon<?>, VerticesDeleteInfo> verticesDeleteInfoMap = new InstanceHashMap<>();
+        final ArrayList<AbstractRenderable> otherSelectedObjects = new ArrayList<>();
 
-        for (final Renderable renderable : editor.selectedObjects())
+        for (final AbstractRenderable renderable : editor.selectedObjects())
         {
             if (renderable instanceof RenderableVertex vertex)
             {
@@ -91,7 +90,7 @@ public final class EditorCommons
 
         for (final var entry : verticesDeleteInfoMap.entries())
         {
-            final RenderablePolygon polygon = entry.getKey();
+            final RenderablePolygon<?> polygon = entry.getKey();
             final VerticesDeleteInfo deleteInfo = entry.getValue();
             final int numVertices = polygon.getRenderablePolygonVertices().size();
             final int numVerticesToDelete = deleteInfo.toDelete.size();
@@ -137,7 +136,7 @@ public final class EditorCommons
             }
         }
 
-        for (final Renderable renderable : otherSelectedObjects)
+        for (final AbstractRenderable renderable : otherSelectedObjects)
         {
             renderable.delete();
         }

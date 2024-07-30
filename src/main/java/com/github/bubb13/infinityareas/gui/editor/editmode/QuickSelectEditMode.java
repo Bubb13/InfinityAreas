@@ -3,7 +3,6 @@ package com.github.bubb13.infinityareas.gui.editor.editmode;
 
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import javafx.geometry.Point2D;
@@ -46,7 +45,7 @@ public class QuickSelectEditMode extends LabeledEditMode
     }
 
     @Override
-    public boolean forceEnableObject(final Renderable renderable)
+    public boolean forceEnableObject(final AbstractRenderable renderable)
     {
         final EditMode previousEditMode = editor.getPreviousEditMode();
         return previousEditMode != null && previousEditMode.forceEnableObject(renderable);
@@ -94,7 +93,7 @@ public class QuickSelectEditMode extends LabeledEditMode
             }
 
             final DoubleCorners selectionCorners = quickSelectRectangle.getCorners();
-            for (final Renderable renderable : editor.iterableNear(selectionCorners))
+            for (final AbstractRenderable renderable : editor.iterableNear(selectionCorners))
             {
                 if (!editor.objectInArea(renderable, selectionCorners))
                 {
@@ -196,7 +195,6 @@ public class QuickSelectEditMode extends LabeledEditMode
             }
 
             editor.addRenderable(this);
-            editor.requestDraw();
         }
 
         @Override

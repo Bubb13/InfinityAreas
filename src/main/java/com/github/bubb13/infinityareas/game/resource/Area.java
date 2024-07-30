@@ -383,7 +383,7 @@ public class Area
 
     private Region parseRegion(final int verticesOffset)
     {
-        final Region region = new Region();
+        final Region region = new Region(NO_INIT.DUMMY);
 
         region.setName(BufferUtil.readLUTF8(buffer, 32));
         region.setType(buffer.getShort());
@@ -991,7 +991,7 @@ public class Area
     }
 
     // Size: 0xC4
-    public class Region implements ReferenceTrackable
+    public static class Region implements ReferenceTrackable
     {
         ////////////////////
         // Private Fields //
@@ -1020,6 +1020,28 @@ public class Area
         private short activationPointX;
         private short activationPointY;
         private byte[] unknown;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public Region()
+        {
+            name = "";
+            polygon = new GenericPolygon(0, 0, 0, 0);
+            destAreaResref = "";
+            entranceNameInDestArea = "";
+            trapLaunchPoint = new IntPointImpl(0, 0);
+            keyResref = "";
+            scriptResref = "";
+            unknown = new byte[0x3C];
+        }
+
+        //////////////////////////
+        // Private Constructors //
+        //////////////////////////
+
+        private Region(final NO_INIT ignored) {}
 
         ////////////////////
         // Public Methods //
@@ -2645,5 +2667,10 @@ public class Area
             int mapNotesArraySize,
             int total
         ) {}
+    }
+
+    private enum NO_INIT
+    {
+        DUMMY
     }
 }

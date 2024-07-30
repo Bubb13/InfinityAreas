@@ -120,7 +120,6 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
         final double angle = MiscUtil.calculateAngle(actor.getX(), actor.getY(), sourcePos.getX(), sourcePos.getY());
         actor.setOrientation(angleToOrientation(angle));
         recalculateLine();
-        editor.requestDraw();
     }
 
     @Override

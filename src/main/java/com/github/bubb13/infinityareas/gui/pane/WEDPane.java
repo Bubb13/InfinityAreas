@@ -9,9 +9,9 @@ import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
-import com.github.bubb13.infinityareas.gui.editor.editmode.NormalEditMode;
+import com.github.bubb13.infinityareas.gui.editor.editmode.wedpane.WEDPaneNormalEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
@@ -52,7 +52,7 @@ public class WEDPane extends StackPane
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
     {
-        final Comparator<Renderable> renderingComparator = Comparator.comparingInt(Renderable::sortWeight);
+        final Comparator<AbstractRenderable> renderingComparator = Comparator.comparingInt(AbstractRenderable::sortWeight);
         editor.setRenderingComparator(renderingComparator);
         editor.setInteractionComparator(renderingComparator.reversed());
     }
@@ -83,7 +83,7 @@ public class WEDPane extends StackPane
 
     private void reset()
     {
-        editor.enterEditMode(NormalEditMode.class);
+        editor.enterEditMode(WEDPaneNormalEditMode.class);
 
         for (final WED.Polygon polygon : wedRef.get().getPolygons())
         {
@@ -169,7 +169,7 @@ public class WEDPane extends StackPane
         mainHBox.getChildren().addAll(mainVBox, sidePaneVBox);
         getChildren().add(mainHBox);
 
-        editor.registerEditMode(NormalEditMode.class, () -> new NormalEditMode(editor));
+        editor.registerEditMode(WEDPaneNormalEditMode.class, () -> new WEDPaneNormalEditMode(editor));
         editor.registerEditMode(DrawPolygonEditMode.class, DrawWallPolygonEditMode::new);
         editor.registerEditMode(QuickSelectEditMode.class, () -> new QuickSelectEditMode(editor));
     }
@@ -312,13 +312,10 @@ public class WEDPane extends StackPane
             return renderPolygonsCheckbox.isSelected();
         }
 
-        ///////////////////////
-        // Protected Methods //
-        ///////////////////////
-
         @Override
-        protected void deleteBackingObject()
+        public void delete()
         {
+            super.delete();
             getPolygon().delete();
         }
     }

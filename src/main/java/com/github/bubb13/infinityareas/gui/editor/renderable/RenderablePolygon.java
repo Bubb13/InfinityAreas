@@ -131,6 +131,15 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
         this.renderFill = renderFill;
     }
 
+    public void removeRenderable()
+    {
+        for (final RenderableVertex renderable : renderableVertices)
+        {
+            editor.removeRenderable(renderable);
+        }
+        editor.removeRenderable(this);
+    }
+
     @Override
     public boolean isEnabled()
     {
@@ -169,13 +178,8 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     @Override
     public void delete()
     {
-        for (final RenderableVertex renderable : renderableVertices)
-        {
-            editor.removeRenderable(renderable);
-        }
-        editor.removeRenderable(this);
-        deleteBackingObject();
-        editor.requestDraw();
+        super.delete();
+        removeRenderable();
     }
 
     ///////////////////////
@@ -186,12 +190,6 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     {
         return Color.WHITE;
     }
-
-    ////////////////////////////////
-    // Protected Abstract Methods //
-    ////////////////////////////////
-
-    protected abstract void deleteBackingObject();
 
     /////////////////////
     // Private Methods //

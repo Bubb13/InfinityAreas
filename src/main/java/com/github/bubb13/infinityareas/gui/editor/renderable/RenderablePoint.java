@@ -38,6 +38,17 @@ public class RenderablePoint<BackingObjectType extends IntPoint> extends Abstrac
         recalculateCorners();
     }
 
+    public void recalculateCorners()
+    {
+        final int sourceX = backingObject.getX();
+        final int sourceY = backingObject.getY();
+        corners.setTopLeftX(sourceX - 1);
+        corners.setTopLeftY(sourceY - 1);
+        corners.setBottomRightExclusiveX(sourceX + 1);
+        corners.setBottomRightExclusiveY(sourceY + 1);
+        editor.addRenderable(this);
+    }
+
     @Override
     public boolean isEnabled()
     {
@@ -77,36 +88,21 @@ public class RenderablePoint<BackingObjectType extends IntPoint> extends Abstrac
         backingObject.setX((int)Math.round(sourcePoint.getX()));
         backingObject.setY((int)Math.round(sourcePoint.getY()));
         recalculateCorners();
-        editor.requestDraw();
     }
 
     @Override
     public void delete()
     {
+        super.delete();
         editor.removeRenderable(this);
-        deleteBackingObject();
-        editor.requestDraw();
     }
 
     ///////////////////////
     // Protected Methods //
     ///////////////////////
 
-    protected void recalculateCorners()
-    {
-        final int sourceX = backingObject.getX();
-        final int sourceY = backingObject.getY();
-        corners.setTopLeftX(sourceX - 1);
-        corners.setTopLeftY(sourceY - 1);
-        corners.setBottomRightExclusiveX(sourceX + 1);
-        corners.setBottomRightExclusiveY(sourceY + 1);
-        editor.addRenderable(this);
-    }
-
     protected Color getLineColor()
     {
         return Color.WHITE;
     }
-
-    protected void deleteBackingObject() {}
 }

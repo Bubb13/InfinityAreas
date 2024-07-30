@@ -5,9 +5,10 @@ import com.github.bubb13.infinityareas.gui.dialog.WarningAlertTwoOptions;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
-import com.github.bubb13.infinityareas.gui.editor.renderable.Renderable;
+import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
+import com.github.bubb13.infinityareas.misc.ReferenceHolder;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -20,6 +21,8 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     ////////////////////
 
     private RenderablePolygon<BackingPolygonType> drawingPolygon;
+    private final ReferenceHolder<RenderablePolygon<BackingPolygonType>> drawingPolygonRef =
+        (reference) -> drawingPolygon = null;
 
     /////////////////////////
     // Public Constructors //
@@ -35,13 +38,13 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     ////////////////////
 
     @Override
-    public boolean forceEnableObject(final Renderable renderable)
+    public boolean forceEnableObject(final AbstractRenderable renderable)
     {
         return renderable instanceof RenderablePolygon || renderable instanceof RenderableVertex;
     }
 
     @Override
-    public boolean shouldCaptureObjectPress(final MouseEvent event, final Renderable renderable)
+    public boolean shouldCaptureObjectPress(final MouseEvent event, final AbstractRenderable renderable)
     {
         return renderable instanceof RenderableVertex;
     }
@@ -63,16 +66,16 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
             polygon.setBoundingBoxBottom(sourcePressYInt + 1);
 
             drawingPolygon = createRenderablePolygon(polygon);
+            drawingPolygon.addedTo(drawingPolygonRef);
             drawingPolygon.setRenderImpliedFinalLine(false);
             drawingPolygon.setDrawing(true);
         }
 
         drawingPolygon.addNewVertex(sourcePressXInt, sourcePressYInt);
-        editor.requestDraw();
     }
 
     @Override
-    public Renderable directCaptureDraggedObject(final MouseEvent event)
+    public AbstractRenderable directCaptureDraggedObject(final MouseEvent event)
     {
         if (event.getButton() == MouseButton.PRIMARY)
         {
@@ -82,13 +85,13 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     }
 
     @Override
-    public boolean shouldCaptureObjectDrag(final MouseEvent event, final Renderable renderable)
+    public boolean shouldCaptureObjectDrag(final MouseEvent event, final AbstractRenderable renderable)
     {
         return renderable instanceof RenderableVertex;
     }
 
     @Override
-    public void onObjectDragged(final MouseEvent event, final Renderable renderable)
+    public void onObjectDragged(final MouseEvent event, final AbstractRenderable renderable)
     {
         renderable.onDragged(event);
     }
@@ -138,6 +141,18 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     protected abstract BackingPolygonType createBackingPolygon();
     protected abstract RenderablePolygon<BackingPolygonType> createRenderablePolygon(BackingPolygonType backingPolygon);
     protected abstract void saveBackingPolygon(BackingPolygonType polygon);
+
+    protected void cleanUpPolygonDrawingModeRenderObjects()
+    {
+        if (drawingPolygon == null) return;
+
+        // Remove all renderable objects from the quadtree
+        for (final RenderableVertex vertex : drawingPolygon.getRenderablePolygonVertices())
+        {
+            editor.removeRenderable(vertex);
+        }
+        editor.removeRenderable(drawingPolygon);
+    }
 
     /////////////////////
     // Private Methods //
@@ -193,17 +208,5 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
         {
             editor.exitEditMode();
         }
-    }
-
-    private void cleanUpPolygonDrawingModeRenderObjects()
-    {
-        if (drawingPolygon == null) return;
-
-        // Remove all renderable objects from the quadtree
-        for (final RenderableVertex vertex : drawingPolygon.getRenderablePolygonVertices())
-        {
-            editor.removeRenderable(vertex);
-        }
-        editor.removeRenderable(drawingPolygon);
     }
 }

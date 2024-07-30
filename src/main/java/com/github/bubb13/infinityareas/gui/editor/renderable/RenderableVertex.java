@@ -78,7 +78,6 @@ public class RenderableVertex extends AbstractRenderable
         vertex.setY(y);
         recalculateCorners();
         renderablePolygon.recalculateBoundsAndCornersFromVertices();
-        editor.requestDraw();
     }
 
     public RenderableVertex previous()
@@ -190,7 +189,7 @@ public class RenderableVertex extends AbstractRenderable
         final int deltaX = newSourcePos.x - vertex.x();
         final int deltaY = newSourcePos.y - vertex.y();
 
-        for (final Renderable renderable : editor.selectedObjects())
+        for (final AbstractRenderable renderable : editor.selectedObjects())
         {
             if (!(renderable instanceof RenderableVertex movingRenderableVertex))
             {
@@ -227,11 +226,11 @@ public class RenderableVertex extends AbstractRenderable
     @Override
     public void delete()
     {
+        super.delete();
         editor.removeRenderable(this);
         renderableVertexNode.remove();
         vertex.getNode().remove();
         renderablePolygon.recalculateBoundsAndCornersFromVertices();
-        editor.requestDraw();
     }
 
     /////////////////////

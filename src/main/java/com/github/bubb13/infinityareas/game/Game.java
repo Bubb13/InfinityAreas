@@ -5,7 +5,6 @@ import com.github.bubb13.infinityareas.game.resource.BifFile;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
-import com.github.bubb13.infinityareas.misc.IteratorToIterable;
 import com.github.bubb13.infinityareas.misc.TaskTracker;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
@@ -23,6 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -103,21 +104,17 @@ public class Game
 
     public Iterable<Resource> getResourcesOfType(final short numericType)
     {
-        return new IteratorToIterable<>(
-            resources.resources.values().stream()
-                .filter((bucket) -> bucket.getIdentifier().numericType() == numericType)
-                .iterator()
-        );
+        return resources.getResourcesOfType(numericType);
     }
 
     public Iterable<Resource> getResourcesOfType(final KeyFile.NumericResourceType numericType)
     {
-        return getResourcesOfType(numericType.getNumericType());
+        return resources.getResourcesOfType(numericType);
     }
 
     public Iterable<Resource> getResourcesOfType(final KeyFile.ResourceType resourceType)
     {
-        return getResourcesOfType(resourceType.getNumericType());
+        return resources.getResourcesOfType(resourceType);
     }
 
     public Resource getResource(final ResourceIdentifier identifier)
@@ -138,7 +135,7 @@ public class Game
     // Public Classes //
     ////////////////////
 
-    public static class Resource
+    public static class Resource implements Comparable<Resource>
     {
         ////////////////////
         // Private Fields //
@@ -178,6 +175,12 @@ public class Game
         public ResourceSource getPrimarySource()
         {
             return sources.first();
+        }
+
+        @Override
+        public int compareTo(final Resource other)
+        {
+            return identifier.compareTo(other.identifier);
         }
     }
 
@@ -725,11 +728,33 @@ public class Game
 
     private static class GameResources
     {
+        ///////////////////////////
+        // Private Static Fields //
+        ///////////////////////////
+
+        private static final Iterator<Resource> NULL_ITERATOR = new Iterator<>()
+        {
+            @Override
+            public boolean hasNext()
+            {
+                return false;
+            }
+
+            @Override
+            public Resource next()
+            {
+                return null;
+            }
+        };
+
+        private static final Iterable<Resource> NULL_ITERABLE = () -> NULL_ITERATOR;
+
         ////////////////////
         // Private Fields //
         ////////////////////
 
         private final TreeMap<ResourceIdentifier, Resource> resources = new TreeMap<>();
+        private final HashMap<Short, TreeSet<Resource>> typeBuckets = new HashMap<>();
 
         ////////////////////
         // Public Methods //
@@ -737,9 +762,16 @@ public class Game
 
         public void addSource(final ResourceIdentifier identifier, final ResourceSource source)
         {
-            final Resource resource = this.resources.computeIfAbsent(identifier,
-                k -> new Resource(identifier));
+            final Resource resource = this.resources.computeIfAbsent(identifier, (ignored) ->
+            {
+                final Resource newResource = new Resource(identifier);
 
+                final TreeSet<Resource> typeBucket = typeBuckets.computeIfAbsent(
+                    newResource.getIdentifier().numericType(), (ignored2) -> new TreeSet<>());
+
+                typeBucket.add(newResource);
+                return newResource;
+            });
             resource.addSource(source);
         }
 
@@ -751,6 +783,30 @@ public class Game
         public boolean hasResource(final ResourceIdentifier identifier)
         {
             return this.resources.containsKey(identifier);
+        }
+
+        public Iterable<Resource> getResourcesOfType(final short numericType)
+        {
+            final TreeSet<Resource> typeBucket = typeBuckets.get(numericType);
+
+            if (typeBucket == null)
+            {
+                return NULL_ITERABLE;
+            }
+            else
+            {
+                return MiscUtil.readOnlyIterable(typeBucket);
+            }
+        }
+
+        public Iterable<Resource> getResourcesOfType(final KeyFile.NumericResourceType numericType)
+        {
+            return getResourcesOfType(numericType.getNumericType());
+        }
+
+        public Iterable<Resource> getResourcesOfType(final KeyFile.ResourceType resourceType)
+        {
+            return getResourcesOfType(resourceType.getNumericType());
         }
     }
 }

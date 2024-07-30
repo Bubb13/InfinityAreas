@@ -6,7 +6,6 @@ import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
 public class RenderableActor extends AbstractRenderable
@@ -82,36 +81,6 @@ public class RenderableActor extends AbstractRenderable
     public boolean isEnabled()
     {
         return true;
-    }
-
-    @Override
-    public void onClicked(final MouseEvent mouseEvent)
-    {
-
-    }
-
-    @Override
-    public void onDragged(final MouseEvent event)
-    {
-
-    }
-
-    @Override
-    public void onBeforeSelected()
-    {
-
-    }
-
-    @Override
-    public void onUnselected()
-    {
-
-    }
-
-    @Override
-    public void delete()
-    {
-
     }
 
     /////////////////////
