@@ -462,6 +462,7 @@ public class Editor
     {
         if (editMode.customOnMouseReleased(event))
         {
+            dragOccurred = false;
             return;
         }
 

@@ -2,7 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor.connector;
 
 import com.github.bubb13.infinityareas.game.resource.Area;
-import com.github.bubb13.infinityareas.gui.editor.field.RegionFields;
+import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionFields;
 
 import java.util.function.Consumer;
 

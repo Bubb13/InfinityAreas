@@ -2,7 +2,7 @@
 package com.github.bubb13.infinityareas.gui.region;
 
 import com.github.bubb13.infinityareas.GlobalState;
-import com.github.bubb13.infinityareas.gui.misc.VisibleNotifiable;
+import com.github.bubb13.infinityareas.gui.VisibleNotifiable;
 import com.github.bubb13.infinityareas.misc.Corners;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.util.ImageUtil;

@@ -30,7 +30,6 @@ public class DoubleQuadTree<ElementType>
         elementHolderToNodes = new HashMap<>();
 
     private final ElementHolder<ElementType> tempHolder = new ElementHolder<>();
-    private Comparator<ElementType> comparator;
 
     /////////////////////////
     // Public Constructors //

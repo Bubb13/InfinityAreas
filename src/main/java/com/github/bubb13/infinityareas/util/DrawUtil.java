@@ -32,6 +32,7 @@ public class DrawUtil
         {
             for (int xCounter = 0; xCounter < drawWidth; ++xCounter, ++curSrcIndex, ++curDstIndex)
             {
+                // TODO
                 int color = src[curSrcIndex];
                 color = multAlpha(color, dwAlpha);
                 int dstColor = dst[curDstIndex];

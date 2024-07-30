@@ -2,7 +2,7 @@
 package com.github.bubb13.infinityareas.gui.pane;
 
 import com.github.bubb13.infinityareas.gui.control.CustomScrollPane;
-import com.github.bubb13.infinityareas.gui.misc.VisibleNotifiable;
+import com.github.bubb13.infinityareas.gui.VisibleNotifiable;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
