@@ -148,10 +148,10 @@ public class AreaPane extends StackPane
             final Button drawPolygonButton = new UnderlinedButton("Draw Region Polygon");
             drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
 
-            final Button bisectLine = new UnderlinedButton("Bisect Line");
+            final Button bisectLine = new UnderlinedButton("Bisect Segment");
             bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
 
-            final Button quickSelect = new UnderlinedButton("Quick Select");
+            final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
             quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
 
             toolbar.getChildren().addAll(saveButton, drawPolygonButton, bisectLine, quickSelect);
@@ -160,8 +160,14 @@ public class AreaPane extends StackPane
             // Side Pane VBox //
             ////////////////////
 
-            defaultRightNode = new VBox();
-            defaultRightNode.setMinWidth(150);
+            defaultRightNode = new VBox()
+            {
+                @Override
+                protected double computeMinWidth(double height)
+                {
+                    return computePrefWidth(height);
+                }
+            };
             defaultRightNode.setPadding(new Insets(0, 10, 10, 10));
 
                 //////////////////////////////
@@ -299,9 +305,9 @@ public class AreaPane extends StackPane
         }
 
         @Override
-        public void onExitMode()
+        public void onModeEnd()
         {
-            super.onExitMode();
+            super.onModeEnd();
             regionEditorObject = null;
         }
 

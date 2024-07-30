@@ -11,8 +11,10 @@ public interface EditMode
 {
     void reset();
 
-    void onEnterMode();
-    void onExitMode();
+    void onModeStart();
+    void onModeResume();
+    void onModeSuspend();
+    void onModeEnd();
 
     void onDraw(GraphicsContext canvasContext);
     boolean forceEnableObject(AbstractRenderable renderable);

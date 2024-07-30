@@ -6,6 +6,10 @@ import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionFlags;
 import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionType;
 import com.github.bubb13.infinityareas.gui.editor.field.enums.ShortYesNoType;
+import com.github.bubb13.infinityareas.gui.editor.field.enums.WEDWallPolygonFields;
+import com.github.bubb13.infinityareas.gui.editor.field.enums.WEDWallPolygonFlags;
+import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedByteBitFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedByteEnum;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedIntBitFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedIntEnum;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedShortEnum;
@@ -44,6 +48,11 @@ public final class StandardStructureDefinitions
         unsignedShort(RegionFields.ACTIVATION_Y, "Activation Y")
     );
 
+    public static final StructureDefinition<WEDWallPolygonFields> WED_WALL_POLYGON = new StructureDefinition<>(
+        byteBitfield(WEDWallPolygonFields.FLAGS, "Flags", WEDWallPolygonFlags::fromValue, WEDWallPolygonFlags.VALUES),
+        unsignedByte(WEDWallPolygonFields.HEIGHT, "Height")
+    );
+
     ///////////////
     // Shortcuts //
     ///////////////
@@ -58,6 +67,33 @@ public final class StandardStructureDefinitions
         return new FieldDefinition<>(fieldEnum, FieldType.TEXT, new TextFieldOptions()
             .label(label)
             .characterLimit(limit));
+    }
+
+    //-------//
+    // Bytes //
+    //-------//
+
+    public static <T extends Enum<?>> FieldDefinition<T> signedByte(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.SIGNED_BYTE, new NumericFieldOptions()
+            .label(label));
+    }
+
+    public static <T extends Enum<?>> FieldDefinition<T> unsignedByte(final T fieldEnum, final String label)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.UNSIGNED_BYTE, new NumericFieldOptions()
+            .label(label));
+    }
+
+    public static <T extends Enum<?>, MappedEnumType extends MappedByteEnum> FieldDefinition<T>
+    byteBitfield(
+        final T fieldEnum, final String label,
+        final Function<Byte, MappedEnumType> enumFromValueFunc, final MappedEnumType[] enumTypes)
+    {
+        return new FieldDefinition<>(fieldEnum, FieldType.BYTE_BITFIELD, new MappedByteBitFieldOptions<MappedEnumType>()
+            .label(label)
+            .enumFromValueFunction(enumFromValueFunc)
+            .enumValues(enumTypes));
     }
 
     //--------//

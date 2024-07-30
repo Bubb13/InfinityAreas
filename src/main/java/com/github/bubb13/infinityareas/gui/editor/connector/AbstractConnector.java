@@ -32,6 +32,16 @@ public abstract class AbstractConnector<FieldEnumType extends Enum<?>> implement
     // Public Methods //
     ////////////////////
 
+    public void runByteListeners(final FieldEnumType field, final byte value)
+    {
+        for (final Consumer<?> uncastListener : listeners[field.ordinal()])
+        {
+            @SuppressWarnings("unchecked")
+            final Consumer<Byte> listener = (Consumer<Byte>)uncastListener;
+            listener.accept(value);
+        }
+    }
+
     public void runShortListeners(final FieldEnumType field, final short value)
     {
         for (final Consumer<?> uncastListener : listeners[field.ordinal()])
@@ -60,6 +70,12 @@ public abstract class AbstractConnector<FieldEnumType extends Enum<?>> implement
             final Consumer<String> listener = (Consumer<String>)uncastListener;
             listener.accept(value);
         }
+    }
+
+    @Override
+    public void addByteListener(final FieldEnumType field, final Consumer<Byte> consumer)
+    {
+        listeners[field.ordinal()].addTail(consumer);
     }
 
     @Override

@@ -28,6 +28,19 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     // Public Methods //
     ////////////////////
 
+    @Override
+    public byte getByte(final RegionFields field)
+    {
+        throw new IllegalArgumentException();
+    }
+
+    @Override
+    public void setByte(final RegionFields field, final byte value)
+    {
+        throw new IllegalArgumentException();
+    }
+
+    @Override
     public short getShort(final RegionFields field)
     {
         return switch (field)
@@ -49,6 +62,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
         };
     }
 
+    @Override
     public void setShort(final RegionFields field, final short value)
     {
         switch (field)
@@ -71,6 +85,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
         runShortListeners(field, value);
     }
 
+    @Override
     public int getInt(final RegionFields field)
     {
         return switch (field)
@@ -83,6 +98,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
         };
     }
 
+    @Override
     public void setInt(final RegionFields field, final int value)
     {
         switch (field)
@@ -96,6 +112,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
         runIntListeners(field, value);
     }
 
+    @Override
     public String getString(final RegionFields value)
     {
         return switch (value)
@@ -109,6 +126,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
         };
     }
 
+    @Override
     public void setString(final RegionFields field, final String value)
     {
         switch (field)
@@ -124,7 +142,13 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void addShortListener(RegionFields field, Consumer<Short> consumer)
+    public void addByteListener(final RegionFields field, final Consumer<Byte> consumer)
+    {
+        throw new IllegalArgumentException();
+    }
+
+    @Override
+    public void addShortListener(final RegionFields field, final Consumer<Short> consumer)
     {
         switch (field)
         {
@@ -137,7 +161,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void addIntListener(RegionFields field, Consumer<Integer> consumer)
+    public void addIntListener(final RegionFields field, final Consumer<Integer> consumer)
     {
         switch (field)
         {

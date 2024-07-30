@@ -297,17 +297,17 @@ public class Editor
         if (editMode != null)
         {
             previousEditModesStack.push(editMode);
-            editMode.onExitMode();
+            editMode.onModeSuspend();
         }
         editMode = nextEditMode;
-        editMode.onEnterMode();
+        editMode.onModeStart();
     }
 
     public void exitEditMode()
     {
-        editMode.onExitMode();
+        editMode.onModeEnd();
         editMode = previousEditModesStack.pop();
-        editMode.onEnterMode();
+        editMode.onModeResume();
     }
 
     public void debugRenderCorners(final GraphicsContext canvasContext, final DoubleCorners corners)

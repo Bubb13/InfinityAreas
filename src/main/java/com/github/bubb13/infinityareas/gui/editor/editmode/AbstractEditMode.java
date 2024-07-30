@@ -11,9 +11,13 @@ public class AbstractEditMode implements EditMode
 {
     public void reset() {}
 
-    public void onEnterMode() {}
+    public void onModeStart() {}
 
-    public void onExitMode() {}
+    public void onModeResume() {}
+
+    public void onModeSuspend() {}
+
+    public void onModeEnd() {}
 
     public void onDraw(final GraphicsContext canvasContext) {}
 

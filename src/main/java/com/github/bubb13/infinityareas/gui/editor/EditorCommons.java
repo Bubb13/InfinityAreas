@@ -96,7 +96,7 @@ public final class EditorCommons
             final int numVerticesToDelete = deleteInfo.toDelete.size();
             final int remainingVertices = numVertices - numVerticesToDelete;
 
-            if (remainingVertices > 0 && remainingVertices < 3)
+            if (!polygon.isDrawing() && remainingVertices > 0 && remainingVertices < 3)
             {
                 noContinue[0] = true;
 
@@ -117,13 +117,13 @@ public final class EditorCommons
 
         for (final var entry : verticesDeleteInfoMap.entries())
         {
-            final RenderablePolygon polygon = entry.getKey();
+            final RenderablePolygon<?> polygon = entry.getKey();
             final VerticesDeleteInfo deleteInfo = entry.getValue();
             final int numVertices = polygon.getRenderablePolygonVertices().size();
             final int numVerticesToDelete = deleteInfo.toDelete.size();
             final int remainingVertices = numVertices - numVerticesToDelete;
 
-            if (remainingVertices < 3)
+            if (!polygon.isDrawing() && remainingVertices < 3)
             {
                 polygon.delete();
             }

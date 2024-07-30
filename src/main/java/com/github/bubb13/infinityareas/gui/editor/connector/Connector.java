@@ -5,12 +5,15 @@ import java.util.function.Consumer;
 
 public interface Connector<FieldEnumType extends Enum<?>>
 {
+    byte getByte(final FieldEnumType field);
+    void setByte(final FieldEnumType field, final byte value);
     short getShort(final FieldEnumType field);
     void setShort(final FieldEnumType field, final short value);
     int getInt(final FieldEnumType field);
     void setInt(final FieldEnumType field, final int value);
     String getString(final FieldEnumType field);
     void setString(final FieldEnumType field, final String name);
+    void addByteListener(final FieldEnumType field, final Consumer<Byte> consumer);
     void addShortListener(final FieldEnumType field, final Consumer<Short> consumer);
     void addIntListener(final FieldEnumType field, final Consumer<Integer> consumer);
     void addStringListener(final FieldEnumType field, final Consumer<String> consumer);

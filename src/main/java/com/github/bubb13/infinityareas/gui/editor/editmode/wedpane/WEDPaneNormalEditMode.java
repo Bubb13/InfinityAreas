@@ -7,7 +7,6 @@ import com.github.bubb13.infinityareas.gui.editor.editmode.AbstractEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
-import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -36,13 +35,13 @@ public class WEDPaneNormalEditMode extends AbstractEditMode
     @Override
     public boolean shouldCaptureObjectPress(final MouseEvent event, final AbstractRenderable renderable)
     {
-        return renderable instanceof RenderableVertex;
+        return true;
     }
 
     @Override
     public boolean shouldCaptureObjectDrag(final MouseEvent event, final AbstractRenderable renderable)
     {
-        return renderable instanceof RenderableVertex;
+        return true;
     }
 
     @Override

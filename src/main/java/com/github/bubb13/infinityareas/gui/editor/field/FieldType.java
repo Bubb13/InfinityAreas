@@ -3,9 +3,13 @@ package com.github.bubb13.infinityareas.gui.editor.field;
 
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.AbstractFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.field.implementation.ByteBitFieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.field.implementation.ByteFieldImplementation;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.FieldImplementation;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.IntBitFieldImplementation;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.IntFieldImplementation;
+import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedByteBitFieldOptions;
+import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedByteEnum;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedIntBitFieldOptions;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedIntEnum;
 import com.github.bubb13.infinityareas.gui.editor.field.implementation.MappedIntFieldOptions;
@@ -31,7 +35,21 @@ public enum FieldType
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
             final EnumType fieldEnum, final Connector<EnumType> connector, final AbstractFieldOptions<?> options)
         {
-            return null;
+            if (!(options instanceof NumericFieldOptions numericFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+
+            Long minValue = numericFieldOptions.getMinValue();
+            Long maxValue = numericFieldOptions.getMaxValue();
+
+            if (minValue == null) numericFieldOptions.minValue(Byte.MIN_VALUE);
+            else if (minValue < Byte.MIN_VALUE) throw new IllegalArgumentException();
+
+            if (maxValue == null) numericFieldOptions.maxValue(Byte.MAX_VALUE);
+            else if (maxValue > Byte.MAX_VALUE) throw new IllegalArgumentException();
+
+            return new ByteFieldImplementation<>(fieldEnum, connector, numericFieldOptions);
         }
     },
 
@@ -40,7 +58,34 @@ public enum FieldType
         public <EnumType extends Enum<?>> FieldImplementation<EnumType> createImplementation(
             final EnumType fieldEnum, final Connector<EnumType> connector, final AbstractFieldOptions<?> options)
         {
-            return null;
+            if (!(options instanceof NumericFieldOptions numericFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+
+            Long minValue = numericFieldOptions.getMinValue();
+            Long maxValue = numericFieldOptions.getMaxValue();
+
+            if (minValue == null) numericFieldOptions.minValue(0);
+            else if (minValue < 0) throw new IllegalArgumentException();
+
+            if (maxValue == null) numericFieldOptions.maxValue(255);
+            else if (maxValue > 255) throw new IllegalArgumentException();
+
+            return new ByteFieldImplementation<>(fieldEnum, connector, numericFieldOptions);
+        }
+    },
+
+    BYTE_BITFIELD
+    {
+        public <FieldEnumType extends Enum<?>> FieldImplementation<FieldEnumType> createImplementation(
+            final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final AbstractFieldOptions<?> options)
+        {
+            if (!(options instanceof MappedByteBitFieldOptions<? extends MappedByteEnum> bitFieldOptions))
+            {
+                throw new IllegalArgumentException();
+            }
+            return new ByteBitFieldImplementation<>(fieldEnum, connector, bitFieldOptions);
         }
     },
 

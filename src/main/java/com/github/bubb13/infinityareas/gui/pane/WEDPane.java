@@ -8,29 +8,36 @@ import com.github.bubb13.infinityareas.gui.control.UnderlinedButton;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
+import com.github.bubb13.infinityareas.gui.editor.connector.WEDWallPolygonConnector;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
-import com.github.bubb13.infinityareas.gui.editor.editmode.wedpane.WEDPaneNormalEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
+import com.github.bubb13.infinityareas.gui.editor.editmode.wedpane.WEDPaneNormalEditMode;
+import com.github.bubb13.infinityareas.gui.editor.field.StandardStructureDefinitions;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
+import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.Reference;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.ImageUtil;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 
 import java.awt.image.BufferedImage;
@@ -56,7 +63,14 @@ public class WEDPane extends StackPane
         editor.setRenderingComparator(renderingComparator);
         editor.setInteractionComparator(renderingComparator.reversed());
     }
-    private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Polygons");
+    private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Wall Polygons");
+
+    private final StackPane rightPane = new StackPane();
+    private Node curRightNode;
+
+    private VBox defaultRightNode;
+    private final FieldPane fieldPane = new FieldPane();
+    private Object fieldPaneOwner = null;
 
     /////////////////////////
     // Public Constructors //
@@ -94,68 +108,47 @@ public class WEDPane extends StackPane
     private void init()
     {
         ///////////////
-        // Main HBox //
+        // Main VBox //
         ///////////////
 
-            final HBox mainHBox = new HBox();
+        final VBox mainVBox = new VBox();
+        mainVBox.setFocusTraversable(false);
+        mainVBox.setPadding(new Insets(5, 0, 0, 10));
 
-            ///////////////
-            // Main VBox //
-            ///////////////
+            //////////////////
+            // Toolbar HBox //
+            //////////////////
 
-            final VBox mainVBox = new VBox();
-            mainVBox.setFocusTraversable(false);
-            mainVBox.setPadding(new Insets(5, 0, 0, 10));
+            final HBox toolbar = new HBox(5);
+            toolbar.setPadding(new Insets(0, 0, 5, 0));
 
-                //////////////////
-                // Toolbar HBox //
-                //////////////////
+            final Button saveButton = new Button("Save");
+            saveButton.setOnAction((ignored) -> this.onSave());
 
-                final HBox toolbar = new HBox();
-                toolbar.setPadding(new Insets(0, 0, 5, 0));
+            final Button drawPolygonButton = new UnderlinedButton("Draw Wall Polygon");
+            drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
 
-                final Button saveButton = new Button("Save");
-                saveButton.setOnAction((ignored) -> this.onSave());
+            final Button bisectLine = new UnderlinedButton("Bisect Segment");
+            bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
 
-                final Region padding1 = new Region();
-                padding1.setPadding(new Insets(0, 0, 0, 5));
+            final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
+            quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
 
-                final Button drawPolygonButton = new UnderlinedButton("Draw Polygon");
-                drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
-
-                final Region padding2 = new Region();
-                padding2.setPadding(new Insets(0, 0, 0, 5));
-
-                final Button bisectLine = new UnderlinedButton("Bisect Line");
-                bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
-
-                final Region padding3 = new Region();
-                padding3.setPadding(new Insets(0, 0, 0, 5));
-
-                final Button quickSelect = new UnderlinedButton("Quick Select");
-                quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
-
-                final Region padding4 = new Region();
-                padding4.setPadding(new Insets(0, 0, 0, 5));
-
-                final MenuButton overlaysDropdown = new MenuButton("Overlays");
-                final MenuItem replaceOverlayTisButton = new MenuItem("Replace Overlay Tileset");
-                replaceOverlayTisButton.setOnAction((ignored) -> this.onSelectReplaceOverlayTileset());
-                overlaysDropdown.getItems().addAll(replaceOverlayTisButton);
-
-                toolbar.getChildren().addAll(saveButton, padding1, drawPolygonButton,
-                    padding2, bisectLine, padding3, quickSelect, padding4, overlaysDropdown);
-
-            VBox.setVgrow(zoomPane, Priority.ALWAYS);
-            mainVBox.getChildren().addAll(toolbar, zoomPane);
+            toolbar.getChildren().addAll(saveButton, drawPolygonButton, bisectLine, quickSelect);
 
             ////////////////////
             // Side Pane VBox //
             ////////////////////
 
-            final VBox sidePaneVBox = new VBox();
-            sidePaneVBox.setMinWidth(150);
-            sidePaneVBox.setPadding(new Insets(5, 10, 10, 10));
+            defaultRightNode = new VBox()
+            {
+                @Override
+                protected double computeMinWidth(double height)
+                {
+                    return computePrefWidth(height);
+                }
+            };
+            defaultRightNode.setPadding(new Insets(0, 10, 10, 10));
 
                 //////////////////////////////
                 // Render Polygons Checkbox //
@@ -164,14 +157,55 @@ public class WEDPane extends StackPane
                 renderPolygonsCheckbox.selectedProperty().addListener((observable, oldValue, newValue) ->
                     onRenderPolygonsChanged(newValue));
 
-            sidePaneVBox.getChildren().addAll(renderPolygonsCheckbox);
+            defaultRightNode.getChildren().addAll(renderPolygonsCheckbox);
 
-        mainHBox.getChildren().addAll(mainVBox, sidePaneVBox);
-        getChildren().add(mainHBox);
+            ///////////////////////////////
+            // ZoomPane + Side Pane HBox //
+            ///////////////////////////////
+
+            final HBox zoomPaneSidePaneHBox = new HBox();
+            zoomPaneSidePaneHBox.getChildren().addAll(zoomPane, rightPane);
+
+                //////////////
+                // ZoomPane //
+                //////////////
+
+                VBox.setVgrow(zoomPane, Priority.ALWAYS);
+
+                ///////////////
+                // Side Pane //
+                ///////////////
+
+                changeRightNode(defaultRightNode);
+
+        mainVBox.getChildren().addAll(toolbar, zoomPaneSidePaneHBox);
+        getChildren().add(mainVBox);
 
         editor.registerEditMode(WEDPaneNormalEditMode.class, () -> new WEDPaneNormalEditMode(editor));
         editor.registerEditMode(DrawPolygonEditMode.class, DrawWallPolygonEditMode::new);
         editor.registerEditMode(QuickSelectEditMode.class, () -> new QuickSelectEditMode(editor));
+    }
+
+    private void changeRightNode(final Parent newNode)
+    {
+        if (newNode != curRightNode)
+        {
+            editor.doOperationMaintainViewportLeft(() ->
+            {
+                curRightNode = newNode;
+                final ObservableList<Node> children = rightPane.getChildren();
+                children.clear();
+                children.add(newNode);
+
+                // Ensure child Control classes have assigned their skins for proper layout calculations
+                newNode.applyCss();
+                //newNode.requestLayout();
+                // Layout the entire panel so that the underlying ZoomPane calculates its new viewport width
+                layout();
+
+                return false;
+            });
+        }
     }
 
     private void onSave()
@@ -293,6 +327,12 @@ public class WEDPane extends StackPane
 
     private class WallPolygon extends RenderablePolygon<WED.Polygon>
     {
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        private boolean selected;
+
         /////////////////////////
         // Public Constructors //
         /////////////////////////
@@ -310,6 +350,86 @@ public class WEDPane extends StackPane
         public boolean isEnabled()
         {
             return renderPolygonsCheckbox.isSelected();
+        }
+
+        @Override
+        public boolean offerPressCapture(final MouseEvent event)
+        {
+            return !isDrawing() && super.offerPressCapture(event);
+        }
+
+        @Override
+        public void onClicked(final MouseEvent mouseEvent)
+        {
+            editor.select(this);
+        }
+
+        @Override
+        public void onBeforeSelected()
+        {
+            // Needs to be before the unselectAll() operation to prevent it from
+            // reverting the side pane when deselecting another region
+            fieldPaneOwner = this;
+            fieldPane.setStructure(StandardStructureDefinitions.WED_WALL_POLYGON,
+                new WEDWallPolygonConnector(getPolygon())
+            );
+            changeRightNode(fieldPane);
+
+            selected = true;
+            editor.unselectAll();
+            editor.requestDraw();
+        }
+
+        @Override
+        public void onBeforeAdditionalObjectSelected(final AbstractRenderable renderable)
+        {
+            editor.unselect(this);
+        }
+
+        @Override
+        public void onReceiveKeyPress(final KeyEvent event)
+        {
+            if (event.getCode() == KeyCode.ESCAPE)
+            {
+                event.consume();
+                editor.unselectAll();
+            }
+        }
+
+        @Override
+        public void onUnselected()
+        {
+            if (fieldPaneOwner == this)
+            {
+                changeRightNode(defaultRightNode);
+            }
+            selected = false;
+            editor.requestDraw();
+        }
+
+        @Override
+        public void onRender(final GraphicsContext canvasContext)
+        {
+            super.onRender(canvasContext);
+
+            if (selected)
+            {
+                final DoubleCorners corners = getCorners();
+
+                final Point2D canvasPointTopLeft = editor.sourceToAbsoluteCanvasDoublePosition(
+                    corners.topLeftX(), corners.topLeftY());
+
+                final Point2D canvasPointBottomRight = editor.sourceToAbsoluteCanvasDoublePosition(
+                    corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+
+                canvasContext.setLineWidth(1);
+                canvasContext.setStroke(Color.rgb(0, 255, 0));
+                canvasContext.strokeRect(
+                    canvasPointTopLeft.getX(), canvasPointTopLeft.getY(),
+                    canvasPointBottomRight.getX() - canvasPointTopLeft.getX(),
+                    canvasPointBottomRight.getY() - canvasPointTopLeft.getY()
+                );
+            }
         }
 
         @Override
