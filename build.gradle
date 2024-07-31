@@ -11,6 +11,13 @@ repositories {
     mavenCentral()
 }
 
+def javaVersion = "17"
+
+compileJava {
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+}
+
 def javaFXVersion = "22.0.1"
 def gsonVersion = "2.11.0"
 def apacheCommonsConfigurationVersion = "2.11.0"
