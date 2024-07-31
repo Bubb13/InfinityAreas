@@ -280,7 +280,7 @@ public class DoubleQuadTree<ElementType>
                         quadrant.topLeftX, quadrant.topLeftY,
                         quadrant.bottomRightExclusiveX, quadrant.bottomRightExclusiveY
                     );
-                    assert intersection != null;
+                    if (intersection == null) continue;
 
                     // Do iteration in quadrant
                     quadrant.iterate(intersection.topLeftX(), intersection.topLeftY(),

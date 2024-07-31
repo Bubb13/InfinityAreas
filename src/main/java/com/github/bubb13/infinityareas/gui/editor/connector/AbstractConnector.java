@@ -3,7 +3,7 @@ package com.github.bubb13.infinityareas.gui.editor.connector;
 
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 public abstract class AbstractConnector<FieldEnumType extends Enum<?>> implements Connector<FieldEnumType>
 {
@@ -11,7 +11,7 @@ public abstract class AbstractConnector<FieldEnumType extends Enum<?>> implement
     // Private Fields //
     ////////////////////
 
-    private final OrderedInstanceSet<Consumer<?>>[] listeners;
+    private final OrderedInstanceSet<BiConsumer<?, ?>>[] listeners;
 
     /////////////////////////
     // Public Constructors //
@@ -21,7 +21,7 @@ public abstract class AbstractConnector<FieldEnumType extends Enum<?>> implement
     {
         final int numValues = fieldEnumValues.length;
         //noinspection unchecked
-        listeners = (OrderedInstanceSet<Consumer<?>>[])new OrderedInstanceSet[numValues];
+        listeners = (OrderedInstanceSet<BiConsumer<?, ?>>[])new OrderedInstanceSet[numValues];
         for (int i = 0; i < numValues; ++i)
         {
             listeners[i] = new OrderedInstanceSet<>();
@@ -32,72 +32,72 @@ public abstract class AbstractConnector<FieldEnumType extends Enum<?>> implement
     // Public Methods //
     ////////////////////
 
-    public void runByteListeners(final FieldEnumType field, final byte value)
+    public void runByteListeners(final FieldEnumType field, final byte oldValue, final byte newValue)
     {
-        for (final Consumer<?> uncastListener : listeners[field.ordinal()])
+        for (final BiConsumer<?, ?> uncastListener : listeners[field.ordinal()])
         {
             @SuppressWarnings("unchecked")
-            final Consumer<Byte> listener = (Consumer<Byte>)uncastListener;
-            listener.accept(value);
+            final BiConsumer<Byte, Byte> listener = (BiConsumer<Byte, Byte>)uncastListener;
+            listener.accept(oldValue, newValue);
         }
     }
 
-    public void runShortListeners(final FieldEnumType field, final short value)
+    public void runShortListeners(final FieldEnumType field, final short oldValue, final short newValue)
     {
-        for (final Consumer<?> uncastListener : listeners[field.ordinal()])
+        for (final BiConsumer<?, ?> uncastListener : listeners[field.ordinal()])
         {
             @SuppressWarnings("unchecked")
-            final Consumer<Short> listener = (Consumer<Short>)uncastListener;
-            listener.accept(value);
+            final BiConsumer<Short, Short> listener = (BiConsumer<Short, Short>)uncastListener;
+            listener.accept(oldValue, newValue);
         }
     }
 
-    public void runIntListeners(final FieldEnumType field, final int value)
+    public void runIntListeners(final FieldEnumType field, final int oldValue, final int newValue)
     {
-        for (final Consumer<?> uncastListener : listeners[field.ordinal()])
+        for (final BiConsumer<?, ?> uncastListener : listeners[field.ordinal()])
         {
             @SuppressWarnings("unchecked")
-            final Consumer<Integer> listener = (Consumer<Integer>)uncastListener;
-            listener.accept(value);
+            final BiConsumer<Integer, Integer> listener = (BiConsumer<Integer, Integer>)uncastListener;
+            listener.accept(oldValue, newValue);
         }
     }
 
-    public void runStringListeners(final FieldEnumType field, final String value)
+    public void runStringListeners(final FieldEnumType field, final String oldValue, final String newValue)
     {
-        for (final Consumer<?> uncastListener : listeners[field.ordinal()])
+        for (final BiConsumer<?, ?> uncastListener : listeners[field.ordinal()])
         {
             @SuppressWarnings("unchecked")
-            final Consumer<String> listener = (Consumer<String>)uncastListener;
-            listener.accept(value);
+            final BiConsumer<String, String> listener = (BiConsumer<String, String>)uncastListener;
+            listener.accept(oldValue, newValue);
         }
     }
 
     @Override
-    public void addByteListener(final FieldEnumType field, final Consumer<Byte> consumer)
+    public void addByteListener(final FieldEnumType field, final BiConsumer<Byte, Byte> consumer)
     {
         listeners[field.ordinal()].addTail(consumer);
     }
 
     @Override
-    public void addShortListener(final FieldEnumType field, final Consumer<Short> consumer)
+    public void addShortListener(final FieldEnumType field, final BiConsumer<Short, Short> consumer)
     {
         listeners[field.ordinal()].addTail(consumer);
     }
 
     @Override
-    public void addIntListener(final FieldEnumType field, final Consumer<Integer> consumer)
+    public void addIntListener(final FieldEnumType field, final BiConsumer<Integer, Integer> consumer)
     {
         listeners[field.ordinal()].addTail(consumer);
     }
 
     @Override
-    public void addStringListener(final FieldEnumType field, final Consumer<String> consumer)
+    public void addStringListener(final FieldEnumType field, final BiConsumer<String, String> consumer)
     {
         listeners[field.ordinal()].addTail(consumer);
     }
 
     @Override
-    public void removeListener(final FieldEnumType field, final Consumer<?> consumer)
+    public void removeListener(final FieldEnumType field, final BiConsumer<?, ?> consumer)
     {
         listeners[field.ordinal()].remove(consumer);
     }

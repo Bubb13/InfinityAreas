@@ -105,6 +105,11 @@ public class WEDPane extends StackPane
         }
     }
 
+    private void resetFX()
+    {
+        changeRightNode(defaultRightNode);
+    }
+
     private void init()
     {
         ///////////////
@@ -479,7 +484,12 @@ public class WEDPane extends StackPane
             editor.reset(image.getWidth(), image.getHeight());
             reset();
 
-            waitForFxThreadToExecute(() -> zoomPane.setImage(image));
+            waitForFxThreadToExecute(() ->
+            {
+                resetFX();
+                zoomPane.setImage(image);
+            });
+
             return null;
         }
     }

@@ -212,7 +212,11 @@ public class ZoomPane extends NotifyingScrollPane
         final double hMax = getHmax();
         final double vMax = getVmax();
 
-        final double hRel = getHvalue() / hMax;
+        // Fixes a strange bug when selecting a region in the area editor before performing a zoom operation
+        final double unsafeHVal = getHvalue();
+        final double safeHVal = Double.isNaN(unsafeHVal) ? 0 : unsafeHVal;
+
+        final double hRel = safeHVal / hMax;
         final double vRel = getVvalue() / vMax;
 
         final double xLeft = hRel * (imageViewWidth - viewportWidth) / zoomFactor;

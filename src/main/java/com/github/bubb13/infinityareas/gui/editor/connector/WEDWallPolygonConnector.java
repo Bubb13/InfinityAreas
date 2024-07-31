@@ -4,7 +4,7 @@ package com.github.bubb13.infinityareas.gui.editor.connector;
 import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.editor.field.enums.WEDWallPolygonFields;
 
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 public class WEDWallPolygonConnector extends AbstractConnector<WEDWallPolygonFields>
 {
@@ -40,15 +40,16 @@ public class WEDWallPolygonConnector extends AbstractConnector<WEDWallPolygonFie
     }
 
     @Override
-    public void setByte(final WEDWallPolygonFields field, final byte value)
+    public void setByte(final WEDWallPolygonFields field, final byte newValue)
     {
+        final byte oldValue = getByte(field);
         switch (field)
         {
-            case FLAGS -> polygon.setFlags(value);
-            case HEIGHT -> polygon.setHeight(value);
+            case FLAGS -> polygon.setFlags(newValue);
+            case HEIGHT -> polygon.setHeight(newValue);
             default -> throw new IllegalArgumentException();
         }
-        runByteListeners(field, value);
+        runByteListeners(field, oldValue, newValue);
     }
 
     @Override
@@ -65,17 +66,18 @@ public class WEDWallPolygonConnector extends AbstractConnector<WEDWallPolygonFie
     }
 
     @Override
-    public void setShort(final WEDWallPolygonFields field, final short value)
+    public void setShort(final WEDWallPolygonFields field, final short newValue)
     {
+        final short oldValue = getShort(field);
         switch (field)
         {
-            case BOUNDING_BOX_LEFT -> polygon.setBoundingBoxLeft(value);
-            case BOUNDING_BOX_RIGHT -> polygon.setBoundingBoxRight(value);
-            case BOUNDING_BOX_TOP -> polygon.setBoundingBoxTop(value);
-            case BOUNDING_BOX_BOTTOM -> polygon.setBoundingBoxBottom(value);
+            case BOUNDING_BOX_LEFT -> polygon.setBoundingBoxLeft(newValue);
+            case BOUNDING_BOX_RIGHT -> polygon.setBoundingBoxRight(newValue);
+            case BOUNDING_BOX_TOP -> polygon.setBoundingBoxTop(newValue);
+            case BOUNDING_BOX_BOTTOM -> polygon.setBoundingBoxBottom(newValue);
             default -> throw new IllegalArgumentException();
         }
-        runShortListeners(field, value);
+        runShortListeners(field, oldValue, newValue);
     }
 
     @Override
@@ -85,7 +87,7 @@ public class WEDWallPolygonConnector extends AbstractConnector<WEDWallPolygonFie
     }
 
     @Override
-    public void setInt(final WEDWallPolygonFields field, final int value)
+    public void setInt(final WEDWallPolygonFields field, final int newValue)
     {
         throw new IllegalArgumentException();
     }
@@ -103,7 +105,7 @@ public class WEDWallPolygonConnector extends AbstractConnector<WEDWallPolygonFie
     }
 
     @Override
-    public void addByteListener(final WEDWallPolygonFields field, final Consumer<Byte> consumer)
+    public void addByteListener(final WEDWallPolygonFields field, final BiConsumer<Byte, Byte> consumer)
     {
         switch (field)
         {
@@ -114,7 +116,7 @@ public class WEDWallPolygonConnector extends AbstractConnector<WEDWallPolygonFie
     }
 
     @Override
-    public void addShortListener(final WEDWallPolygonFields field, final Consumer<Short> consumer)
+    public void addShortListener(final WEDWallPolygonFields field, final BiConsumer<Short, Short> consumer)
     {
         switch (field)
         {
@@ -125,13 +127,13 @@ public class WEDWallPolygonConnector extends AbstractConnector<WEDWallPolygonFie
     }
 
     @Override
-    public void addIntListener(final WEDWallPolygonFields field, final Consumer<Integer> consumer)
+    public void addIntListener(final WEDWallPolygonFields field, final BiConsumer<Integer, Integer> consumer)
     {
         throw new IllegalArgumentException();
     }
 
     @Override
-    public void addStringListener(final WEDWallPolygonFields field, final Consumer<String> consumer)
+    public void addStringListener(final WEDWallPolygonFields field, final BiConsumer<String, String> consumer)
     {
         throw new IllegalArgumentException();
     }

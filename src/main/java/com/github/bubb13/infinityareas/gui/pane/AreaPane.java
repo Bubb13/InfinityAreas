@@ -14,11 +14,11 @@ import com.github.bubb13.infinityareas.gui.editor.connector.RegionConnector;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.areapane.AreaPaneNormalEditMode;
-import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.field.StandardStructureDefinitions;
+import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActor;
-import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableClippedLine;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableAnchoredLine;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePoint;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
@@ -31,7 +31,6 @@ import com.github.bubb13.infinityareas.util.ImageUtil;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.canvas.GraphicsContext;
@@ -52,8 +51,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 
 public class AreaPane extends StackPane
@@ -333,23 +330,18 @@ public class AreaPane extends StackPane
         @Override
         protected void saveBackingPolygon(final GenericPolygon polygon)
         {
-            final Area.Region region = regionEditorObject.getRegion();
+            final RegionConnector regionConnector = regionEditorObject.getConnector();
+            final short centerX = (short)((polygon.getBoundingBoxLeft() + polygon.getBoundingBoxRight()) / 2);
+            final short centerY = (short)((polygon.getBoundingBoxTop() + polygon.getBoundingBoxBottom()) / 2);
 
-            final int centerX = (polygon.getBoundingBoxLeft() + polygon.getBoundingBoxRight()) / 2;
-            final int centerY = (polygon.getBoundingBoxTop() + polygon.getBoundingBoxBottom()) / 2;
+            regionConnector.setShort(RegionFields.TRAP_LAUNCH_X, centerX);
+            regionConnector.setShort(RegionFields.TRAP_LAUNCH_Y, centerY);
 
-            final IntPoint launchPoint = region.getTrapLaunchPoint();
-            launchPoint.setX(centerX);
-            launchPoint.setY(centerY);
-
-            final RegionEditorObject.RegionEditorObjectLaunchPosition launchPosition
-                = regionEditorObject.getRegionEditorObjectLaunchPosition();
-
-            launchPosition.recalculateCorners();
-            launchPosition.recalculateLineCorners();
+            regionConnector.setShort(RegionFields.ACTIVATION_X, centerX);
+            regionConnector.setShort(RegionFields.ACTIVATION_Y, centerY);
 
             regionEditorObject.setRegionBeingDrawn(false);
-            area.addRegion(region);
+            area.addRegion(regionEditorObject.getRegion());
         }
 
         @Override
@@ -394,6 +386,7 @@ public class AreaPane extends StackPane
         private final RegionConnector regionConnector;
         private final RegionEditorObjectPolygon regionEditorObjectPolygon;
         private final RegionEditorObjectLaunchPosition regionEditorObjectLaunchPosition;
+        private final RegionEditorObjectLaunchPosition regionEditorObjectActivationPosition;
         private boolean selected;
         private boolean regionBeingDrawn;
 
@@ -406,7 +399,12 @@ public class AreaPane extends StackPane
             this.region = region;
             this.regionConnector = new RegionConnector(region);
             regionEditorObjectPolygon = new RegionEditorObjectPolygon();
-            regionEditorObjectLaunchPosition = new RegionEditorObjectLaunchPosition();
+            regionEditorObjectLaunchPosition = new RegionEditorObjectLaunchPosition(
+                RegionFields.TRAP_LAUNCH_X, RegionFields.TRAP_LAUNCH_Y, Color.MAGENTA
+            );
+            regionEditorObjectActivationPosition = new RegionEditorObjectActivationPosition(
+                RegionFields.ACTIVATION_X, RegionFields.ACTIVATION_Y, Color.YELLOW
+            );
         }
 
         ////////////////////
@@ -418,14 +416,14 @@ public class AreaPane extends StackPane
             return region;
         }
 
+        public RegionConnector getConnector()
+        {
+            return regionConnector;
+        }
+
         public RegionEditorObjectPolygon getRegionEditorObjectPolygon()
         {
             return regionEditorObjectPolygon;
-        }
-
-        public RegionEditorObjectLaunchPosition getRegionEditorObjectLaunchPosition()
-        {
-            return regionEditorObjectLaunchPosition;
         }
 
         public void setRegionBeingDrawn(final boolean regionBeingDrawn)
@@ -437,6 +435,7 @@ public class AreaPane extends StackPane
         {
             regionEditorObjectPolygon.removeRenderable();
             regionEditorObjectLaunchPosition.removeRenderable();
+            regionEditorObjectActivationPosition.removeRenderable();
         }
 
         ////////////////////
@@ -572,6 +571,28 @@ public class AreaPane extends StackPane
         // Private Classes //
         /////////////////////
 
+        private class RegionEditorObjectActivationPosition extends RegionEditorObjectLaunchPosition
+        {
+            public RegionEditorObjectActivationPosition(
+                final RegionFields xField, final RegionFields yField, final Color lineColor)
+            {
+                super(xField, yField, lineColor);
+                regionConnector.addIntListener(RegionFields.FLAGS, (oldValue, newValue) ->
+                {
+                    if ((oldValue & 0x400) != (newValue & 0x400))
+                    {
+                        editor.requestDraw();
+                    }
+                });
+            }
+
+            @Override
+            public boolean isEnabled()
+            {
+                return (region.getFlags() & 0x400) != 0 && super.isEnabled();
+            }
+        }
+
         private class RegionEditorObjectLaunchPosition extends RenderablePoint<IntPoint>
         {
             ////////////////////
@@ -579,18 +600,25 @@ public class AreaPane extends StackPane
             ////////////////////
 
             private final RegionEditorObjectLaunchPositionLine launchPositionLine;
+            private final RegionFields xField;
+            private final RegionFields yField;
+            private final Color lineColor;
 
             /////////////////////////
             // Public Constructors //
             /////////////////////////
 
-            public RegionEditorObjectLaunchPosition()
+            public RegionEditorObjectLaunchPosition(
+                final RegionFields xField, final RegionFields yField, final Color lineColor)
             {
                 super(AreaPane.this.editor);
+                this.xField = xField;
+                this.yField = yField;
+                this.lineColor = lineColor;
                 setBackingObject(new LaunchPointProxy());
                 launchPositionLine = new RegionEditorObjectLaunchPositionLine();
-                regionConnector.addShortListener(RegionFields.TRAP_LAUNCH_X, (ignored) -> update());
-                regionConnector.addShortListener(RegionFields.TRAP_LAUNCH_Y, (ignored) -> update());
+                regionConnector.addShortListener(xField, (ignored1, ignored2) -> update());
+                regionConnector.addShortListener(yField, (ignored1, ignored2) -> update());
             }
 
             ////////////////////
@@ -651,36 +679,30 @@ public class AreaPane extends StackPane
                 @Override
                 public int getX()
                 {
-                    return regionConnector.getShort(RegionFields.TRAP_LAUNCH_X);
+                    return regionConnector.getShort(xField);
                 }
 
                 @Override
                 public void setX(int x)
                 {
-                    regionConnector.setShort(RegionFields.TRAP_LAUNCH_X, (short)x);
+                    regionConnector.setShort(xField, (short)x);
                 }
 
                 @Override
                 public int getY()
                 {
-                    return regionConnector.getShort(RegionFields.TRAP_LAUNCH_Y);
+                    return regionConnector.getShort(yField);
                 }
 
                 @Override
                 public void setY(int y)
                 {
-                    regionConnector.setShort(RegionFields.TRAP_LAUNCH_Y, (short)y);
+                    regionConnector.setShort(yField, (short)y);
                 }
             }
 
-            private class RegionEditorObjectLaunchPositionLine extends RenderableClippedLine<ReadableDoublePoint>
+            private class RegionEditorObjectLaunchPositionLine extends RenderableAnchoredLine<ReadableDoublePoint>
             {
-                ////////////////////
-                // Private Fields //
-                ////////////////////
-
-                private final Collection<Rectangle2D> exclusionRectangles = new ArrayList<>();
-
                 /////////////////////////
                 // Public Constructors //
                 /////////////////////////
@@ -688,7 +710,10 @@ public class AreaPane extends StackPane
                 public RegionEditorObjectLaunchPositionLine()
                 {
                     super(AreaPane.this.editor);
-                    setBackingPoints(new BackingObjectPointProxy(), new RegionEditorObjectPolygonCenterProxy());
+                    setBackingObjects(
+                        new BackingObjectPointProxy(), new RegionEditorObjectPolygonCenterProxy(),
+                        RegionEditorObjectLaunchPosition.this.getCorners(), regionEditorObjectPolygon.getCorners()
+                    );
                 }
 
                 ////////////////////
@@ -712,22 +737,9 @@ public class AreaPane extends StackPane
                 ///////////////////////
 
                 @Override
-                protected Collection<Rectangle2D> getCanvasExclusionRects()
-                {
-                    exclusionRectangles.clear();
-                    exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(
-                        RegionEditorObjectLaunchPosition.this.getCorners())
-                    );
-                    exclusionRectangles.add(editor.cornersToAbsoluteCanvasRectangle(
-                        regionEditorObjectPolygon.getCorners())
-                    );
-                    return exclusionRectangles;
-                }
-
-                @Override
                 protected Color getLineColor()
                 {
-                    return Color.MAGENTA;
+                    return lineColor;
                 }
 
                 /////////////////////

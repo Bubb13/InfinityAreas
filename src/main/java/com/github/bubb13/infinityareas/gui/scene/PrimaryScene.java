@@ -15,6 +15,7 @@ import com.github.bubb13.infinityareas.gui.pane.WEDPane;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.MenuButton;
@@ -72,6 +73,7 @@ public final class PrimaryScene extends Stage
             //////////////////
 
             final HBox toolbar = new HBox();
+            toolbar.setPadding(new Insets(5, 5, 5, 5));
 
             final MenuButton gameDropdown = new MenuButton("Game");
             final MenuItem changeButton = new MenuItem("Change");
@@ -83,7 +85,8 @@ public final class PrimaryScene extends Stage
             stepButton.setOnAction((ignored) -> this.debugStepThroughAllAreas());
             debugDropdown.getItems().addAll(stepButton);
 
-            toolbar.getChildren().addAll(gameDropdown, debugDropdown);
+            toolbar.getChildren().addAll(gameDropdown);
+            //toolbar.getChildren().addAll(debugDropdown);
 
             ////////////////////
             // Main SplitPane //

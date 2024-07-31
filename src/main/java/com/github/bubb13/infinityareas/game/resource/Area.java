@@ -4,8 +4,8 @@ package com.github.bubb13.infinityareas.game.resource;
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
-import com.github.bubb13.infinityareas.misc.IntPoint;
 import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
+import com.github.bubb13.infinityareas.misc.IntPoint;
 import com.github.bubb13.infinityareas.misc.IntPointImpl;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.ReferenceHolder;
@@ -739,7 +739,8 @@ public class Area
 
     private void parse_V9_1(final TaskTrackerI tracker) throws Exception
     {
-        loadWED(tracker);
+        throw new UnsupportedOperationException("Cannot handle AREAV9.1 at this time (IWD2 areas).");
+        //loadWED(tracker);
     }
 
     private void loadWED(final TaskTrackerI tracker) throws Exception

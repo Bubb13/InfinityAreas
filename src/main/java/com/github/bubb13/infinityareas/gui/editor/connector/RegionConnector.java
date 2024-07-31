@@ -4,7 +4,7 @@ package com.github.bubb13.infinityareas.gui.editor.connector;
 import com.github.bubb13.infinityareas.game.resource.Area;
 import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionFields;
 
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 public class RegionConnector extends AbstractConnector<RegionFields>
 {
@@ -35,7 +35,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void setByte(final RegionFields field, final byte value)
+    public void setByte(final RegionFields field, final byte newValue)
     {
         throw new IllegalArgumentException();
     }
@@ -63,26 +63,27 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void setShort(final RegionFields field, final short value)
+    public void setShort(final RegionFields field, final short newValue)
     {
+        final short oldValue = getShort(field);
         switch (field)
         {
-            case TYPE -> region.setType(value);
-            case BOUNDING_BOX_LEFT -> region.getPolygon().setBoundingBoxLeft(value);
-            case BOUNDING_BOX_TOP -> region.getPolygon().setBoundingBoxTop(value);
-            case BOUNDING_BOX_RIGHT -> region.getPolygon().setBoundingBoxRight(value);
-            case BOUNDING_BOX_BOTTOM -> region.getPolygon().setBoundingBoxBottom(value);
-            case TRAP_DETECTION_DIFFICULTY -> region.setTrapDetectionDifficulty(value);
-            case TRAP_DISARM_DIFFICULTY -> region.setTrapDisarmDifficulty(value);
-            case TRAPPED -> region.setbTrapped(value);
-            case DETECTED -> region.setbTrapDetected(value);
-            case TRAP_LAUNCH_X -> region.getTrapLaunchPoint().setX(value);
-            case TRAP_LAUNCH_Y -> region.getTrapLaunchPoint().setY(value);
-            case ACTIVATION_X -> region.setActivationPointX(value);
-            case ACTIVATION_Y -> region.setActivationPointY(value);
+            case TYPE -> region.setType(newValue);
+            case BOUNDING_BOX_LEFT -> region.getPolygon().setBoundingBoxLeft(newValue);
+            case BOUNDING_BOX_TOP -> region.getPolygon().setBoundingBoxTop(newValue);
+            case BOUNDING_BOX_RIGHT -> region.getPolygon().setBoundingBoxRight(newValue);
+            case BOUNDING_BOX_BOTTOM -> region.getPolygon().setBoundingBoxBottom(newValue);
+            case TRAP_DETECTION_DIFFICULTY -> region.setTrapDetectionDifficulty(newValue);
+            case TRAP_DISARM_DIFFICULTY -> region.setTrapDisarmDifficulty(newValue);
+            case TRAPPED -> region.setbTrapped(newValue);
+            case DETECTED -> region.setbTrapDetected(newValue);
+            case TRAP_LAUNCH_X -> region.getTrapLaunchPoint().setX(newValue);
+            case TRAP_LAUNCH_Y -> region.getTrapLaunchPoint().setY(newValue);
+            case ACTIVATION_X -> region.setActivationPointX(newValue);
+            case ACTIVATION_Y -> region.setActivationPointY(newValue);
             default -> throw new IllegalArgumentException();
         }
-        runShortListeners(field, value);
+        runShortListeners(field, oldValue, newValue);
     }
 
     @Override
@@ -99,23 +100,24 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void setInt(final RegionFields field, final int value)
+    public void setInt(final RegionFields field, final int newValue)
     {
+        final int oldValue = getInt(field);
         switch (field)
         {
-            case TRIGGER_VALUE -> region.setTriggerValue(value);
-            case CURSOR_INDEX -> region.setCursorIndex(value);
-            case FLAGS -> region.setFlags(value);
-            case INFO_TEXT -> region.setInfoStrref(value);
+            case TRIGGER_VALUE -> region.setTriggerValue(newValue);
+            case CURSOR_INDEX -> region.setCursorIndex(newValue);
+            case FLAGS -> region.setFlags(newValue);
+            case INFO_TEXT -> region.setInfoStrref(newValue);
             default -> throw new IllegalArgumentException();
         }
-        runIntListeners(field, value);
+        runIntListeners(field, oldValue, newValue);
     }
 
     @Override
-    public String getString(final RegionFields value)
+    public String getString(final RegionFields field)
     {
-        return switch (value)
+        return switch (field)
         {
             case NAME -> region.getName();
             case DESTINATION_AREA -> region.getDestAreaResref();
@@ -127,28 +129,29 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void setString(final RegionFields field, final String value)
+    public void setString(final RegionFields field, final String newValue)
     {
+        final String oldValue = getString(field);
         switch (field)
         {
-            case NAME -> region.setName(value);
-            case DESTINATION_AREA -> region.setDestAreaResref(value);
-            case DESTINATION_ENTRANCE_NAME -> region.setEntranceNameInDestArea(value);
-            case KEY -> region.setKeyResref(value);
-            case SCRIPT -> region.setScriptResref(value);
+            case NAME -> region.setName(newValue);
+            case DESTINATION_AREA -> region.setDestAreaResref(newValue);
+            case DESTINATION_ENTRANCE_NAME -> region.setEntranceNameInDestArea(newValue);
+            case KEY -> region.setKeyResref(newValue);
+            case SCRIPT -> region.setScriptResref(newValue);
             default -> throw new IllegalArgumentException();
         }
-        runStringListeners(field, value);
+        runStringListeners(field, oldValue, newValue);
     }
 
     @Override
-    public void addByteListener(final RegionFields field, final Consumer<Byte> consumer)
+    public void addByteListener(final RegionFields field, final BiConsumer<Byte, Byte> consumer)
     {
         throw new IllegalArgumentException();
     }
 
     @Override
-    public void addShortListener(final RegionFields field, final Consumer<Short> consumer)
+    public void addShortListener(final RegionFields field, final BiConsumer<Short, Short> consumer)
     {
         switch (field)
         {
@@ -161,7 +164,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void addIntListener(final RegionFields field, final Consumer<Integer> consumer)
+    public void addIntListener(final RegionFields field, final BiConsumer<Integer, Integer> consumer)
     {
         switch (field)
         {
@@ -172,7 +175,7 @@ public class RegionConnector extends AbstractConnector<RegionFields>
     }
 
     @Override
-    public void addStringListener(final RegionFields field, final Consumer<String> consumer)
+    public void addStringListener(final RegionFields field, final BiConsumer<String, String> consumer)
     {
         switch (field)
         {

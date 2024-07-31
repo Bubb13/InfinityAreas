@@ -2,9 +2,9 @@
 package com.github.bubb13.infinityareas.gui.pane;
 
 import com.github.bubb13.infinityareas.gui.editor.connector.Connector;
-import com.github.bubb13.infinityareas.gui.editor.field.implementation.FieldImplementation;
 import com.github.bubb13.infinityareas.gui.editor.field.FieldDefinition;
 import com.github.bubb13.infinityareas.gui.editor.field.StructureDefinition;
+import com.github.bubb13.infinityareas.gui.editor.field.implementation.FieldImplementation;
 import javafx.geometry.Insets;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;

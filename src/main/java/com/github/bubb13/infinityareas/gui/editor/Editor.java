@@ -7,6 +7,7 @@ import com.github.bubb13.infinityareas.gui.pane.ZoomPane;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
@@ -34,7 +35,17 @@ public class Editor
     private final ZoomPane zoomPane;
     private final HashMap<Class<? extends EditMode>, EditMode> cachedEditModes = new HashMap<>();
     private final Stack<EditMode> previousEditModesStack = new Stack<>();
-    private final OrderedInstanceSet<AbstractRenderable> selectedObjects = new OrderedInstanceSet<>();
+
+    private final TrackingOrderedInstanceSet<AbstractRenderable> selectedObjects = new TrackingOrderedInstanceSet<>()
+    {
+        @Override
+        public void referencedObjectDeleted(AbstractRenderable reference)
+        {
+            super.referencedObjectDeleted(reference);
+            reference.onUnselected();
+        }
+    };
+
     private final OrderedInstanceSet<AbstractRenderable> zoomFactorListenerObjects = new OrderedInstanceSet<>();
 
     private DoubleQuadTree<AbstractRenderable> quadTree = null;

@@ -7,7 +7,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 
 import java.awt.Toolkit;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 public abstract class NumericFieldImplementation<FieldEnumType extends Enum<?>>
     extends LabeledNodeFieldImplementation<FieldEnumType>
@@ -24,7 +24,7 @@ public abstract class NumericFieldImplementation<FieldEnumType extends Enum<?>>
     // Protected Fields //
     //////////////////////
 
-    protected Consumer<?> connectedValueChangedListener;
+    protected BiConsumer<?, ?> connectedValueChangedListener;
 
     /////////////////////////
     // Public Constructors //
@@ -56,7 +56,7 @@ public abstract class NumericFieldImplementation<FieldEnumType extends Enum<?>>
     abstract protected void setConnectedValue(final long newValue);
     abstract protected void addConnectedValueChangedListener();
 
-    protected void onConnectedValueChanged(final long newValue)
+    protected void onConnectedValueChanged(final long oldValue, final long newValue)
     {
         textField.setText(String.valueOf(newValue));
     }
