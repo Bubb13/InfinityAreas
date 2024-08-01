@@ -4,22 +4,29 @@ package com.github.bubb13.infinityareas.gui.editor;
 import com.github.bubb13.infinityareas.gui.editor.editmode.EditMode;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.pane.ZoomPane;
+import com.github.bubb13.infinityareas.misc.CanvasCache;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.MiscUtil;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Affine;
 
 import java.awt.Point;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +35,12 @@ import java.util.function.Supplier;
 
 public class Editor
 {
+    //////////////////////////
+    // Public Static Fields //
+    //////////////////////////
+
+    public static final int MAX_SNAPSHOT_SIDE = 100;
+
     ////////////////////
     // Private Fields //
     ////////////////////
@@ -39,7 +52,7 @@ public class Editor
     private final TrackingOrderedInstanceSet<AbstractRenderable> selectedObjects = new TrackingOrderedInstanceSet<>()
     {
         @Override
-        public void referencedObjectDeleted(AbstractRenderable reference)
+        public void referencedObjectDeleted(final AbstractRenderable reference)
         {
             super.referencedObjectDeleted(reference);
             reference.onUnselected();
@@ -58,6 +71,10 @@ public class Editor
     private AbstractRenderable pressObject = null;
     private boolean dragOccurred = false;
     private AbstractRenderable dragObject = null;
+
+    private final ArrayList<Snapshot> snapshots = new ArrayList<>();
+    private final ObservableList<Snapshot> observableSnapshots = FXCollections.observableList(snapshots);
+    private final CanvasCache snapshotCanvasCache = new CanvasCache(MAX_SNAPSHOT_SIDE, MAX_SNAPSHOT_SIDE);
 
     /////////////////////////
     // Public Constructors //
@@ -78,6 +95,10 @@ public class Editor
     ////////////////////
     // Public Methods //
     ////////////////////
+
+    //------------//
+    // Renderable //
+    //------------//
 
     public void reset(final double quadTreeWidth, final double quadTreeHeight)
     {
@@ -123,6 +144,20 @@ public class Editor
     public void requestDraw()
     {
         zoomPane.requestDraw();
+    }
+
+    public ObservableList<Snapshot> getSnapshots()
+    {
+        return observableSnapshots;
+    }
+
+    //-----------//
+    // Selection //
+    //-----------//
+
+    public Iterable<AbstractRenderable> selectedObjects()
+    {
+        return MiscUtil.readOnlyIterable(selectedObjects);
     }
 
     public boolean isSelected(final AbstractRenderable renderable)
@@ -172,9 +207,23 @@ public class Editor
         selectedObjects.clear();
     }
 
-    public Iterable<AbstractRenderable> selectedObjects()
+    //--------//
+    // Canvas //
+    //--------//
+
+    public double getZoomFactor()
     {
-        return MiscUtil.readOnlyIterable(selectedObjects);
+        return zoomPane.getZoomFactor();
+    }
+
+    public Bounds getCanvasBounds()
+    {
+        return zoomPane.getCanvasBounds();
+    }
+
+    public WritableImage getLatestCanvasBackgroundImage()
+    {
+        return zoomPane.getLatestCanvasBackgroundImage();
     }
 
     public void doOperationMaintainViewportCenter(final Supplier<Boolean> operation)
@@ -187,14 +236,38 @@ public class Editor
         zoomPane.doOperationMaintainViewportLeft(operation);
     }
 
-    public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
+    //------------------//
+    // Position Helpers //
+    //------------------//
+
+    public Point2D sourceToCanvasPosition(final int srcX, final int srcY)
     {
-        return zoomPane.sourceToAbsoluteCanvasPosition(srcX, srcY);
+        return zoomPane.sourceToCanvasPosition(srcX, srcY);
     }
 
-    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
+    public Point2D sourceToCanvasDoublePosition(final double srcX, final double srcY)
     {
-        return zoomPane.sourceToAbsoluteCanvasDoublePosition(srcX, srcY);
+        return zoomPane.sourceToCanvasDoublePosition(srcX, srcY);
+    }
+
+    public Point canvasToSourcePosition(final int canvasX, final int canvasY)
+    {
+        return zoomPane.canvasToSourcePosition(canvasX, canvasY);
+    }
+
+    public Point2D canvasToSourceDoublePosition(final double canvasX, final double canvasY)
+    {
+        return zoomPane.canvasToSourceDoublePosition(canvasX, canvasY);
+    }
+
+    public double getCanvasWidth()
+    {
+        return zoomPane.getWidth();
+    }
+
+    public double getCanvasHeight()
+    {
+        return zoomPane.getHeight();
     }
 
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
@@ -212,27 +285,17 @@ public class Editor
         return zoomPane.absoluteCanvasToSourceDoublePosition(canvasX, canvasY);
     }
 
-    public Bounds getCanvasBounds()
-    {
-        return zoomPane.getCanvasBounds();
-    }
-
     public Rectangle2D cornersToAbsoluteCanvasRectangle(final DoubleCorners corners)
     {
-        final Point2D canvasPointTopLeft = sourceToAbsoluteCanvasDoublePosition(
+        final Point2D canvasPointTopLeft = sourceToCanvasDoublePosition(
             corners.topLeftX(), corners.topLeftY());
 
-        final Point2D canvasPointBottomRight = sourceToAbsoluteCanvasDoublePosition(
+        final Point2D canvasPointBottomRight = sourceToCanvasDoublePosition(
             corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
 
         return new Rectangle2D(canvasPointTopLeft.getX(), canvasPointTopLeft.getY(),
             canvasPointBottomRight.getX() - canvasPointTopLeft.getX(),
             canvasPointBottomRight.getY() - canvasPointTopLeft.getY());
-    }
-
-    public double getZoomFactor()
-    {
-        return zoomPane.getZoomFactor();
     }
 
     public Point getEventSourcePosition(final MouseEvent event)
@@ -246,6 +309,33 @@ public class Editor
         );
     }
 
+    public Point2D getCornersCanvasCenter(final DoubleCorners corners)
+    {
+        final Point2D canvasTopLeft = sourceToCanvasDoublePosition(
+            corners.topLeftX(), corners.topLeftY());
+
+        final Point2D canvasBottomRightExclusive = sourceToCanvasDoublePosition(
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+
+        final double centerX = (canvasTopLeft.getX() + canvasBottomRightExclusive.getX()) / 2;
+        final double centerY = (canvasTopLeft.getY() + canvasBottomRightExclusive.getY()) / 2;
+        return new Point2D(centerX, centerY);
+    }
+
+    //----------//
+    // QuadTree //
+    //----------//
+
+    public void setRenderingComparator(final Comparator<AbstractRenderable> comparator)
+    {
+        this.renderingComparator = comparator;
+    }
+
+    public void setInteractionComparator(final Comparator<AbstractRenderable> comparator)
+    {
+        this.interactionComparator = comparator;
+    }
+
     public boolean objectInArea(final AbstractRenderable renderable, final DoubleCorners corners)
     {
         return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
@@ -255,23 +345,14 @@ public class Editor
     public boolean pointInObjectCornersFudge(
         final Point2D point, final AbstractRenderable renderable, final double fudgeAmount)
     {
-        return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
+        return !renderable.isHidden() && (editMode.forceEnableObject(renderable) || renderable.isEnabled())
             && renderable.getCorners().contains(point, fudgeAmount);
     }
 
     public boolean pointInObjectExact(final Point2D point, final AbstractRenderable renderable)
     {
-        return (editMode.forceEnableObject(renderable) || renderable.isEnabled()) && renderable.contains(point);
-    }
-
-    public MouseButton getPressButton()
-    {
-        return pressButton;
-    }
-
-    public void setPressButton(final MouseButton button)
-    {
-        pressButton = button;
+        return !renderable.isHidden() &&
+            (editMode.forceEnableObject(renderable) || renderable.isEnabled()) && renderable.contains(point);
     }
 
     public Iterable<AbstractRenderable> iterableNear(final DoubleCorners corners)
@@ -279,15 +360,23 @@ public class Editor
         return quadTree.iterableNear(corners);
     }
 
-    public EditMode getPreviousEditMode()
+    public void debugRenderCorners(final GraphicsContext canvasContext, final DoubleCorners corners)
     {
-        return previousEditModesStack.isEmpty() ? null : previousEditModesStack.peek();
+        canvasContext.setStroke(Color.rgb(0, 255, 0));
+        canvasContext.setLineWidth(1);
+
+        final Point2D t1 = sourceToCanvasDoublePosition(corners.topLeftX(), corners.topLeftY());
+        final Point2D t2 = sourceToCanvasDoublePosition(
+            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+
+        canvasContext.strokeRect(t1.getX(), t1.getY(),
+            t2.getX() - t1.getX(),
+            t2.getY() - t1.getY());
     }
 
-    public EditMode getEditMode()
-    {
-        return editMode;
-    }
+    //--------------//
+    // Editor State //
+    //--------------//
 
     public <T extends EditMode> void registerEditMode(final Class<T> clazz, final Supplier<T> supplier)
     {
@@ -295,7 +384,7 @@ public class Editor
         cachedEditModes.put(clazz, supplier.get());
     }
 
-    public <T extends EditMode> T getEditMode(final Class<T> clazz)
+    public <T extends EditMode> T getRegisteredEditMode(final Class<T> clazz)
     {
         //noinspection unchecked
         return (T)cachedEditModes.get(clazz);
@@ -321,28 +410,24 @@ public class Editor
         editMode.onModeResume();
     }
 
-    public void debugRenderCorners(final GraphicsContext canvasContext, final DoubleCorners corners)
+    public EditMode getCurrentEditMode()
     {
-        canvasContext.setStroke(Color.rgb(0, 255, 0));
-        canvasContext.setLineWidth(1);
-
-        final Point2D t1 = sourceToAbsoluteCanvasDoublePosition(corners.topLeftX(), corners.topLeftY());
-        final Point2D t2 = sourceToAbsoluteCanvasDoublePosition(
-            corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
-
-        canvasContext.strokeRect(t1.getX(), t1.getY(),
-            t2.getX() - t1.getX(),
-            t2.getY() - t1.getY());
+        return editMode;
     }
 
-    public void setRenderingComparator(final Comparator<AbstractRenderable> comparator)
+    public EditMode getPreviousEditMode()
     {
-        this.renderingComparator = comparator;
+        return previousEditModesStack.isEmpty() ? null : previousEditModesStack.peek();
     }
 
-    public void setInteractionComparator(final Comparator<AbstractRenderable> comparator)
+    public MouseButton getPressButton()
     {
-        this.interactionComparator = comparator;
+        return pressButton;
+    }
+
+    public void setPressButton(final MouseButton button)
+    {
+        pressButton = button;
     }
 
     /////////////////////
@@ -352,10 +437,97 @@ public class Editor
     private void onDraw(final GraphicsContext canvasContext)
     {
         final DoubleCorners visibleSourceCorners = zoomPane.getVisibleSourceDoubleCorners();
-        for (final AbstractRenderable renderable : quadTree.listNear(visibleSourceCorners, renderingComparator,
-            (renderable) -> objectInArea(renderable, visibleSourceCorners)))
+        final List<AbstractRenderable> renderables = quadTree.listNear(visibleSourceCorners, renderingComparator,
+            (renderable) -> objectInArea(renderable, visibleSourceCorners));
+
+        for (final AbstractRenderable renderable : renderables)
         {
-            renderable.onRender(canvasContext);
+            if (!renderable.isHidden())
+            {
+                renderable.onRender(canvasContext, 1);
+            }
+        }
+
+        //-----------------------------------------------------------------------------------------------------//
+        // Resort the renderables based on distance from viewport center in preparation for snapshot rendering //
+        //-----------------------------------------------------------------------------------------------------//
+
+        final Canvas canvas = canvasContext.getCanvas();
+        final int canvasWidth = (int)canvas.getWidth();
+        final int canvasHeight = (int)canvas.getHeight();
+
+        final Point2D viewSourceCenter = canvasToSourceDoublePosition(
+            (double)canvasWidth / 2, (double)canvasHeight / 2);
+
+        renderables.sort((o1, o2) ->
+        {
+            final Point2D o1Center = o1.getCorners().getCenter();
+            final Point2D o2Center = o2.getCorners().getCenter();
+
+            final int distanceCompare = Double.compare(
+                o1Center.distance(viewSourceCenter), o2Center.distance(viewSourceCenter));
+
+            return distanceCompare == 0 ? interactionComparator.compare(o1, o2) : distanceCompare;
+        });
+
+        // Prepare the snapshot Canvas for rendering
+        final WritableImage curBackgroundImage = zoomPane.getLatestCanvasBackgroundImage();
+        observableSnapshots.clear();
+
+        //----------------------//
+        // Render the snapshots //
+        //----------------------//
+
+        for (final AbstractRenderable renderable : renderables)
+        {
+            if (!renderable.snapshotable())
+            {
+                continue;
+            }
+
+            final DoubleCorners corners = renderable.getCorners();
+
+            final Point2D canvasTopLeft = sourceToCanvasDoublePosition(
+                corners.topLeftX(), corners.topLeftY());
+
+            final Point2D canvasBottomRightExclusive = sourceToCanvasDoublePosition(
+                corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
+
+            final double bottomRightExclusiveX = Math.min(canvasBottomRightExclusive.getX(), canvasWidth);
+            final double bottomRightExclusiveY = Math.min(canvasBottomRightExclusive.getY(), canvasHeight);
+
+            final double renderX = Math.max(0, canvasTopLeft.getX());
+            final double renderY = Math.max(0, canvasTopLeft.getY());
+
+            final double srcW = bottomRightExclusiveX - renderX;
+            final double srcH = bottomRightExclusiveY - renderY;
+
+            final double scaleX = srcW > MAX_SNAPSHOT_SIDE ? MAX_SNAPSHOT_SIDE / srcW : 1;
+            final double scaleY = srcH > MAX_SNAPSHOT_SIDE ? MAX_SNAPSHOT_SIDE / srcH : 1;
+            final double scale = Math.min(scaleX, scaleY);
+
+            final double renderW = scale * srcW;
+            final double renderH = scale * srcH;
+
+            final Canvas snapshotCanvas = snapshotCanvasCache.getCacheCanvas();
+            final GraphicsContext snapshotContext = snapshotCanvas.getGraphicsContext2D();
+
+            snapshotCanvas.setWidth(renderW);
+            snapshotCanvas.setHeight(renderH);
+
+            final Affine saved = canvasContext.getTransform();
+
+            snapshotContext.drawImage(curBackgroundImage,
+                renderX, renderY, srcW, srcH,
+                0, 0, renderW, renderH);
+
+            snapshotContext.scale(scale, scale);
+            snapshotContext.translate(-renderX, -renderY);
+            renderable.onRender(snapshotContext, scale);
+
+            snapshotContext.setTransform(saved);
+
+            observableSnapshots.add(new Snapshot(renderable, snapshotCanvas));
         }
 
         editMode.onDraw(canvasContext);
@@ -528,4 +700,10 @@ public class Editor
             }
         }
     }
+
+    ////////////////////
+    // Public Classes //
+    ////////////////////
+
+    public record Snapshot(AbstractRenderable renderable, Canvas canvas) {}
 }

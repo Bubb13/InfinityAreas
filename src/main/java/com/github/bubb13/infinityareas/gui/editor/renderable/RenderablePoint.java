@@ -62,12 +62,12 @@ public class RenderablePoint<BackingObjectType extends IntPoint> extends Abstrac
     }
 
     @Override
-    public void onRender(final GraphicsContext canvasContext)
+    public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
     {
-        final Point2D canvasPointTopLeft = editor.sourceToAbsoluteCanvasDoublePosition(
+        final Point2D canvasPointTopLeft = editor.sourceToCanvasDoublePosition(
             corners.topLeftX(), corners.topLeftY());
 
-        final Point2D canvasPointBottomRight = editor.sourceToAbsoluteCanvasDoublePosition(
+        final Point2D canvasPointBottomRight = editor.sourceToCanvasDoublePosition(
             corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
 
         canvasContext.setLineWidth(1);

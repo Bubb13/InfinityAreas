@@ -115,7 +115,13 @@ public class RenderableVertex extends AbstractRenderable
     }
 
     @Override
-    public void onRender(final GraphicsContext canvasContext)
+    public boolean isHidden()
+    {
+        return renderablePolygon.isHidden();
+    }
+
+    @Override
+    public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
     {
         Color color = selected ? Color.BLUE : Color.TEAL;
         if (renderablePolygon.isDrawing() && renderableVertexNode.next() == null)
@@ -127,8 +133,8 @@ public class RenderableVertex extends AbstractRenderable
 
         canvasContext.setLineWidth(1);
         canvasContext.setStroke(color);
-        final Point2D p1 = editor.sourceToAbsoluteCanvasPosition(vertex.x() - 1, vertex.y() - 1);
-        final Point2D p2 = editor.sourceToAbsoluteCanvasPosition(vertex.x() + 1, vertex.y() + 1);
+        final Point2D p1 = editor.sourceToCanvasPosition(vertex.x() - 1, vertex.y() - 1);
+        final Point2D p2 = editor.sourceToCanvasPosition(vertex.x() + 1, vertex.y() + 1);
         canvasContext.strokeRect(p1.getX(), p1.getY(), p2.getX() - p1.getX(), p2.getY() - p1.getY());
     }
 

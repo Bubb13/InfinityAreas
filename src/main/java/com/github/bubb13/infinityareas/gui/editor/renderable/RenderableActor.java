@@ -50,15 +50,15 @@ public class RenderableActor extends AbstractRenderable
     }
 
     @Override
-    public void onRender(final GraphicsContext canvasContext)
+    public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
     {
-        final Point2D actorPoint1 = editor.sourceToAbsoluteCanvasDoublePosition(
+        final Point2D actorPoint1 = editor.sourceToCanvasDoublePosition(
             actor.getX() - RADIUS, actor.getY() - RADIUS
         );
         final double actorPoint1X = actorPoint1.getX();
         final double actorPoint1Y = actorPoint1.getY();
 
-        final Point2D actorPoint2 = editor.sourceToAbsoluteCanvasDoublePosition(
+        final Point2D actorPoint2 = editor.sourceToCanvasDoublePosition(
             actor.getX() + RADIUS, actor.getY() + RADIUS
         );
         final double actorPoint2X = actorPoint2.getX();

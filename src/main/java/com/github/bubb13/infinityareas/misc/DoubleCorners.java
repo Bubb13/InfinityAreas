@@ -101,4 +101,9 @@ public class DoubleCorners
     {
         return contains(point, 0);
     }
+
+    public Point2D getCenter()
+    {
+        return new Point2D((topLeftX + bottomRightExclusiveX) / 2, (topLeftY + bottomRightExclusiveY) / 2);
+    }
 }

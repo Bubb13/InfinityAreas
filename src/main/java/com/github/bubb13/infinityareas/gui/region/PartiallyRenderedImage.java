@@ -49,7 +49,7 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
     /**
      * Single-pixel canvas drawing starts breaking down after this value
      */
-    final double MAX_ZOOM_FACTOR = 2500;
+    private final double MAX_ZOOM_FACTOR = 2500;
 
     ////////////////////
     // Private Fields //
@@ -76,6 +76,8 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
     private int curToDrawImagesHeight = 0;
     private int toDrawImageIndex = 0;
     private boolean blockDraw = false;
+
+    private WritableImage latestCanvasBackground;
 
     /////////////////////////
     // Public Constructors //
@@ -135,12 +137,17 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return graphics;
     }
 
+    public WritableImage getLatestCanvasBackgroundImage()
+    {
+        return latestCanvasBackground;
+    }
+
     public void setDrawCallback(final Consumer<GraphicsContext> drawCallback)
     {
         this.drawCallback = drawCallback;
     }
 
-    public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
+    public Point2D sourceToCanvasPosition(final int srcX, final int srcY)
     {
         final Bounds layout = canvas.getBoundsInParent();
         final int renderX = (int)layout.getMinX();
@@ -148,10 +155,35 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
         return new Point2D((int)(srcX * zoomFactor - renderX), (int)(srcY * zoomFactor - renderY));
     }
 
-    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
+    public Point2D sourceToCanvasDoublePosition(final double srcX, final double srcY)
     {
         final Bounds layout = canvas.getBoundsInParent();
         return new Point2D(srcX * zoomFactor - layout.getMinX(), srcY * zoomFactor - layout.getMinY());
+    }
+
+    public Point canvasToSourcePosition(final int canvasX, final int canvasY)
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        return new Point(
+            (int)((layout.getMinX() + canvasX) / zoomFactor),
+            (int)((layout.getMinY() + canvasY) / zoomFactor)
+        );
+    }
+
+    public Point2D canvasToSourceDoublePosition(final double canvasX, final double canvasY)
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        return new Point2D((layout.getMinX() + canvasX) / zoomFactor, (layout.getMinY() + canvasY) / zoomFactor);
+    }
+
+    public double getCanvasWidth()
+    {
+        return canvas.getWidth();
+    }
+
+    public double getCanvasHeight()
+    {
+        return canvas.getHeight();
     }
 
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
@@ -331,6 +363,8 @@ public class PartiallyRenderedImage extends Region implements VisibleNotifiable
                 scaleBgra(renderX, renderY, renderW, renderH);
                 toDrawImage.getPixelWriter().setPixels(0, 0, renderW, renderH,
                     PixelFormat.getByteBgraPreInstance(), scaleBuffer, 0, renderW * 4);
+
+                latestCanvasBackground = toDrawImage;
 
                 graphics.clearRect(0, 0, renderW, renderH);
                 graphics.drawImage(toDrawImage,

@@ -11,8 +11,11 @@ public interface RenderableInterface
 {
     DoubleCorners getCorners();
     boolean isEnabled();
+    boolean isHidden();
+    boolean snapshotable();
+    void snapshot(GraphicsContext snapshotContext);
     int sortWeight();
-    void onRender(GraphicsContext canvasContext);
+    void onRender(GraphicsContext canvasContext, final double scaleCorrection);
     boolean contains(Point2D point);
     boolean offerPressCapture(MouseEvent event);
     void onClicked(MouseEvent event);

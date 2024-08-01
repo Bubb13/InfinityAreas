@@ -77,13 +77,13 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
     }
 
     @Override
-    public void onRender(final GraphicsContext canvasContext)
+    public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
     {
         canvasContext.setStroke(Color.MAGENTA);
         canvasContext.setLineWidth(LINE_WIDTH * editor.getZoomFactor());
 
-        final Point2D startPoint = editor.sourceToAbsoluteCanvasDoublePosition(lineStartPointX, lineStartPointY);
-        final Point2D endPoint = editor.sourceToAbsoluteCanvasDoublePosition(lineEndPointX, lineEndPointY);
+        final Point2D startPoint = editor.sourceToCanvasDoublePosition(lineStartPointX, lineStartPointY);
+        final Point2D endPoint = editor.sourceToCanvasDoublePosition(lineEndPointX, lineEndPointY);
 
         canvasContext.strokeLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
     }

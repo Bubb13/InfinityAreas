@@ -71,7 +71,7 @@ public abstract class RenderableAnchoredLine<BackingPointType extends ReadableDo
     }
 
     @Override
-    public void onRender(final GraphicsContext canvasContext)
+    public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
     {
         final double x1 = backingPoint1.getX();
         final double y1 = backingPoint1.getY();
@@ -84,8 +84,8 @@ public abstract class RenderableAnchoredLine<BackingPointType extends ReadableDo
         final Point2D p2 = getIntersection(x1, y1, x2, y2, anchor2);
         if (p2 == null) return;
 
-        final Point2D canvasP1 = editor.sourceToAbsoluteCanvasDoublePosition(p1.getX(), p1.getY());
-        final Point2D canvasP2 = editor.sourceToAbsoluteCanvasDoublePosition(p2.getX(), p2.getY());
+        final Point2D canvasP1 = editor.sourceToCanvasDoublePosition(p1.getX(), p1.getY());
+        final Point2D canvasP2 = editor.sourceToCanvasDoublePosition(p2.getX(), p2.getY());
 
         // Hack so that the line doesn't render over the second anchor
         final int xAdj = canvasP2.getX() < canvasP1.getX() ? 1 : -1;

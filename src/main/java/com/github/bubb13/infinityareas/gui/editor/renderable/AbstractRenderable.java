@@ -5,12 +5,45 @@ import com.github.bubb13.infinityareas.misc.ReferenceHolder;
 import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
 import com.github.bubb13.infinityareas.misc.ReferenceTracker;
 import javafx.geometry.Point2D;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 public abstract class AbstractRenderable implements RenderableInterface, ReferenceTrackable
 {
+    ////////////////////
+    // Private Fields //
+    ////////////////////
+
     private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+    private boolean isHidden = false;
+
+    ////////////////////
+    // Public Methods //
+    ////////////////////
+
+    public void setHidden(final boolean hidden)
+    {
+        isHidden = hidden;
+    }
+
+    @Override
+    public boolean isHidden()
+    {
+        return isHidden;
+    }
+
+    @Override
+    public boolean snapshotable()
+    {
+        return false;
+    }
+
+    @Override
+    public void snapshot(final GraphicsContext graphicsContext)
+    {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public void addedTo(final ReferenceHolder<?> referenceHolder)

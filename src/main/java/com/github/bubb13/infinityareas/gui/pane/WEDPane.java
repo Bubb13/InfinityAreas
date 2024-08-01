@@ -9,9 +9,9 @@ import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.EditorCommons;
 import com.github.bubb13.infinityareas.gui.editor.connector.WEDWallPolygonConnector;
+import com.github.bubb13.infinityareas.gui.editor.editmode.AbstractEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.DrawPolygonEditMode;
 import com.github.bubb13.infinityareas.gui.editor.editmode.QuickSelectEditMode;
-import com.github.bubb13.infinityareas.gui.editor.editmode.wedpane.WEDPaneNormalEditMode;
 import com.github.bubb13.infinityareas.gui.editor.field.StandardStructureDefinitions;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
@@ -63,12 +63,21 @@ public class WEDPane extends StackPane
         editor.setRenderingComparator(renderingComparator);
         editor.setInteractionComparator(renderingComparator.reversed());
     }
-    private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Wall Polygons");
 
-    private final StackPane rightPane = new StackPane();
+    private final StackPane rightNodeParent = new StackPane();
     private Node curRightNode;
 
-    private VBox defaultRightNode;
+    private final VBox defaultRightNode = new VBox()
+    {
+        @Override
+        protected double computeMinWidth(double height)
+        {
+            return computePrefWidth(height);
+        }
+    };
+    private final CheckBox renderPolygonsCheckbox = new CheckBox("Render Wall Polygons");
+
+    private final SnapshotsPane snapshotsPane = new SnapshotsPane(editor, editor.getSnapshots());
     private final FieldPane fieldPane = new FieldPane();
     private Object fieldPaneOwner = null;
 
@@ -130,6 +139,9 @@ public class WEDPane extends StackPane
             final Button saveButton = new Button("Save");
             saveButton.setOnAction((ignored) -> this.onSave());
 
+            final Button viewVisibleObjectsButton = new UnderlinedButton("View Visible Objects");
+            viewVisibleObjectsButton.setOnAction((ignored) -> this.onViewVisibleObjects());
+
             final Button drawPolygonButton = new UnderlinedButton("Draw Wall Polygon");
             drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
 
@@ -139,20 +151,13 @@ public class WEDPane extends StackPane
             final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
             quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
 
-            toolbar.getChildren().addAll(saveButton, drawPolygonButton, bisectLine, quickSelect);
+            toolbar.getChildren().addAll(saveButton, viewVisibleObjectsButton,
+                drawPolygonButton, bisectLine, quickSelect);
 
             ////////////////////
             // Side Pane VBox //
             ////////////////////
 
-            defaultRightNode = new VBox()
-            {
-                @Override
-                protected double computeMinWidth(double height)
-                {
-                    return computePrefWidth(height);
-                }
-            };
             defaultRightNode.setPadding(new Insets(0, 10, 10, 10));
 
                 //////////////////////////////
@@ -169,7 +174,7 @@ public class WEDPane extends StackPane
             ///////////////////////////////
 
             final HBox zoomPaneSidePaneHBox = new HBox();
-            zoomPaneSidePaneHBox.getChildren().addAll(zoomPane, rightPane);
+            zoomPaneSidePaneHBox.getChildren().addAll(zoomPane, rightNodeParent);
 
                 //////////////
                 // ZoomPane //
@@ -188,7 +193,7 @@ public class WEDPane extends StackPane
 
         editor.registerEditMode(WEDPaneNormalEditMode.class, () -> new WEDPaneNormalEditMode(editor));
         editor.registerEditMode(DrawPolygonEditMode.class, DrawWallPolygonEditMode::new);
-        editor.registerEditMode(QuickSelectEditMode.class, () -> new QuickSelectEditMode(editor));
+        editor.registerEditMode(QuickSelectEditMode.class, WEDPaneQuickSelectEditMode::new);
     }
 
     private void changeRightNode(final Parent newNode)
@@ -198,7 +203,7 @@ public class WEDPane extends StackPane
             editor.doOperationMaintainViewportLeft(() ->
             {
                 curRightNode = newNode;
-                final ObservableList<Node> children = rightPane.getChildren();
+                final ObservableList<Node> children = rightNodeParent.getChildren();
                 children.clear();
                 children.add(newNode);
 
@@ -247,6 +252,16 @@ public class WEDPane extends StackPane
             .start();
     }
 
+    private void onViewVisibleObjects()
+    {
+        if (fieldPaneOwner != null)
+        {
+            editor.unselectAll();
+        }
+
+        changeRightNode(snapshotsPane);
+    }
+
     private void onSelectReplaceOverlayTileset()
     {
         final WED wed = wedRef.get();
@@ -274,6 +289,136 @@ public class WEDPane extends StackPane
     // Private Classes //
     /////////////////////
 
+    public class WEDPaneNormalEditMode extends AbstractEditMode
+    {
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        private final Editor editor;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public WEDPaneNormalEditMode(Editor editor)
+        {
+            this.editor = editor;
+        }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
+
+        @Override
+        public boolean shouldCaptureObjectPress(final MouseEvent event, final AbstractRenderable renderable)
+        {
+            return true;
+        }
+
+        @Override
+        public boolean shouldCaptureObjectDrag(final MouseEvent event, final AbstractRenderable renderable)
+        {
+            return true;
+        }
+
+        @Override
+        public void onObjectDragged(final MouseEvent event, final AbstractRenderable renderable)
+        {
+            renderable.onDragged(event);
+        }
+
+        @Override
+        public void onKeyPressed(final KeyEvent event)
+        {
+            final KeyCode key = event.getCode();
+
+            switch (key)
+            {
+                case ESCAPE ->
+                {
+                    if (editor.selectedCount() > 0)
+                    {
+                        event.consume();
+                        editor.unselectAll();
+                    }
+                    else if (rightNodeParent.getChildren().get(0) == snapshotsPane)
+                    {
+                        changeRightNode(defaultRightNode);
+                    }
+                }
+                case B ->
+                {
+                    event.consume();
+                    EditorCommons.onBisectLine(editor);
+                }
+                case D ->
+                {
+                    event.consume();
+                    editor.enterEditMode(DrawPolygonEditMode.class);
+                }
+                case Q ->
+                {
+                    event.consume();
+                    editor.enterEditMode(QuickSelectEditMode.class);
+                }
+                case DELETE ->
+                {
+                    event.consume();
+                    EditorCommons.deleteSelected(editor);
+                }
+                case V ->
+                {
+                    event.consume();
+                    onViewVisibleObjects();
+                }
+            }
+        }
+    }
+
+    public class WEDPaneQuickSelectEditMode extends QuickSelectEditMode
+    {
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public WEDPaneQuickSelectEditMode()
+        {
+            super(WEDPane.this.editor);
+        }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
+
+        @Override
+        public void onKeyPressed(KeyEvent event)
+        {
+            final KeyCode key = event.getCode();
+
+            switch (key)
+            {
+                case ESCAPE ->
+                {
+                    if (editor.selectedCount() == 0 && rightNodeParent.getChildren().get(0) == snapshotsPane)
+                    {
+                        event.consume();
+                        changeRightNode(defaultRightNode);
+                        return;
+                    }
+                }
+                case V ->
+                {
+                    event.consume();
+                    onViewVisibleObjects();
+                    return;
+                }
+            }
+
+            super.onKeyPressed(event);
+        }
+    }
+
     private class DrawWallPolygonEditMode extends DrawPolygonEditMode<WED.Polygon>
     {
         /////////////////////////
@@ -290,17 +435,30 @@ public class WEDPane extends StackPane
         ////////////////////
 
         @Override
-        public void onKeyPressed(final KeyEvent event)
+        public void onKeyPressed(KeyEvent event)
         {
-            if (event.getCode() == KeyCode.Q)
+            final KeyCode key = event.getCode();
+
+            switch (key)
             {
-                event.consume();
-                editor.enterEditMode(QuickSelectEditMode.class);
+                case ESCAPE ->
+                {
+                    if (editor.selectedCount() == 0 && rightNodeParent.getChildren().get(0) == snapshotsPane)
+                    {
+                        event.consume();
+                        changeRightNode(defaultRightNode);
+                        return;
+                    }
+                }
+                case V ->
+                {
+                    event.consume();
+                    onViewVisibleObjects();
+                    return;
+                }
             }
-            else
-            {
-                super.onKeyPressed(event);
-            }
+
+            super.onKeyPressed(event);
         }
 
         ///////////////////////
@@ -413,18 +571,18 @@ public class WEDPane extends StackPane
         }
 
         @Override
-        public void onRender(final GraphicsContext canvasContext)
+        public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
         {
-            super.onRender(canvasContext);
+            super.onRender(canvasContext, scaleCorrection);
 
             if (selected)
             {
                 final DoubleCorners corners = getCorners();
 
-                final Point2D canvasPointTopLeft = editor.sourceToAbsoluteCanvasDoublePosition(
+                final Point2D canvasPointTopLeft = editor.sourceToCanvasDoublePosition(
                     corners.topLeftX(), corners.topLeftY());
 
-                final Point2D canvasPointBottomRight = editor.sourceToAbsoluteCanvasDoublePosition(
+                final Point2D canvasPointBottomRight = editor.sourceToCanvasDoublePosition(
                     corners.bottomRightExclusiveX(), corners.bottomRightExclusiveY());
 
                 canvasContext.setLineWidth(1);

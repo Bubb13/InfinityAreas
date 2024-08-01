@@ -147,14 +147,20 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     }
 
     @Override
-    public void onRender(final GraphicsContext canvasContext)
+    public boolean snapshotable()
+    {
+        return !drawing;
+    }
+
+    @Override
+    public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
     {
         if (renderFill)
         {
             renderFill(canvasContext);
         }
 
-        renderOutline(canvasContext);
+        renderOutline(canvasContext, scaleCorrection);
     }
 
     @Override
@@ -207,8 +213,8 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     private void renderLine(
         final GraphicsContext canvasContext, final GenericPolygon.Vertex v1, final GenericPolygon.Vertex v2)
     {
-        final Point2D p1 = editor.sourceToAbsoluteCanvasPosition(v1.x(), v1.y());
-        final Point2D p2 = editor.sourceToAbsoluteCanvasPosition(v2.x(), v2.y());
+        final Point2D p1 = editor.sourceToCanvasPosition(v1.x(), v1.y());
+        final Point2D p2 = editor.sourceToCanvasPosition(v2.x(), v2.y());
         canvasContext.strokeLine(p1.getX(), p1.getY(), p2.getX(), p2.getY());
     }
 
@@ -231,12 +237,12 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
         canvasContext.setTransform(savedAffine);
     }
 
-    private void renderOutline(final GraphicsContext canvasContext)
+    private void renderOutline(final GraphicsContext canvasContext, final double scaleCorrection)
     {
         final SimpleLinkedList<GenericPolygon.Vertex> vertices = polygon.getVertices();
         final int limit = vertices.size() - 1;
 
-        canvasContext.setLineWidth(1D);
+        canvasContext.setLineWidth(1D / scaleCorrection);
         canvasContext.setStroke(getLineColor());
 
         var curNode = vertices.getFirstNode();

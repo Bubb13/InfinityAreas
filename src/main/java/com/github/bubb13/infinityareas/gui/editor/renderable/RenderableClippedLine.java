@@ -75,7 +75,7 @@ public abstract class RenderableClippedLine<BackingPointType extends ReadableDou
     }
 
     @Override
-    public void onRender(final GraphicsContext canvasContext)
+    public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
     {
         canvasContext.save();
 
@@ -85,10 +85,10 @@ public abstract class RenderableClippedLine<BackingPointType extends ReadableDou
         canvasContext.setStroke(getLineColor());
         canvasContext.setLineWidth(1);
 
-        final Point2D canvasPoint1 = editor.sourceToAbsoluteCanvasDoublePosition(
+        final Point2D canvasPoint1 = editor.sourceToCanvasDoublePosition(
             backingPoint1.getX(), backingPoint1.getY());
 
-        final Point2D canvasPoint2 = editor.sourceToAbsoluteCanvasDoublePosition(
+        final Point2D canvasPoint2 = editor.sourceToCanvasDoublePosition(
             backingPoint2.getX(), backingPoint2.getY());
 
         canvasContext.moveTo(canvasPoint1.getX(), canvasPoint1.getY());

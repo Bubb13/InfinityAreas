@@ -8,6 +8,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -89,6 +90,11 @@ public class ZoomPane extends NotifyingScrollPane
         return partialImage.getGraphics();
     }
 
+    public WritableImage getLatestCanvasBackgroundImage()
+    {
+        return partialImage.getLatestCanvasBackgroundImage();
+    }
+
     public void requestDraw()
     {
         partialImage.requestLayout();
@@ -137,14 +143,34 @@ public class ZoomPane extends NotifyingScrollPane
     // Position Helpers //
     //------------------//
 
-    public Point2D sourceToAbsoluteCanvasPosition(final int srcX, final int srcY)
+    public Point2D sourceToCanvasPosition(final int srcX, final int srcY)
     {
-        return partialImage.sourceToAbsoluteCanvasPosition(srcX, srcY);
+        return partialImage.sourceToCanvasPosition(srcX, srcY);
     }
 
-    public Point2D sourceToAbsoluteCanvasDoublePosition(final double srcX, final double srcY)
+    public Point2D sourceToCanvasDoublePosition(final double srcX, final double srcY)
     {
-        return partialImage.sourceToAbsoluteCanvasDoublePosition(srcX, srcY);
+        return partialImage.sourceToCanvasDoublePosition(srcX, srcY);
+    }
+
+    public Point canvasToSourcePosition(final int canvasX, final int canvasY)
+    {
+        return partialImage.canvasToSourcePosition(canvasX, canvasY);
+    }
+
+    public Point2D canvasToSourceDoublePosition(final double canvasX, final double canvasY)
+    {
+        return partialImage.canvasToSourceDoublePosition(canvasX, canvasY);
+    }
+
+    public double getCanvasWidth()
+    {
+        return partialImage.getWidth();
+    }
+
+    public double getCanvasHeight()
+    {
+        return partialImage.getHeight();
     }
 
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)

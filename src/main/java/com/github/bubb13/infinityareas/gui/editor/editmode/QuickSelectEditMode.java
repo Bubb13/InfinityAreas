@@ -210,15 +210,15 @@ public class QuickSelectEditMode extends LabeledEditMode
         }
 
         @Override
-        public void onRender(final GraphicsContext canvasContext)
+        public void onRender(final GraphicsContext canvasContext, final double scaleCorrection)
         {
             canvasContext.setLineWidth(1D);
             canvasContext.setStroke(Color.rgb(0, 255, 0));
 
-            final Point2D absoluteTopLeft = editor.sourceToAbsoluteCanvasPosition(
+            final Point2D absoluteTopLeft = editor.sourceToCanvasPosition(
                 (int)corners.topLeftX(), (int)corners.topLeftY());
 
-            final Point2D absoluteBottomRightExclusive = editor.sourceToAbsoluteCanvasPosition(
+            final Point2D absoluteBottomRightExclusive = editor.sourceToCanvasPosition(
                 (int)corners.bottomRightExclusiveX(), (int)corners.bottomRightExclusiveY());
 
             canvasContext.strokeRect(absoluteTopLeft.getX(), absoluteTopLeft.getY(),

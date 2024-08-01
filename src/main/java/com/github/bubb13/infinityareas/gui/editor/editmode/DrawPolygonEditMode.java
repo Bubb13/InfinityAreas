@@ -131,6 +131,11 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
                 event.consume();
                 EditorCommons.deleteSelected(editor);
             }
+            case Q ->
+            {
+                event.consume();
+                editor.enterEditMode(QuickSelectEditMode.class);
+            }
         }
     }
 
