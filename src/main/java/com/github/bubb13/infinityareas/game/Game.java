@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -41,13 +42,14 @@ public class Game
     private final BifFile[] bifFiles;
     private Type engineType;
 
-    private Path aliasHD0;
-    private Path aliasCD1;
-    private Path aliasCD2;
-    private Path aliasCD3;
-    private Path aliasCD4;
-    private Path aliasCD5;
-    private Path aliasCD6;
+    private final ArrayList<Path> aliasHD0 = new ArrayList<>();
+    private final ArrayList<Path> aliasCache = new ArrayList<>(); // Not defined in INI, but derived from aliasHD0
+    private final ArrayList<Path> aliasCD1 = new ArrayList<>();
+    private final ArrayList<Path> aliasCD2 = new ArrayList<>();
+    private final ArrayList<Path> aliasCD3 = new ArrayList<>();
+    private final ArrayList<Path> aliasCD4 = new ArrayList<>();
+    private final ArrayList<Path> aliasCD5 = new ArrayList<>();
+    private final ArrayList<Path> aliasCD6 = new ArrayList<>();
 
     /////////////////////////
     // Public Constructors //
@@ -367,7 +369,7 @@ public class Game
     {
         registerResources(tracker);
         detectEngineType();
-        parseClassicINI(tracker);
+        handleAliasPaths(tracker);
         readBifs(tracker);
     }
 
@@ -510,7 +512,7 @@ public class Game
         return matchedTypes;
     }
 
-    private void parseClassicINI(final TaskTrackerI tracker) throws Exception
+    private void handleAliasPaths(final TaskTrackerI tracker) throws Exception
     {
         final String classicININame = switch (engineType)
         {
@@ -533,9 +535,16 @@ public class Game
 
         if (classicININame == null)
         {
-            return;
+            aliasHD0.add(gameRoot); // EE games only use the game root
         }
+        else
+        {
+            parseClassicINI(tracker, classicININame);
+        }
+    }
 
+    private void parseClassicINI(final TaskTrackerI tracker, final String classicININame) throws Exception
+    {
         tracker.updateMessage("Processing classic game ini ...");
         tracker.updateProgress(0, 1);
 
@@ -552,22 +561,39 @@ public class Game
         {
             ini.read(reader);
             final var alias = ini.configurationAt("Alias");
-            aliasHD0 = parseINIPath(alias, "HD0:");
-            aliasCD1 = parseINIPath(alias, "CD1:");
-            aliasCD2 = parseINIPath(alias, "CD2:");
-            aliasCD3 = parseINIPath(alias, "CD3:");
-            aliasCD4 = parseINIPath(alias, "CD4:");
-            aliasCD5 = parseINIPath(alias, "CD5:");
-            aliasCD6 = parseINIPath(alias, "CD6:");
+
+            parseINIPath(alias, "HD0:", aliasHD0);
+            aliasHD0.add(gameRoot); // Fall back to game root when HD0: isn't defined
+
+            for (final Path path : aliasHD0)
+            {
+                aliasCache.add(path.resolve("cache"));
+            }
+
+            parseINIPath(alias, "CD1:", aliasCD1);
+            parseINIPath(alias, "CD2:", aliasCD2);
+            parseINIPath(alias, "CD3:", aliasCD3);
+            parseINIPath(alias, "CD4:", aliasCD4);
+            parseINIPath(alias, "CD5:", aliasCD5);
+            parseINIPath(alias, "CD6:", aliasCD6);
         }
 
         tracker.updateProgress(1, 1);
     }
 
-    private Path parseINIPath(final HierarchicalConfiguration<ImmutableNode> node, final String key)
+    private void parseINIPath(
+        final HierarchicalConfiguration<ImmutableNode> node, final String key, final Collection<Path> aliasPaths)
     {
-        final String pathStr = node.getString(key);
-        return pathStr == null ? null : Paths.get(pathStr);
+        final String aliasStr = node.getString(key);
+        if (aliasStr == null) return;
+
+        // Classic versions sometimes use a semicolon to supply more than one path for an alias.
+        // The engine uses the first matching path when it is looking for a resource.
+        final String[] pathStrings = aliasStr.split(";");
+        for (final String pathString : pathStrings)
+        {
+            aliasPaths.add(Paths.get(pathString));
+        }
     }
 
     private void readBifs(final TaskTrackerI tracker) throws Exception
@@ -585,100 +611,68 @@ public class Game
             Path bifRoot = null;
             Path bifPath = null;
 
+            outer:
             for (final KeyFile.BifEntry.Location possibleLocation : bifEntry.getPossibleLocations())
             {
                 //System.out.printf("BIF: \"%s\", possible location: %s\n", bifEntry.getName(), possibleLocation);
-                String testBifRootName;
-                Path testBifRoot;
+                final String testBifRootName;
+                final ArrayList<Path> testBifRoots;
 
                 switch (possibleLocation)
                 {
                     case HD0 ->
                     {
                         testBifRootName = "<game>";
-                        testBifRoot = aliasHD0 == null ? gameRoot : aliasHD0;
+                        testBifRoots = aliasHD0;
                     }
-                    // TODO: Is this under HD0?
                     case CACHE ->
                     {
                         testBifRootName = "<cache>";
-                        testBifRoot = (aliasHD0 == null ? gameRoot : aliasHD0).resolve("cache");
+                        testBifRoots = aliasCache;
                     }
                     case CD1 ->
                     {
                         testBifRootName = "<cd1>";
-                        testBifRoot = aliasCD1;
+                        testBifRoots = aliasCD1;
                     }
                     case CD2 ->
                     {
                         testBifRootName = "<cd2>";
-                        testBifRoot = aliasCD2;
+                        testBifRoots = aliasCD2;
                     }
                     case CD3 ->
                     {
                         testBifRootName = "<cd3>";
-                        testBifRoot = aliasCD3;
+                        testBifRoots = aliasCD3;
                     }
                     case CD4 ->
                     {
                         testBifRootName = "<cd4>";
-                        testBifRoot = aliasCD4;
+                        testBifRoots = aliasCD4;
                     }
                     case CD5 ->
                     {
                         testBifRootName = "<cd5>";
-                        testBifRoot = aliasCD5;
+                        testBifRoots = aliasCD5;
                     }
                     case CD6 ->
                     {
                         testBifRootName = "<cd6>";
-                        testBifRoot = aliasCD6;
+                        testBifRoots = aliasCD6;
                     }
                     default -> throw new IllegalStateException(String.format(
                         "Unknown bif location for \"%s\"", bifName));
                 }
 
-                Path testBifPath = FileUtil.resolvePathSafe(testBifRoot, bifName);
-
-                if (testBifPath == null)
+                for (final Path testBifRoot : testBifRoots)
                 {
-                    throw new IllegalStateException(String.format(
-                        "Attempted to access malformed bif path: \"%s%s%s\"",
-                        testBifRoot, File.separator, bifName));
-                }
-
-                //System.out.printf("testBifRootName: \"%s\", testBifRoot: \"%s\", bifName: \"%s\"\n",
-                //    testBifRootName, testBifRoot, bifName);
-
-                //System.out.printf("Checking: \"%s\"\n", testBifPath);
-
-                boolean found = false;
-
-                if (Files.isRegularFile(testBifPath))
-                {
-                    found = true;
-                }
-                else if (engineType == Type.IWD1 || engineType == Type.HOW || engineType == Type.TOTLM)
-                {
-                    final String bifNameNoPathOrExtension = FileUtil.getFileName(Paths.get(bifName));
-                    final Path compressedBifPath = testBifPath.getParent()
-                        .resolve(bifNameNoPathOrExtension + ".cbf");
-
-                    //System.out.printf("Looking for special: \"%s\"\n", compressedBifPath);
-
-                    if (Files.isRegularFile(compressedBifPath))
+                    bifPath = checkBifRoot(testBifRoot, bifName);
+                    if (bifPath != null)
                     {
-                        testBifPath = compressedBifPath;
-                        found = true;
+                        bifRootName = testBifRootName;
+                        bifRoot = testBifRoot;
+                        break outer;
                     }
-                }
-
-                if (found)
-                {
-                    bifRootName = testBifRootName;
-                    bifRoot = testBifRoot;
-                    bifPath = testBifPath;
-                    break;
                 }
             }
 
@@ -702,8 +696,7 @@ public class Game
                     ErrorAlert.openAndWait(String.format("Failed to find bif: \"%s\"", bifName));
                 }
             }
-
-            if (bifPath != null)
+            else
             {
                 try
                 {
@@ -717,6 +710,43 @@ public class Game
 
             tracker.updateProgress(i + 1, keyFile.getNumBifEntries());
         }
+    }
+
+    private Path checkBifRoot(final Path testBifRoot, final String bifName)
+    {
+        final Path testBifPath = FileUtil.resolvePathSafe(testBifRoot, bifName);
+
+        if (testBifPath == null)
+        {
+            throw new IllegalStateException(String.format(
+                "Attempted to access malformed bif path: \"%s%s%s\"",
+                testBifRoot, File.separator, bifName));
+        }
+
+        //System.out.printf("testBifRootName: \"%s\", testBifRoot: \"%s\", bifName: \"%s\"\n",
+        //    testBifRootName, testBifRoot, bifName);
+
+        //System.out.printf("Checking: \"%s\"\n", testBifPath);
+
+        if (Files.isRegularFile(testBifPath))
+        {
+            return testBifPath;
+        }
+        else if (engineType == Type.IWD1 || engineType == Type.HOW || engineType == Type.TOTLM)
+        {
+            final String bifNameNoPathOrExtension = FileUtil.getFileName(Paths.get(bifName));
+            final Path compressedBifPath = testBifPath.getParent()
+                .resolve(bifNameNoPathOrExtension + ".cbf");
+
+            //System.out.printf("Looking for special: \"%s\"\n", compressedBifPath);
+
+            if (Files.isRegularFile(compressedBifPath))
+            {
+                return compressedBifPath;
+            }
+        }
+
+        return null;
     }
 
     ///////////////////////////
