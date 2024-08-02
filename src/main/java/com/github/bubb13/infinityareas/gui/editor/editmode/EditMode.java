@@ -21,7 +21,7 @@ public interface EditMode
 
     MouseButton customOnMousePressed(MouseEvent event);
     boolean shouldCaptureObjectPress(MouseEvent event, AbstractRenderable renderable);
-    void onBackgroundPressed(MouseEvent event, double sourcePressX, double sourcePressY);
+    boolean onBackgroundPressed(MouseEvent event, double sourcePressX, double sourcePressY);
 
     boolean customOnMouseDragged(MouseEvent event);
     AbstractRenderable directCaptureDraggedObject(MouseEvent event);
@@ -29,6 +29,7 @@ public interface EditMode
     void onObjectDragged(MouseEvent event, AbstractRenderable renderable);
 
     boolean customOnMouseReleased(MouseEvent event);
+    void onBackgroundClicked(MouseEvent event);
 
     void onKeyPressed(KeyEvent event);
 }

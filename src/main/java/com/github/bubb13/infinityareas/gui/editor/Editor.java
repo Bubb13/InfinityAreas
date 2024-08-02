@@ -599,7 +599,10 @@ public class Editor
             return;
         }
 
-        editMode.onBackgroundPressed(event, sourcePressX, sourcePressY);
+        if (!editMode.onBackgroundPressed(event, sourcePressX, sourcePressY))
+        {
+            pressButton = event.getButton();
+        }
     }
 
     private void onMouseDragged(final MouseEvent event)
@@ -615,10 +618,11 @@ public class Editor
         if (pressObject == null)
         {
             pressObject = editMode.directCaptureDraggedObject(event);
-            if (pressObject != null)
+            if (pressObject == null)
             {
-                pressButton = button;
+                return;
             }
+            pressButton = button;
         }
 
         if (button != pressButton)
@@ -655,10 +659,19 @@ public class Editor
         {
             if (!dragOccurred)
             {
-                final Point2D sourcePoint = zoomPane.absoluteCanvasToSourceDoublePosition(event.getX(), event.getY());
-                if (pointInObjectExact(sourcePoint, pressObject))
+                if (pressObject == null)
                 {
-                    pressObject.onClicked(event);
+                    editMode.onBackgroundClicked(event);
+                }
+                else
+                {
+                    final Point2D sourcePoint = zoomPane.absoluteCanvasToSourceDoublePosition(
+                        event.getX(), event.getY());
+
+                    if (pointInObjectExact(sourcePoint, pressObject))
+                    {
+                        pressObject.onClicked(event);
+                    }
                 }
             }
             pressButton = null;

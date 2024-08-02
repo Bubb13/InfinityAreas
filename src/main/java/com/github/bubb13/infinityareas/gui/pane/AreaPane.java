@@ -306,6 +306,12 @@ public class AreaPane extends StackPane
         }
 
         @Override
+        public void onBackgroundClicked(final MouseEvent event)
+        {
+            editor.unselectAll();
+        }
+
+        @Override
         public void onKeyPressed(final KeyEvent event)
         {
             final KeyCode key = event.getCode();

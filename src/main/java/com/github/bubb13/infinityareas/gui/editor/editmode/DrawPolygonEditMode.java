@@ -50,9 +50,9 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     }
 
     @Override
-    public void onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY)
+    public boolean onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY)
     {
-        if (event.getButton() != MouseButton.PRIMARY) return;
+        if (event.getButton() != MouseButton.PRIMARY) return false;
 
         final int sourcePressXInt = (int)sourcePressX;
         final int sourcePressYInt = (int)sourcePressY;
@@ -72,6 +72,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
         }
 
         drawingPolygon.addNewVertex(sourcePressXInt, sourcePressYInt);
+        return true;
     }
 
     @Override

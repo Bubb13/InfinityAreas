@@ -36,7 +36,10 @@ public class AbstractEditMode implements EditMode
         return false;
     }
 
-    public void onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY) {}
+    public boolean onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY)
+    {
+        return false;
+    }
 
     public boolean customOnMouseDragged(final MouseEvent event)
     {
@@ -59,6 +62,8 @@ public class AbstractEditMode implements EditMode
     {
         return false;
     }
+
+    public void onBackgroundClicked(final MouseEvent event) {}
 
     public void onKeyPressed(final KeyEvent event) {}
 }
