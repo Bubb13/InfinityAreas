@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas.gui.dialog;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.application.Platform;
@@ -14,6 +15,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.stage.Stage;
 
 public class ErrorAlert extends Alert
 {
@@ -102,5 +104,10 @@ public class ErrorAlert extends Alert
 
         final DialogPane dialogPane = getDialogPane();
         dialogPane.setContent(pane);
+
+        final Stage stage = (Stage)dialogPane.getScene().getWindow();
+        stage.setOnHiding((ignored) -> GlobalState.setFrontStage(null));
+        GlobalState.setFrontStage(stage);
+        JavaFXUtil.forceToFront(stage);
     }
 }

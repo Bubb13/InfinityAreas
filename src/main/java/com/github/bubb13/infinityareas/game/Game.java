@@ -689,8 +689,9 @@ public class Game
                 if (engineType == Type.SOA || engineType == Type.TOB)
                 {
                     final String bifOnlyName = Paths.get(bifName).getFileName().toString();
-                    if (bifOnlyName.equals("progtest.bif") || bifOnlyName.equals("ProgTes2.bif")
-                        || bifOnlyName.equals("DeSound.bif"))
+                    if (bifOnlyName.equalsIgnoreCase("progtest.bif")
+                        || bifOnlyName.equalsIgnoreCase("ProgTes2.bif")
+                        || bifOnlyName.equalsIgnoreCase("DeSound.bif"))
                     {
                         ignore = true;
                     }
@@ -698,7 +699,7 @@ public class Game
 
                 if (!ignore)
                 {
-                    throw new IllegalStateException(String.format("Failed to find bif: \"%s\"", bifName));
+                    ErrorAlert.openAndWait(String.format("Failed to find bif: \"%s\"", bifName));
                 }
             }
 

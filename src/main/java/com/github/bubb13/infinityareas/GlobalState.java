@@ -36,6 +36,7 @@ public class GlobalState
     private static Application application;
     private static Stage primaryStage;
     private static PixelFormat.Type nativePixelFormatType;
+    private static Stage frontStage;
 
     ///////////////////////////
     // Public Static Methods //
@@ -172,6 +173,20 @@ public class GlobalState
     public static void popModalStage(final Stage stage)
     {
         modalStages.remove(stage);
+    }
+
+    public static void checkFrontStage()
+    {
+        if (frontStage != null)
+        {
+            frontStage.setAlwaysOnTop(true);
+            frontStage.setAlwaysOnTop(false);
+        }
+    }
+
+    public static void setFrontStage(final Stage stage)
+    {
+        frontStage = stage;
     }
 
     public static void cleanTemp()

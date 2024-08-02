@@ -2,10 +2,10 @@
 package com.github.bubb13.infinityareas.gui.stage;
 
 import com.github.bubb13.infinityareas.GlobalState;
+import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.concurrent.Task;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -19,7 +19,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
 
 public class LoadingStage extends Stage
 {
@@ -98,17 +97,7 @@ public class LoadingStage extends Stage
         this.sizeToScene();
         this.setResizable(false);
 
-        // Force the window to the top of the window stack
-        // Note: Stage::toFront() doesn't work for an unknown reason
-        this.addEventHandler(WindowEvent.WINDOW_SHOWN, new EventHandler<>()
-        {
-            @Override
-            public void handle(WindowEvent window)
-            {
-                LoadingStage.this.removeEventHandler(WindowEvent.WINDOW_SHOWN, this);
-                LoadingStage.this.setAlwaysOnTop(true);
-            }
-        });
+        JavaFXUtil.forceToFront(this);
     }
 
     @Override

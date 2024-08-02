@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas.util;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -29,6 +30,7 @@ public final class JavaFXUtil
         {
             stage.setAlwaysOnTop(true);
             stage.setAlwaysOnTop(false);
+            GlobalState.checkFrontStage();
         }
         else
         {
@@ -40,6 +42,7 @@ public final class JavaFXUtil
                     stage.removeEventHandler(WindowEvent.WINDOW_SHOWN, this);
                     stage.setAlwaysOnTop(true);
                     stage.setAlwaysOnTop(false);
+                    GlobalState.checkFrontStage();
                 }
             });
         }
