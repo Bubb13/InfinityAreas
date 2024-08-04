@@ -5,7 +5,6 @@ import com.github.bubb13.infinityareas.misc.ReferenceHolder;
 import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
 import com.github.bubb13.infinityareas.misc.ReferenceTracker;
 import javafx.geometry.Point2D;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
@@ -37,12 +36,6 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     public boolean snapshotable()
     {
         return false;
-    }
-
-    @Override
-    public void snapshot(final GraphicsContext graphicsContext)
-    {
-        throw new UnsupportedOperationException();
     }
 
     @Override

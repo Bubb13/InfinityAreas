@@ -13,7 +13,6 @@ public interface RenderableInterface
     boolean isEnabled();
     boolean isHidden();
     boolean snapshotable();
-    void snapshot(GraphicsContext snapshotContext);
     int sortWeight();
     void onRender(GraphicsContext canvasContext, final double scaleCorrection);
     boolean contains(Point2D point);

@@ -1,6 +1,8 @@
 
 package com.github.bubb13.infinityareas.gui.pane;
 
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -15,22 +17,33 @@ public class LabeledNode extends HBox
 
     private final Label label = new Label();
     private final VBox nodeVBox = new VBox();
+    private final ChangeListener<Boolean> nodeDisableListener =
+        (observable, oldValue, newValue) -> label.setDisable(newValue);
+
+    private Node node;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
+    public LabeledNode(final String labelText, final Node node, final Pos labelPosition)
+    {
+        setLabel(labelText);
+        setNode(node);
+        init(labelPosition);
+    }
+
     public LabeledNode(final String labelText, final Node node)
     {
         setLabel(labelText);
         setNode(node);
-        init();
+        init(Pos.CENTER);
     }
 
     public LabeledNode(final String labelText)
     {
         setLabel(labelText);
-        init();
+        init(Pos.CENTER);
     }
 
     ////////////////////
@@ -42,9 +55,16 @@ public class LabeledNode extends HBox
         label.setText(labelText + ": ");
     }
 
-    public void setNode(final Node node)
+    public void setNode(final Node newNode)
     {
-        final var children = nodeVBox.getChildren();
+        if (node != null)
+        {
+            node.disableProperty().removeListener(nodeDisableListener);
+        }
+        node = newNode;
+        node.disableProperty().addListener(nodeDisableListener);
+
+        final ObservableList<Node> children = nodeVBox.getChildren();
         children.clear();
         children.addAll(node);
     }
@@ -53,10 +73,10 @@ public class LabeledNode extends HBox
     // Private Methods //
     /////////////////////
 
-    private void init()
+    private void init(final Pos labelPos)
     {
         final VBox labelVBox = new VBox();
-        labelVBox.setAlignment(Pos.CENTER);
+        labelVBox.setAlignment(labelPos);
         labelVBox.getChildren().addAll(label);
 
         nodeVBox.setAlignment(Pos.CENTER);

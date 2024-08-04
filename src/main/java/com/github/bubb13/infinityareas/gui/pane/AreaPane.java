@@ -4,6 +4,9 @@ package com.github.bubb13.infinityareas.gui.pane;
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.Area;
+import com.github.bubb13.infinityareas.game.resource.AreaSearchMap;
+import com.github.bubb13.infinityareas.game.resource.KeyFile;
+import com.github.bubb13.infinityareas.game.resource.ResourceIdentifier;
 import com.github.bubb13.infinityareas.game.resource.WED;
 import com.github.bubb13.infinityareas.gui.control.UnderlinedButton;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
@@ -19,6 +22,7 @@ import com.github.bubb13.infinityareas.gui.editor.field.enums.RegionFields;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableActor;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableAnchoredLine;
+import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableImage;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePoint;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
@@ -31,11 +35,13 @@ import com.github.bubb13.infinityareas.util.ImageUtil;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Slider;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -61,6 +67,7 @@ public class AreaPane extends StackPane
 
     // Data
     private Area area;
+    private AreaSearchMap searchMap;
 
     // GUI
     private final ZoomPane zoomPane = new ZoomPane();
@@ -74,7 +81,7 @@ public class AreaPane extends StackPane
     private final StackPane rightNodeParent = new StackPane();
     private Node curRightNode;
 
-    private final VBox defaultRightNode = new VBox()
+    private final VBox defaultRightNode = new VBox(10)
     {
         @Override
         protected double computeMinWidth(double height)
@@ -83,10 +90,21 @@ public class AreaPane extends StackPane
         }
     };
     private final CheckBox renderRegionsCheckbox = new CheckBox("Render Regions");
+    private final CheckBox renderSearchMapCheckbox = new CheckBox("Render Search Map");
 
     private final SnapshotsPane snapshotsPane = new SnapshotsPane(editor, editor.getSnapshots());
     private final FieldPane fieldPane = new FieldPane();
     private Object fieldPaneOwner = null;
+
+    private SearchMapImage searchMapImage;
+    private final Slider searchMapOpacitySlider = new Slider(0, 100, 50)
+    {
+        @Override
+        protected double computePrefWidth(double height)
+        {
+            return 150;
+        }
+    };
 
     /////////////////////////
     // Public Constructors //
@@ -111,7 +129,7 @@ public class AreaPane extends StackPane
     // Private Methods //
     /////////////////////
 
-    private void reset()
+    private void reset(final TaskTrackerI tracker) throws Exception
     {
         editor.enterEditMode(AreaPaneNormalEditMode.class);
 
@@ -124,6 +142,48 @@ public class AreaPane extends StackPane
         {
             new RegionEditorObject(region);
         }
+
+        attemptLoadSearchMap(tracker);
+    }
+
+    private void attemptLoadSearchMap(final TaskTrackerI tracker) throws Exception
+    {
+        final Game game = GlobalState.getGame();
+        final String areaSearchMapResref = area.getSource().getIdentifier().resref() + "SR";
+
+        final Game.Resource searchMapResource = game.getResource(
+            new ResourceIdentifier(areaSearchMapResref, KeyFile.NumericResourceType.BMP));
+
+        if (searchMapResource == null)
+        {
+            disableSearchMap();
+            return;
+        }
+
+        final AreaSearchMap searchMapTemp = new AreaSearchMap(searchMapResource.getPrimarySource().demandFileData());
+        try
+        {
+            searchMapTemp.load(tracker);
+        }
+        catch (final Exception e)
+        {
+            disableSearchMap();
+            ErrorAlert.openAndWait("Failed to load search map.", e);
+            return;
+        }
+
+        searchMap = searchMapTemp;
+        searchMapImage = new SearchMapImage(0, 0, editor.getSourceWidth(), editor.getSourceHeight());
+        renderSearchMapCheckbox.setDisable(false);
+        searchMapOpacitySlider.setDisable(false);
+    }
+
+    private void disableSearchMap()
+    {
+        searchMap = null;
+        searchMapImage = null;
+        renderSearchMapCheckbox.setDisable(true);
+        searchMapOpacitySlider.setDisable(true);
     }
 
     private void resetFX()
@@ -177,9 +237,34 @@ public class AreaPane extends StackPane
                 //////////////////////////////
 
                 renderRegionsCheckbox.selectedProperty().addListener((observable, oldValue, newValue) ->
-                    onRenderRegionsChanged(newValue));
+                    onRenderRegionsChanged());
 
-            defaultRightNode.getChildren().addAll(renderRegionsCheckbox);
+                ////////////////////////////////
+                // Render Search Map Checkbox //
+                ////////////////////////////////
+
+                renderSearchMapCheckbox.selectedProperty().addListener((observable, oldValue, newValue) ->
+                    onRenderSearchMapChanged());
+
+                ///////////////////////////////
+                // Search Map Opacity Slider //
+                ///////////////////////////////
+
+                searchMapOpacitySlider.setShowTickLabels(true);
+                searchMapOpacitySlider.setShowTickMarks(true);
+                searchMapOpacitySlider.setMajorTickUnit(20);
+                searchMapOpacitySlider.setMinorTickCount(5);
+                searchMapOpacitySlider.setBlockIncrement(1);
+                searchMapOpacitySlider.valueProperty().addListener(
+                    (observable, oldValue, newValue) -> onSearchMapOpacityChanged(newValue.doubleValue() / 100));
+
+                final LabeledNode labeledSearchMapOpacitySlider = new LabeledNode(
+                    "Opacity", searchMapOpacitySlider, Pos.TOP_LEFT
+                );
+                labeledSearchMapOpacitySlider.setPadding(new Insets(0, 5, 0, 15));
+
+            defaultRightNode.getChildren().addAll(renderRegionsCheckbox, renderSearchMapCheckbox,
+                labeledSearchMapOpacitySlider);
 
             ///////////////////////////////
             // ZoomPane + Side Pane HBox //
@@ -272,9 +357,19 @@ public class AreaPane extends StackPane
         }
     }
 
-    private void onRenderRegionsChanged(final boolean newValue)
+    private void onRenderRegionsChanged()
     {
         editor.requestDraw();
+    }
+
+    private void onRenderSearchMapChanged()
+    {
+        editor.requestDraw();
+    }
+
+    private void onSearchMapOpacityChanged(final double opacity)
+    {
+        searchMapImage.setOpacity(opacity);
     }
 
     /////////////////////
@@ -503,6 +598,28 @@ public class AreaPane extends StackPane
         }
     }
 
+    private class SearchMapImage extends RenderableImage
+    {
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public SearchMapImage(final double x, final double y, final double width, final double height)
+        {
+            super(editor, searchMap.getImage(), x, y, width, height, searchMapOpacitySlider.getValue() / 100);
+        }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
+
+        @Override
+        public boolean isEnabled()
+        {
+            return renderSearchMapCheckbox.isSelected();
+        }
+    }
+
     private class AreaActor extends RenderableActor
     {
         /////////////////////////
@@ -521,7 +638,7 @@ public class AreaPane extends StackPane
         @Override
         public int sortWeight()
         {
-            return 2;
+            return 3;
         }
     }
 
@@ -611,6 +728,12 @@ public class AreaPane extends StackPane
             public boolean isEnabled()
             {
                 return renderRegionsCheckbox.isSelected();
+            }
+
+            @Override
+            public int sortWeight()
+            {
+                return 1;
             }
 
             @Override
@@ -795,7 +918,7 @@ public class AreaPane extends StackPane
             @Override
             public int sortWeight()
             {
-                return 3;
+                return 5;
             }
 
             @Override
@@ -959,21 +1082,21 @@ public class AreaPane extends StackPane
             tracker.updateMessage("Processing area ...");
             tracker.updateProgress(0, 1);
 
-            final Area area = new Area(source);
-            area.load(getTracker());
-            AreaPane.this.area = area;
+            final Area areaTemp = new Area(source);
+            areaTemp.load(getTracker());
+            area = areaTemp;
 
             final WED.Graphics wedGraphics = area.newGraphics().getWedGraphics();
             wedGraphics.renderOverlays(getTracker(), 0, 1, 2, 3, 4);
             final BufferedImage image = ImageUtil.copyArgb(wedGraphics.getImage());
 
             editor.reset(image.getWidth(), image.getHeight());
-            reset();
             waitForFxThreadToExecute(() ->
             {
                 resetFX();
                 zoomPane.setImage(image);
             });
+            reset(getTracker());
 
             return null;
         }

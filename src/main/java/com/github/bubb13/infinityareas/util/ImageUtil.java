@@ -122,6 +122,37 @@ public final class ImageUtil
         return ImageUtil.wrapBgra(dstBuffer, imageWidth, imageHeight);
     }
 
+    public static BufferedImage convertByteBinaryToBgraPre(final BufferedImage image)
+    {
+        if (image.getType() != BufferedImage.TYPE_BYTE_BINARY)
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        final int imageWidth = image.getWidth();
+        final int imageHeight = image.getHeight();
+        final int numPixels = imageWidth * imageHeight;
+
+        final byte[] dstBuffer = new byte[numPixels * 4];
+        final int[] srcPixels = new int[numPixels];
+        image.getRGB(0, 0, imageWidth, imageHeight, srcPixels, 0, imageWidth);
+
+        for (int i = 0, dstIndex = 0; i < numPixels; ++i)
+        {
+            final int src = srcPixels[i];
+
+            final short srcAlpha = (short)((src >>> 24) & 0xFF);
+            final double alphaRatio = (double)srcAlpha / 255;
+
+            dstBuffer[dstIndex++] = (byte)(alphaRatio * (src & 0xFF));
+            dstBuffer[dstIndex++] = (byte)(alphaRatio * ((src >>> 8) & 0xFF));
+            dstBuffer[dstIndex++] = (byte)(alphaRatio * ((src >>> 16) & 0xFF));
+            dstBuffer[dstIndex++] = (byte)srcAlpha;
+        }
+
+        return ImageUtil.wrapBgra(dstBuffer, imageWidth, imageHeight);
+    }
+
     public static BufferedImage wrapBgra(final byte[] sourceData, final int width, final int height)
     {
         return createBgraBufferedImageFromRaster(createBgraRasterFromByteArray(sourceData, width, height));

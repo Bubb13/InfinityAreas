@@ -260,14 +260,14 @@ public class Editor
         return zoomPane.canvasToSourceDoublePosition(canvasX, canvasY);
     }
 
-    public double getCanvasWidth()
+    public int getSourceWidth()
     {
-        return zoomPane.getWidth();
+        return zoomPane.getSourceWidth();
     }
 
-    public double getCanvasHeight()
+    public int getSourceHeight()
     {
-        return zoomPane.getHeight();
+        return zoomPane.getSourceHeight();
     }
 
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
