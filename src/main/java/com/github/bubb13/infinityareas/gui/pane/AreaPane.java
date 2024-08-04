@@ -871,7 +871,6 @@ public class AreaPane extends StackPane
             // Private Fields //
             ////////////////////
 
-            // TODO: Destroying FPS on AR0300 inside QuadTree
             private final RegionEditorObjectLaunchPositionLine launchPositionLine;
             private final RegionFields xField;
             private final RegionFields yField;

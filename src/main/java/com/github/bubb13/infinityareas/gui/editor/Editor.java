@@ -106,7 +106,10 @@ public class Editor
         selectedObjects.clear();
         zoomFactorListenerObjects.clear();
 
-        quadTree = new DoubleQuadTree<>(0, 0, quadTreeWidth, quadTreeHeight, 10);
+        // Important: Low values of minimumWidth actually hurt performance. If the QuadTree divides too many times,
+        //            iterations over larger areas must descend into a prohibitive number of quadrants. Current value
+        //            arbitrarily chosen based on the performance of BG2's AR0300.
+        quadTree = new DoubleQuadTree<>(0, 0, quadTreeWidth, quadTreeHeight, 100);
 
         editMode = null;
 
