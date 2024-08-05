@@ -58,6 +58,8 @@ public class PartiallyRenderedImageLogic
     private double srcScaleFactorY = 1;
     private double opacity = 1;
 
+    private int[] setArgbBuffer = new int[4];
+
     /////////////////////////
     // Public Constructors //
     /////////////////////////
@@ -95,6 +97,16 @@ public class PartiallyRenderedImageLogic
     {
         this.srcScaleFactorX = srcScaleFactorX;
         this.srcScaleFactorY = srcScaleFactorY;
+    }
+
+    public double getSrcScaleFactorX()
+    {
+        return srcScaleFactorX;
+    }
+
+    public double getSrcScaleFactorY()
+    {
+        return srcScaleFactorY;
     }
 
     public void setOpacity(final double opacity)
@@ -164,6 +176,24 @@ public class PartiallyRenderedImageLogic
                 );
                 graphics.setGlobalAlpha(1);
             }
+        }
+    }
+
+    // 'B' being the lowest bit
+    // BufferedImage::setRGB() doesn't function correctly (for some reason)
+    public void setPixelARGB(final int x, final int y, final int argb)
+    {
+        if (GlobalState.getNativePixelFormatType() == PixelFormat.Type.BYTE_BGRA_PRE)
+        {
+            setArgbBuffer[0] = argb & 0xFF;
+            setArgbBuffer[1] = (argb >>> 8) & 0xFF;
+            setArgbBuffer[2] = (argb >>> 16) & 0xFF;
+            setArgbBuffer[3] = (argb >>> 24) & 0xFF;
+            getSourceImage().getRaster().setPixel(x, y, setArgbBuffer);
+        }
+        else
+        {
+            throw new UnsupportedOperationException();
         }
     }
 

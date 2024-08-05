@@ -26,4 +26,5 @@ public interface RenderableInterface
     void onUnselected();
     boolean listensToZoomFactorChanges();
     void onZoomFactorChanged(double zoomFactor);
+    void onBeforeRemoved();
 }

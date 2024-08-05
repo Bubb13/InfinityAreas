@@ -340,6 +340,55 @@ public class ZoomPane extends NotifyingScrollPane
         setVvalue(newVVal);
     }
 
+    public void doOperationMaintainViewportBottom(final Supplier<Boolean> operation)
+    {
+        final BufferedImage image = partialImage.getSourceImage();
+
+        if (image == null)
+        {
+            operation.get();
+            return;
+        }
+
+        // Block notify+draw events until positioning is done
+        blockDraw(true);
+
+        final Bounds viewportBounds = getViewportBounds();
+        final double viewportHeight = viewportBounds.getHeight();
+        final double viewportEffectiveHeight = viewportHeight / zoomFactor;
+
+        final Bounds imageViewBounds = partialImage.getBoundsInLocal();
+        final double imageViewHeight = imageViewBounds.getHeight();
+
+        final double vMax = getVmax();
+        final double vRel = getVvalue() / vMax;
+        final double yTop = vRel * (imageViewHeight - viewportHeight) / zoomFactor;
+        final double yBottom = yTop + viewportEffectiveHeight;
+
+        if (operation.get())
+        {
+            blockDraw(false);
+            return;
+        }
+
+        //layout();
+
+        final Bounds newViewportBounds = getViewportBounds();
+        final double newViewportHeight = newViewportBounds.getHeight();
+        final double newViewportEffectiveHeight = newViewportHeight / zoomFactor;
+
+        final double newImageViewHeight = image.getHeight() * zoomFactor;
+
+        final double targetYTop = yBottom - (newViewportEffectiveHeight);
+
+        final double newVRel = targetYTop * zoomFactor / (newImageViewHeight - newViewportHeight);
+        final double newVVal = newVRel * vMax;
+
+        // Release the notify+draw block so that the `setVvalue()` call triggers those events
+        blockDraw(false);
+        setVvalue(newVVal);
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////

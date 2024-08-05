@@ -37,6 +37,7 @@ public class GlobalState
     private static Stage primaryStage;
     private static PixelFormat.Type nativePixelFormatType;
     private static Stage frontStage;
+    private static String infinityAreasStylesheet;
 
     ///////////////////////////
     // Public Static Methods //
@@ -49,6 +50,7 @@ public class GlobalState
         cleanTemp();
         settingsFile = new SettingsFile(GlobalState.getInfinityAreasRoot().resolve("settings.json"));
         cacheNativePixelFormatType();
+        loadInfinityAreasStylesheet();
     }
 
     public static Path getInfinityAreasRoot()
@@ -189,6 +191,11 @@ public class GlobalState
         frontStage = stage;
     }
 
+    public static String getInfinityAreasStylesheet()
+    {
+        return infinityAreasStylesheet;
+    }
+
     public static void cleanTemp()
     {
         if (Files.isDirectory(infinityAreasTemp))
@@ -223,6 +230,12 @@ public class GlobalState
 
             Files.createDirectories(infinityAreasTemp);
         }
+    }
+
+    private static void loadInfinityAreasStylesheet()
+    {
+        infinityAreasStylesheet = GlobalState.class.getClassLoader()
+            .getResource("infinity_areas.css").toExternalForm();
     }
 
     private static void cacheNativePixelFormatType()

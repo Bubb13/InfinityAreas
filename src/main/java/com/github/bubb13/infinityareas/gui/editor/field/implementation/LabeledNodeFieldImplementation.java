@@ -11,7 +11,7 @@ public class LabeledNodeFieldImplementation<FieldEnumType extends Enum<?>> exten
     // Private Fields //
     ////////////////////
 
-    private final LabeledNode labeledNode;
+    private final LabeledNode<Node> labeledNode;
 
     //////////////////////////////////
     // Package Private Constructors //
@@ -21,7 +21,7 @@ public class LabeledNodeFieldImplementation<FieldEnumType extends Enum<?>> exten
         final FieldEnumType fieldEnum, final Connector<FieldEnumType> connector, final String labelText)
     {
         super(fieldEnum, connector);
-        labeledNode = new LabeledNode(labelText);
+        labeledNode = new LabeledNode<>(labelText);
     }
 
     ////////////////////

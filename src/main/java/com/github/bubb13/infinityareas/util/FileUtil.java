@@ -1,6 +1,9 @@
 
 package com.github.bubb13.infinityareas.util;
 
+import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
+import com.github.bubb13.infinityareas.gui.dialog.WarningAlertTwoOptions;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -26,6 +29,32 @@ public final class FileUtil
         {
             throw new FileNotFoundException("Not a file: \"" + path.toAbsolutePath() + "\"");
         }
+    }
+
+    public static boolean hasFileConflict(final Path path)
+    {
+        if (Files.exists(path))
+        {
+            if (Files.isRegularFile(path))
+            {
+                final boolean[] canceled = new boolean[1];
+
+                WarningAlertTwoOptions.openAndWait(
+                    String.format("\"%s\" already exists, and will be overwritten. Continue?", path.getFileName()),
+                    "Yes", null,
+                    "No", () -> canceled[0] = true);
+
+                return canceled[0];
+            }
+            else
+            {
+                ErrorAlert.openAndWait(String.format(
+                    "Failed to save: conflict with existing \"%s\".", path.getFileName())
+                );
+                return true;
+            }
+        }
+        return false;
     }
 
     public static Path resolvePathSafe(final Path rootPath, final String toResolve)

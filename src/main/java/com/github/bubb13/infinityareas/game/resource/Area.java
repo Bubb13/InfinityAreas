@@ -101,9 +101,30 @@ public class Area
         };
     }
 
+    public void save(final TaskTrackerI tracker, final Path path) throws Exception
+    {
+        final SaveAreaState saveAreaState = new SaveAreaState(path);
+        tracker.subtask(saveAreaState::save);
+    }
+
+    public void save(final Path path) throws Exception
+    {
+        final SaveAreaState saveAreaState = new SaveAreaState(path);
+        saveAreaState.save(TaskTracker.DUMMY);
+    }
+
     public TrackedTask<Void> saveTask(final Path path)
     {
-        return new SaveAreaTask(path);
+        return new TrackedTask<>()
+        {
+            @Override
+            protected Void doTask() throws Exception
+            {
+                final SaveAreaState saveAreaState = new SaveAreaState(path);
+                subtask(saveAreaState::save);
+                return null;
+            }
+        };
     }
 
     public int getOverlayCount()
@@ -1923,7 +1944,7 @@ public class Area
     // Private Classes //
     /////////////////////
 
-    private class SaveAreaTask extends TrackedTask<Void>
+    private class SaveAreaState
     {
         ////////////////////
         // Private Fields //
@@ -1941,27 +1962,16 @@ public class Area
         // Public Constructors //
         /////////////////////////
 
-        public SaveAreaTask(final Path path)
+        public SaveAreaState(final Path path)
         {
             this.path = path;
         }
 
-        ///////////////////////
-        // Protected Methods //
-        ///////////////////////
+        ////////////////////
+        // Public Methods //
+        ////////////////////
 
-        @Override
-        protected Void doTask() throws Exception
-        {
-            save();
-            return null;
-        }
-
-        /////////////////////
-        // Private Methods //
-        /////////////////////
-
-        private void save() throws Exception
+        public void save(final TaskTrackerI tracker) throws Exception
         {
             final AreaSectionSizes sectionSizes = calculateSectionSizes();
             buffer = ByteBuffer.allocate(sectionSizes.total());
@@ -2039,6 +2049,10 @@ public class Area
 
             Files.write(path, buffer.array());
         }
+
+        /////////////////////
+        // Private Methods //
+        /////////////////////
 
         /////////////////////
         // Saving Sections //

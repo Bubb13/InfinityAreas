@@ -7,6 +7,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
@@ -110,6 +111,13 @@ public final class JavaFXUtil
 
             waitLatch.awaitAdvance(waitLatch.getPhase());
         }
+    }
+
+    public static void loadInlineStylesheet(final Parent parent, final String css)
+    {
+        parent.getStylesheets().add("data:text/css," + css
+            .replace("\n", "")
+            .replace(" ", "%20"));
     }
 
     //////////////////////////

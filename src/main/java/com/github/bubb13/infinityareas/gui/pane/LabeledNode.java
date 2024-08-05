@@ -9,7 +9,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-public class LabeledNode extends HBox
+public class LabeledNode<NodeType extends Node> extends HBox
 {
     ////////////////////
     // Private Fields //
@@ -20,20 +20,20 @@ public class LabeledNode extends HBox
     private final ChangeListener<Boolean> nodeDisableListener =
         (observable, oldValue, newValue) -> label.setDisable(newValue);
 
-    private Node node;
+    private NodeType node;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public LabeledNode(final String labelText, final Node node, final Pos labelPosition)
+    public LabeledNode(final String labelText, final NodeType node, final Pos labelPosition)
     {
         setLabel(labelText);
         setNode(node);
         init(labelPosition);
     }
 
-    public LabeledNode(final String labelText, final Node node)
+    public LabeledNode(final String labelText, final NodeType node)
     {
         setLabel(labelText);
         setNode(node);
@@ -55,7 +55,7 @@ public class LabeledNode extends HBox
         label.setText(labelText + ": ");
     }
 
-    public void setNode(final Node newNode)
+    public void setNode(final NodeType newNode)
     {
         if (node != null)
         {
@@ -67,6 +67,11 @@ public class LabeledNode extends HBox
         final ObservableList<Node> children = nodeVBox.getChildren();
         children.clear();
         children.addAll(node);
+    }
+
+    public NodeType getNode()
+    {
+        return node;
     }
 
     /////////////////////

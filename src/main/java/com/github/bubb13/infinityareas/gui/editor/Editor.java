@@ -2,6 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor;
 
 import com.github.bubb13.infinityareas.gui.editor.editmode.EditMode;
+import com.github.bubb13.infinityareas.gui.editor.editmode.EditModeForceEnableState;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.pane.ZoomPane;
 import com.github.bubb13.infinityareas.misc.CanvasCache;
@@ -84,6 +85,7 @@ public class Editor
     {
         this.zoomPane = zoomPane;
         zoomPane.setDrawCallback(this::onDraw);
+        zoomPane.setDragDetectedListener(this::onDragDetected);
         zoomPane.setMouseDraggedListener(this::onMouseDragged);
         zoomPane.setMousePressedListener(this::onMousePressed);
         zoomPane.setMouseReleasedListener(this::onMouseReleased);
@@ -138,6 +140,7 @@ public class Editor
 
     public void removeRenderable(final AbstractRenderable renderable)
     {
+        renderable.onBeforeRemoved();
         zoomFactorListenerObjects.remove(renderable);
         selectedObjects.remove(renderable);
         quadTree.remove(renderable);
@@ -237,6 +240,11 @@ public class Editor
     public void doOperationMaintainViewportLeft(final Supplier<Boolean> operation)
     {
         zoomPane.doOperationMaintainViewportLeft(operation);
+    }
+
+    public void doOperationMaintainViewportBottom(final Supplier<Boolean> operation)
+    {
+        zoomPane.doOperationMaintainViewportBottom(operation);
     }
 
     //------------------//
@@ -341,21 +349,29 @@ public class Editor
 
     public boolean objectInArea(final AbstractRenderable renderable, final DoubleCorners corners)
     {
-        return (editMode.forceEnableObject(renderable) || renderable.isEnabled())
+        final EditModeForceEnableState forceEnableState = editMode.forceObjectEnableState(renderable);
+        return forceEnableState != EditModeForceEnableState.DISABLE
+            && (forceEnableState == EditModeForceEnableState.ENABLE || renderable.isEnabled())
             && renderable.getCorners().intersect(corners) != null;
     }
 
     public boolean pointInObjectCornersFudge(
         final Point2D point, final AbstractRenderable renderable, final double fudgeAmount)
     {
-        return !renderable.isHidden() && (editMode.forceEnableObject(renderable) || renderable.isEnabled())
+        final EditModeForceEnableState forceEnableState = editMode.forceObjectEnableState(renderable);
+        return forceEnableState != EditModeForceEnableState.DISABLE
+            && (forceEnableState == EditModeForceEnableState.ENABLE || renderable.isEnabled())
+            && !renderable.isHidden()
             && renderable.getCorners().contains(point, fudgeAmount);
     }
 
     public boolean pointInObjectExact(final Point2D point, final AbstractRenderable renderable)
     {
-        return !renderable.isHidden() &&
-            (editMode.forceEnableObject(renderable) || renderable.isEnabled()) && renderable.contains(point);
+        final EditModeForceEnableState forceEnableState = editMode.forceObjectEnableState(renderable);
+        return forceEnableState != EditModeForceEnableState.DISABLE
+            && (forceEnableState == EditModeForceEnableState.ENABLE || renderable.isEnabled())
+            && !renderable.isHidden()
+            && renderable.contains(point);
     }
 
     public Iterable<AbstractRenderable> iterableNear(final DoubleCorners corners)
@@ -608,6 +624,11 @@ public class Editor
         }
     }
 
+    private void onDragDetected(final MouseEvent event)
+    {
+        editMode.onDragDetected(event);
+    }
+
     private void onMouseDragged(final MouseEvent event)
     {
         dragOccurred = true;
@@ -673,7 +694,10 @@ public class Editor
 
                     if (pointInObjectExact(sourcePoint, pressObject))
                     {
-                        pressObject.onClicked(event);
+                        if (!editMode.customOnObjectClicked(event, pressObject))
+                        {
+                            pressObject.onClicked(event);
+                        }
                     }
                 }
             }

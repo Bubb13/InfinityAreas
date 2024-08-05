@@ -9,61 +9,77 @@ import javafx.scene.input.MouseEvent;
 
 public class AbstractEditMode implements EditMode
 {
-    public void reset() {}
+    @Override public void reset() {}
 
-    public void onModeStart() {}
+    @Override public void onModeStart() {}
 
-    public void onModeResume() {}
+    @Override public void onModeResume() {}
 
-    public void onModeSuspend() {}
+    @Override public void onModeSuspend() {}
 
-    public void onModeEnd() {}
+    @Override public void onModeEnd() {}
 
-    public void onDraw(final GraphicsContext canvasContext) {}
+    @Override public void onDraw(final GraphicsContext canvasContext) {}
 
-    public boolean forceEnableObject(final AbstractRenderable renderable)
+    @Override
+    public EditModeForceEnableState forceObjectEnableState(final AbstractRenderable renderable)
     {
-        return false;
+        return EditModeForceEnableState.NO;
     }
 
+    @Override
     public MouseButton customOnMousePressed(final MouseEvent event)
     {
         return null;
     }
 
+    @Override
     public boolean shouldCaptureObjectPress(final MouseEvent event, final AbstractRenderable renderable)
     {
         return false;
     }
 
+    @Override
     public boolean onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY)
     {
         return false;
     }
 
+    @Override public void onDragDetected(final MouseEvent event) {}
+
+    @Override
     public boolean customOnMouseDragged(final MouseEvent event)
     {
         return false;
     }
 
+    @Override
     public AbstractRenderable directCaptureDraggedObject(final MouseEvent event)
     {
         return null;
     }
 
+    @Override
     public boolean shouldCaptureObjectDrag(final MouseEvent event, final AbstractRenderable renderable)
     {
         return false;
     }
 
-    public void onObjectDragged(final MouseEvent event, final AbstractRenderable renderable) {}
+    @Override public void onObjectDragged(final MouseEvent event, final AbstractRenderable renderable) {}
 
+    @Override
     public boolean customOnMouseReleased(final MouseEvent event)
     {
         return false;
     }
 
-    public void onBackgroundClicked(final MouseEvent event) {}
+    @Override
+    public boolean customOnObjectClicked(final MouseEvent event, final AbstractRenderable renderable)
+    {
+        return false;
+    }
 
-    public void onKeyPressed(final KeyEvent event) {}
+    @Override public void onBackgroundClicked(final MouseEvent event) {}
+
+    @Override public void onKeyPressed(final KeyEvent event) {}
 }

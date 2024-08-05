@@ -38,9 +38,11 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     ////////////////////
 
     @Override
-    public boolean forceEnableObject(final AbstractRenderable renderable)
+    public EditModeForceEnableState forceObjectEnableState(final AbstractRenderable renderable)
     {
-        return renderable instanceof RenderablePolygon || renderable instanceof RenderableVertex;
+        return renderable instanceof RenderablePolygon || renderable instanceof RenderableVertex
+            ? EditModeForceEnableState.ENABLE
+            : EditModeForceEnableState.NO;
     }
 
     @Override

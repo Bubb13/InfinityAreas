@@ -19,6 +19,8 @@ public class RenderableImage extends AbstractRenderable
     private final Editor editor;
     private final DoubleCorners corners = new DoubleCorners();
     private final PartiallyRenderedImageLogic logic = new PartiallyRenderedImageLogic();
+    private double stretchFactorX;
+    private double stretchFactorY;
 
     /////////////////////////
     // Public Constructors //
@@ -59,6 +61,11 @@ public class RenderableImage extends AbstractRenderable
     {
         logic.setOpacity(opacity);
         editor.requestDraw();
+    }
+
+    public void setPixelARGB(final int x, final int y, final int argb)
+    {
+        logic.setPixelARGB(x, y, argb);
     }
 
     @Override
@@ -125,6 +132,14 @@ public class RenderableImage extends AbstractRenderable
         );
     }
 
+    public Point2D absoluteCanvasToSourceImagePoint(final double x, final double y)
+    {
+        final Point2D srcPoint = editor.absoluteCanvasToSourceDoublePosition(x, y);
+        final double srcX = (srcPoint.getX() - corners.topLeftX()) / stretchFactorX;
+        final double srcY = (srcPoint.getY() - corners.topLeftY()) / stretchFactorY;
+        return new Point2D(srcX, srcY);
+    }
+
     @Override
     public boolean listensToZoomFactorChanges()
     {
@@ -147,8 +162,8 @@ public class RenderableImage extends AbstractRenderable
         final double height = corners.bottomRightExclusiveY() - corners.topLeftY();
 
         final BufferedImage sourceImage = logic.getSourceImage();
-        final double stretchFactorX = width / sourceImage.getWidth();
-        final double stretchFactorY = height / sourceImage.getHeight();
+        stretchFactorX = width / sourceImage.getWidth();
+        stretchFactorY = height / sourceImage.getHeight();
 
         final double zoomFactor = editor.getZoomFactor();
         final double srcScaleFactorX = zoomFactor * stretchFactorX;

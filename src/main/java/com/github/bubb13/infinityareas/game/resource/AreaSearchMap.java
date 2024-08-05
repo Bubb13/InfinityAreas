@@ -8,8 +8,10 @@ import com.github.bubb13.infinityareas.misc.TrackedTask;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
+import java.awt.image.WritableRaster;
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 public class AreaSearchMap
 {
@@ -19,6 +21,11 @@ public class AreaSearchMap
 
     private final ByteBuffer buffer;
     private BufferedImage image;
+    private WritableRaster raster;
+    private int[] colors;
+    private boolean hasUnsavedChanges;
+
+    private final ArrayList<PixelPaletteIndexChangedListener> listeners = new ArrayList<>();
 
     /////////////////////////
     // Public Constructors //
@@ -61,6 +68,47 @@ public class AreaSearchMap
         return image;
     }
 
+    public int getPixelPaletteIndex(final int x, final int y)
+    {
+        return raster.getSample(x, y, 0);
+    }
+
+    public void setPixelPaletteIndex(final int x, final int y, final int paletteIndex)
+    {
+        raster.setSample(x, y, 0, paletteIndex);
+        hasUnsavedChanges = true;
+
+        for (final PixelPaletteIndexChangedListener listener : listeners)
+        {
+            listener.changed(x, y, paletteIndex);
+        }
+    }
+
+    public int getPaletteIndexColor(final int index)
+    {
+        return colors[index];
+    }
+
+    public void addOnPixelPaletteIndexChangedListener(final PixelPaletteIndexChangedListener listener)
+    {
+        listeners.add(listener);
+    }
+
+    public void removeOnPixelPaletteIndexChangedListener(final PixelPaletteIndexChangedListener listener)
+    {
+        listeners.remove(listener);
+    }
+
+    public boolean hasUnsavedChanges()
+    {
+        return hasUnsavedChanges;
+    }
+
+    public void clearHasUnsavedChanges()
+    {
+        hasUnsavedChanges = false;
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -78,6 +126,10 @@ public class AreaSearchMap
             }
 
             this.image = image;
+            raster = image.getRaster();
+
+            colors = new int[indexColorModel.getMapSize()];
+            indexColorModel.getRGBs(colors);
         }
     }
 
@@ -103,5 +155,10 @@ public class AreaSearchMap
         ROOF_IMPASSABLE_BLOCK_LOS_AND_FLIGHT, // 13 Magenta
         WORLD_MAP_EXIT_IMPASSABLE,            // 14 Cyan
         GRASS_2,                              // 15 White        - WAL_04
+    }
+
+    public interface PixelPaletteIndexChangedListener
+    {
+        void changed(int x, int y, int newPaletteIndex);
     }
 }

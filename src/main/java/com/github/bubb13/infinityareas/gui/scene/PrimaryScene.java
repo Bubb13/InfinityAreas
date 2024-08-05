@@ -124,6 +124,7 @@ public final class PrimaryScene extends Stage
         ///////////
 
         final Scene scene = new Scene(vbox, 500, 500);
+        scene.getStylesheets().add(GlobalState.getInfinityAreasStylesheet());
 
         stage.setTitle("Infinity Areas");
         stage.setScene(scene);

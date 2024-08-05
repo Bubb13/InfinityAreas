@@ -74,4 +74,5 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     @Override public void onDragged(final MouseEvent event) {}
     @Override public boolean listensToZoomFactorChanges() { return false; }
     @Override public void onZoomFactorChanged(final double zoomFactor) {}
+    @Override public void onBeforeRemoved() {}
 }

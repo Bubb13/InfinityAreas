@@ -97,6 +97,18 @@ public class DoubleQuadTree<ElementType>
         return true;
     }
 
+    public void iterateAll(final Consumer<ElementType> consumer)
+    {
+        for (final ArrayList<SimpleLinkedList<ElementHolder<ElementType>>.Node> list : elementHolderToNodes.values())
+        {
+            for (final SimpleLinkedList<ElementHolder<ElementType>>.Node elementHolderNode : list)
+            {
+                final ElementType element = elementHolderNode.value().element;
+                consumer.accept(element);
+            }
+        }
+    }
+
     /**
      * Iterates the quadrants intersected by the given area, and executes the given
      * callback once for every unique element instance that is encountered.

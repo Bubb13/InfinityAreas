@@ -17,18 +17,20 @@ public interface EditMode
     void onModeEnd();
 
     void onDraw(GraphicsContext canvasContext);
-    boolean forceEnableObject(AbstractRenderable renderable);
+    EditModeForceEnableState forceObjectEnableState(AbstractRenderable renderable);
 
     MouseButton customOnMousePressed(MouseEvent event);
     boolean shouldCaptureObjectPress(MouseEvent event, AbstractRenderable renderable);
     boolean onBackgroundPressed(MouseEvent event, double sourcePressX, double sourcePressY);
 
+    void onDragDetected(MouseEvent event);
     boolean customOnMouseDragged(MouseEvent event);
     AbstractRenderable directCaptureDraggedObject(MouseEvent event);
     boolean shouldCaptureObjectDrag(MouseEvent event, AbstractRenderable renderable);
     void onObjectDragged(MouseEvent event, AbstractRenderable renderable);
 
     boolean customOnMouseReleased(MouseEvent event);
+    boolean customOnObjectClicked(MouseEvent event, AbstractRenderable renderable);
     void onBackgroundClicked(MouseEvent event);
 
     void onKeyPressed(KeyEvent event);

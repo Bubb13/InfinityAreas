@@ -45,10 +45,10 @@ public class QuickSelectEditMode extends LabeledEditMode
     }
 
     @Override
-    public boolean forceEnableObject(final AbstractRenderable renderable)
+    public EditModeForceEnableState forceObjectEnableState(final AbstractRenderable renderable)
     {
         final EditMode previousEditMode = editor.getPreviousEditMode();
-        return previousEditMode != null && previousEditMode.forceEnableObject(renderable);
+        return previousEditMode != null ? previousEditMode.forceObjectEnableState(renderable) : EditModeForceEnableState.NO;
     }
 
     @Override

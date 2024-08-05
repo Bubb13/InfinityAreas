@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas.gui.dialog;
 
+import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -16,6 +17,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.stage.Stage;
 
 public class WarningAlertTwoOptions extends Alert
 {
@@ -118,5 +120,10 @@ public class WarningAlertTwoOptions extends Alert
 
         final Button okButton = (Button)dialogPane.lookupButton(okButtonType);
         if (okCallback != null) okButton.setOnAction((ignored) -> okCallback.run());
+
+        final Stage stage = (Stage)dialogPane.getScene().getWindow();
+        stage.setOnHiding((ignored) -> GlobalState.setFrontStage(null));
+        GlobalState.setFrontStage(stage);
+        JavaFXUtil.forceToFront(stage);
     }
 }
