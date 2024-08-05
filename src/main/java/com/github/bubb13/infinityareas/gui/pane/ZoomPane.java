@@ -413,6 +413,7 @@ public class ZoomPane extends NotifyingScrollPane
     private void init()
     {
         final Pane pane = new Pane();
+        partialImage.setClearBeforeDraw(true);
         pane.getChildren().add(partialImage);
 
         setContent(pane);

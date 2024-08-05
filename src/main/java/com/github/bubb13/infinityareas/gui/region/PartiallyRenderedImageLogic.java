@@ -58,6 +58,7 @@ public class PartiallyRenderedImageLogic
     private double srcScaleFactorX = 1;
     private double srcScaleFactorY = 1;
     private double opacity = 1;
+    private boolean clearBeforeDraw;
 
     /////////////////////////
     // Public Constructors //
@@ -111,6 +112,11 @@ public class PartiallyRenderedImageLogic
     public void setOpacity(final double opacity)
     {
         this.opacity = opacity;
+    }
+
+    public void setClearBeforeDraw(final boolean clearBeforeDraw)
+    {
+        this.clearBeforeDraw = clearBeforeDraw;
     }
 
     public void draw(
@@ -167,6 +173,11 @@ public class PartiallyRenderedImageLogic
                 //////////////////////////////////////////
                 // Draw the WritableImage to the Canvas //
                 //////////////////////////////////////////
+
+                if (clearBeforeDraw)
+                {
+                    graphics.clearRect(dstX, dstY, dstWidth, dstHeight);
+                }
 
                 graphics.setGlobalAlpha(opacity);
                 graphics.drawImage(toDrawImage,

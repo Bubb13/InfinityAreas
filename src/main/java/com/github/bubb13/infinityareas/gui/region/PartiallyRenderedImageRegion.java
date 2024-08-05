@@ -76,6 +76,11 @@ public class PartiallyRenderedImageRegion extends Region implements VisibleNotif
         return zoomFactor;
     }
 
+    public void setClearBeforeDraw(final boolean clearBeforeDraw)
+    {
+        logic.setClearBeforeDraw(clearBeforeDraw);
+    }
+
     public GraphicsContext getGraphics()
     {
         return graphics;
