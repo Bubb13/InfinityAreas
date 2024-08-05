@@ -128,6 +128,12 @@ public class PartiallyRenderedImageRegion extends Region implements VisibleNotif
         return new Point2D(canvasX - renderX, canvasY - renderY);
     }
 
+    public Point2D absoluteToRelativeCanvasDoublePosition(final double canvasX, final double canvasY)
+    {
+        final Bounds layout = canvas.getBoundsInParent();
+        return new Point2D(canvasX - layout.getMinX(), canvasY - layout.getMinY());
+    }
+
     public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
     {
         return new Point((int)(canvasX / zoomFactor), (int)(canvasY / zoomFactor));

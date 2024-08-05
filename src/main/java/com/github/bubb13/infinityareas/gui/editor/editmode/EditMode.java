@@ -19,6 +19,9 @@ public interface EditMode
     void onDraw(GraphicsContext canvasContext);
     EditModeForceEnableState forceObjectEnableState(AbstractRenderable renderable);
 
+    void onZoomFactorChanged(double newZoomFactor);
+    void onMouseMoved(MouseEvent event);
+
     MouseButton customOnMousePressed(MouseEvent event);
     boolean shouldCaptureObjectPress(MouseEvent event, AbstractRenderable renderable);
     boolean onBackgroundPressed(MouseEvent event, double sourcePressX, double sourcePressY);
@@ -32,6 +35,8 @@ public interface EditMode
     boolean customOnMouseReleased(MouseEvent event);
     boolean customOnObjectClicked(MouseEvent event, AbstractRenderable renderable);
     void onBackgroundClicked(MouseEvent event);
+
+    void onMouseExited(MouseEvent event);
 
     void onKeyPressed(KeyEvent event);
 }

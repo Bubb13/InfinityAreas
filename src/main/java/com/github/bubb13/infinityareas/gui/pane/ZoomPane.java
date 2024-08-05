@@ -28,12 +28,14 @@ public class ZoomPane extends NotifyingScrollPane
     private final PartiallyRenderedImageRegion partialImage = new PartiallyRenderedImageRegion();
     private double zoomFactor = 1;
     private Consumer<Double> zoomFactorListener;
-    private Consumer<MouseEvent> mouseDraggedListener;
+    private Consumer<MouseEvent> mouseMovedListener;
     private Consumer<MouseEvent> mouseClickedListener;
     private Consumer<MouseEvent> mousePressedListener;
-    private Consumer<MouseEvent> mouseReleasedListener;
-    private Consumer<KeyEvent> keyPressedListener;
     private Consumer<MouseEvent> dragDetectedListener;
+    private Consumer<MouseEvent> mouseDraggedListener;
+    private Consumer<MouseEvent> mouseReleasedListener;
+    private Consumer<MouseEvent> mouseExitedListener;
+    private Consumer<KeyEvent> keyPressedListener;
 
     /////////////////////////
     // Public Constructors //
@@ -114,6 +116,11 @@ public class ZoomPane extends NotifyingScrollPane
         this.mouseDraggedListener = mouseDraggedListener;
     }
 
+    public void setMouseMovedListener(final Consumer<MouseEvent> mouseMovedListener)
+    {
+        this.mouseMovedListener = mouseMovedListener;
+    }
+
     public void setMouseClickedListener(final Consumer<MouseEvent> mouseDraggedListener)
     {
         this.mouseClickedListener = mouseDraggedListener;
@@ -127,6 +134,11 @@ public class ZoomPane extends NotifyingScrollPane
     public void setMouseReleasedListener(final Consumer<MouseEvent> mouseReleasedListener)
     {
         this.mouseReleasedListener = mouseReleasedListener;
+    }
+
+    public void setMouseExitedListener(final Consumer<MouseEvent> mouseExitedListener)
+    {
+        this.mouseExitedListener = mouseExitedListener;
     }
 
     public void setKeyPressedListener(final Consumer<KeyEvent> keyPressedListener)
@@ -176,6 +188,11 @@ public class ZoomPane extends NotifyingScrollPane
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
     {
         return partialImage.absoluteToRelativeCanvasPosition(canvasX, canvasY);
+    }
+
+    public Point2D absoluteToRelativeCanvasDoublePosition(final double canvasX, final double canvasY)
+    {
+        return partialImage.absoluteToRelativeCanvasDoublePosition(canvasX, canvasY);
     }
 
     public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
@@ -404,10 +421,12 @@ public class ZoomPane extends NotifyingScrollPane
         setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
 
         addEventFilter(ScrollEvent.SCROLL, this::onScrollFilter);
+        partialImage.setOnMouseMoved(this::onMouseMoved);
         partialImage.setOnMouseClicked(this::onMouseClicked);
         partialImage.setOnMouseDragged(this::onMouseDragged);
         partialImage.setOnMousePressed(this::onMousePressed);
         partialImage.setOnMouseReleased(this::onMouseReleased);
+        partialImage.setOnMouseExited(this::onMouseExited);
         partialImage.setOnKeyPressed(this::onKeyPressed);
         partialImage.setOnDragDetected(this::onDragDetected);
     }
@@ -479,6 +498,14 @@ public class ZoomPane extends NotifyingScrollPane
         }
     }
 
+    private void onMouseMoved(final MouseEvent event)
+    {
+        if (mouseMovedListener != null)
+        {
+            mouseMovedListener.accept(event);
+        }
+    }
+
     private void onMouseClicked(final MouseEvent event)
     {
         if (mouseClickedListener != null)
@@ -508,6 +535,14 @@ public class ZoomPane extends NotifyingScrollPane
         if (mouseReleasedListener != null)
         {
             mouseReleasedListener.accept(event);
+        }
+    }
+
+    private void onMouseExited(final MouseEvent event)
+    {
+        if (mouseExitedListener != null)
+        {
+            mouseExitedListener.accept(event);
         }
     }
 

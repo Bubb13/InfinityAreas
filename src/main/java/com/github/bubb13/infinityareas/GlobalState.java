@@ -11,11 +11,13 @@ import javafx.application.Application;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.geometry.Point2D;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
@@ -38,6 +40,7 @@ public class GlobalState
     private static PixelFormat.Type nativePixelFormatType;
     private static Stage frontStage;
     private static String infinityAreasStylesheet;
+    private static Robot robot;
 
     ///////////////////////////
     // Public Static Methods //
@@ -194,6 +197,16 @@ public class GlobalState
     public static String getInfinityAreasStylesheet()
     {
         return infinityAreasStylesheet;
+    }
+
+    public static void createRobot()
+    {
+        robot = new Robot();
+    }
+
+    public static Point2D getMousePosition()
+    {
+        return robot.getMousePosition();
     }
 
     public static void cleanTemp()

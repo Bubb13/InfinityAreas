@@ -44,6 +44,7 @@ public class PartiallyRenderedImageLogic
      * as needed; they are never freed.
      */
     private final ArrayList<WritableImage> toDrawImages = new ArrayList<>();
+    private final int[] setArgbBuffer = new int[4];
 
     private BufferedImage sourceImage;
 
@@ -57,8 +58,6 @@ public class PartiallyRenderedImageLogic
     private double srcScaleFactorX = 1;
     private double srcScaleFactorY = 1;
     private double opacity = 1;
-
-    private int[] setArgbBuffer = new int[4];
 
     /////////////////////////
     // Public Constructors //
@@ -236,7 +235,7 @@ public class PartiallyRenderedImageLogic
         }
     }
 
-    private void scaleBgra(final int srcX, final int srcY, int dstW, int dstH)
+    private void scaleBgra(final int srcX, final int srcY, final int dstW, final int dstH)
     {
         final byte[] src = ((DataBufferByte)sourceImage.getRaster().getDataBuffer()).getData();
         final int srcWidth = sourceImage.getWidth();

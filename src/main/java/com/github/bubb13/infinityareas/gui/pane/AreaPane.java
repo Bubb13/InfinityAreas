@@ -36,6 +36,7 @@ import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.ImageUtil;
+import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -45,6 +46,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -60,6 +62,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Affine;
 import javafx.stage.DirectoryChooser;
 
 import javax.imageio.ImageIO;
@@ -76,11 +79,21 @@ public class AreaPane extends StackPane
     // Private Fields //
     ////////////////////
 
-    // Data
+    //------//
+    // Data //
+    //------//
+
     private Area area;
     private AreaSearchMap searchMap;
 
-    // GUI
+    //-----//
+    // GUI //
+    //-----//
+
+    //++++++++
+    // Core ++
+    //++++++++
+
     private final ZoomPane zoomPane = new ZoomPane();
     private final Editor editor = new Editor(zoomPane, this);
     {
@@ -88,17 +101,46 @@ public class AreaPane extends StackPane
         editor.setRenderingComparator(renderingComparator);
         editor.setInteractionComparator(renderingComparator.reversed());
     }
+    private SearchMapImage searchMapImage;
+
+    //+++++++++++
+    // Toolbar ++
+    //+++++++++++
+
+    //----------------------------
+    // State tracking variables --
+    //----------------------------
 
     private final StackPane toolbarParent = new StackPane();
     private Parent curToolbarNode;
 
+    //---------------
+    // GUI Objects --
+    //---------------
+
+    // Default toolbar
     private final HBox defaultToolbarNode = new HBox(5);
-    private final FlowPane searchMapEditModeToolbarButtonsFlow = new FlowPane(Orientation.HORIZONTAL, 5, 5);
+
+    // Search Map Edit Mode toolbar
     private final ArrayList<ColorButton> searchMapEditModeToolbarColorButtons = new ArrayList<>();
+    private final FlowPane searchMapEditModeToolbarButtonsFlow = new FlowPane(Orientation.HORIZONTAL, 5, 5);
+
+    //++++++++++++++++++++
+    // Right-Side Panel ++
+    //++++++++++++++++++++
+
+    //----------------------------
+    // State tracking variables --
+    //----------------------------
 
     private final StackPane rightNodeParent = new StackPane();
     private Parent curRightNode;
 
+    //---------------
+    // GUI Objects --
+    //---------------
+
+    // Default Panel
     private final VBox defaultRightNode = new VBox(10)
     {
         @Override
@@ -109,11 +151,17 @@ public class AreaPane extends StackPane
     };
     private final CheckBox renderRegionsCheckbox = new CheckBox("Render Regions");
     private final CheckBox renderSearchMapCheckbox = new CheckBox("Render Search Map");
+    private Slider searchMapOpacitySlider;
 
+    // Snapshots panel (View Visible Objects)
     private final SnapshotsPane snapshotsPane = new SnapshotsPane(editor, editor.getSnapshots());
+
+    // Fields panel (object selected)
     private final FieldPane fieldPane = new FieldPane();
     private Object fieldPaneOwner = null;
-    private final VBox editSearchMapPane = new VBox(10)
+
+    // Search Map Edit Mode panel
+    private final VBox searchMapEditModeRightPane = new VBox(10)
     {
         @Override
         protected double computeMinWidth(double height)
@@ -121,10 +169,8 @@ public class AreaPane extends StackPane
             return computePrefWidth(height);
         }
     };
-
-    private SearchMapImage searchMapImage;
-    private Slider searchMapOpacitySlider;
     private Slider searchMapEditModeOpacitySlider;
+    private Slider searchMapEditModeBrushSizeSlider;
 
     /////////////////////////
     // Public Constructors //
@@ -263,7 +309,7 @@ public class AreaPane extends StackPane
                 quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
 
                 final Button editSearchMap = new Button("Edit Search Map");
-                editSearchMap.setOnAction((ignored) -> editor.enterEditMode(EditSearchMapMode.class));
+                editSearchMap.setOnAction((ignored) -> editor.enterEditMode(SearchMapEditMode.class));
 
                 defaultToolbarNode.getChildren().addAll(saveButton, viewVisibleObjectsButton,
                     drawPolygonButton, bisectLine, quickSelect, editSearchMap);
@@ -348,13 +394,28 @@ public class AreaPane extends StackPane
             // Search Map Edit Mode Right Node //
             /////////////////////////////////////
 
-            editSearchMapPane.setPadding(new Insets(0, 10, 10, 10));
+                searchMapEditModeRightPane.setPadding(new Insets(0, 10, 10, 10));
 
-            final LabeledNode<Slider> labeledSearchMapEditModeOpacitySlider
-                = createNewSearchMapOpacitySlider(0);
+                ////////////////////
+                // Opacity Slider //
+                ////////////////////
 
-            editSearchMapPane.getChildren().add(labeledSearchMapEditModeOpacitySlider);
-            searchMapEditModeOpacitySlider = labeledSearchMapEditModeOpacitySlider.getNode();
+                final LabeledNode<Slider> labeledSearchMapEditModeOpacitySlider
+                    = createNewSearchMapOpacitySlider(0);
+
+                searchMapEditModeOpacitySlider = labeledSearchMapEditModeOpacitySlider.getNode();
+
+                ///////////////////////
+                // Brush Size Slider //
+                ///////////////////////
+
+                final LabeledNode<Slider> labeledSearchMapEditModeBrushSizeSlider
+                    = createNewSearchMapBrushSizeSlider(0);
+
+                searchMapEditModeBrushSizeSlider = labeledSearchMapEditModeBrushSizeSlider.getNode();
+
+            searchMapEditModeRightPane.getChildren().addAll(labeledSearchMapEditModeOpacitySlider,
+                labeledSearchMapEditModeBrushSizeSlider);
 
             ///////////////////////////////
             // ZoomPane + Side Pane HBox //
@@ -381,7 +442,7 @@ public class AreaPane extends StackPane
         editor.registerEditMode(AreaPaneNormalEditMode.class, AreaPaneNormalEditMode::new);
         editor.registerEditMode(DrawPolygonEditMode.class, DrawRegionPolygonEditMode::new);
         editor.registerEditMode(QuickSelectEditMode.class, AreaPaneQuickSelectEditMode::new);
-        editor.registerEditMode(EditSearchMapMode.class, EditSearchMapMode::new);
+        editor.registerEditMode(SearchMapEditMode.class, SearchMapEditMode::new);
     }
 
     private LabeledNode<Slider> createNewSearchMapOpacitySlider(final double insetLeft)
@@ -411,46 +472,32 @@ public class AreaPane extends StackPane
         return labeledSearchMapOpacitySlider;
     }
 
-    private void onSave()
+    private LabeledNode<Slider> createNewSearchMapBrushSizeSlider(final double insetLeft)
     {
-        final Path overridePath = GlobalState.getGame().getRoot().resolve("override");
-        try
+        final Slider searchMapBrushSizeSlider = new Slider(1, 10, 1)
         {
-            Files.createDirectories(overridePath);
-        }
-        catch (final Exception e)
-        {
-            ErrorAlert.openAndWait("Failed to save area.", e);
-            return;
-        }
+            @Override
+            protected double computePrefWidth(double height)
+            {
+                return 150;
+            }
+        };
 
-        final DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setTitle("Select Output Directory");
-        directoryChooser.setInitialDirectory(overridePath.toFile());
+        searchMapBrushSizeSlider.setShowTickLabels(true);
+        searchMapBrushSizeSlider.setShowTickMarks(true);
+        searchMapBrushSizeSlider.setMajorTickUnit(1);
+        searchMapBrushSizeSlider.setMinorTickCount(0);
+        searchMapBrushSizeSlider.setBlockIncrement(1);
+        // Slider::setSnapToTicks() does nothing(?!)
+        searchMapBrushSizeSlider.valueProperty().addListener((observable, oldValue, newValue)
+            -> searchMapBrushSizeSlider.setValue(MiscUtil.snapToNearest(newValue.doubleValue(), 1)));
 
-        GlobalState.pushModalStage(null);
-        final File selectedDirectory = directoryChooser.showDialog(null);
-        GlobalState.popModalStage(null);
+        final LabeledNode<Slider> labeledSearchMapBrushSizeSlider = new LabeledNode<>(
+            "Brush Size", searchMapBrushSizeSlider, Pos.TOP_LEFT
+        );
+        labeledSearchMapBrushSizeSlider.setPadding(new Insets(0, 5, 0, insetLeft));
 
-        if (selectedDirectory == null)
-        {
-            return;
-        }
-
-        new SaveTask(selectedDirectory.toPath())
-            .trackWith(new LoadingStageTracker())
-            .onFailedFx((e) -> ErrorAlert.openAndWait("Failed to save area.", e))
-            .start();
-    }
-
-    private void onViewVisibleObjects()
-    {
-        if (fieldPaneOwner != null)
-        {
-            editor.unselectAll();
-        }
-
-        changeRightNode(snapshotsPane);
+        return labeledSearchMapBrushSizeSlider;
     }
 
     private void changeToolbarNode(final Parent newNode)
@@ -497,6 +544,48 @@ public class AreaPane extends StackPane
         }
     }
 
+    private void onSave()
+    {
+        final Path overridePath = GlobalState.getGame().getRoot().resolve("override");
+        try
+        {
+            Files.createDirectories(overridePath);
+        }
+        catch (final Exception e)
+        {
+            ErrorAlert.openAndWait("Failed to save area.", e);
+            return;
+        }
+
+        final DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Select Output Directory");
+        directoryChooser.setInitialDirectory(overridePath.toFile());
+
+        GlobalState.pushModalStage(null);
+        final File selectedDirectory = directoryChooser.showDialog(null);
+        GlobalState.popModalStage(null);
+
+        if (selectedDirectory == null)
+        {
+            return;
+        }
+
+        new SaveTask(selectedDirectory.toPath())
+            .trackWith(new LoadingStageTracker())
+            .onFailedFx((e) -> ErrorAlert.openAndWait("Failed to save area.", e))
+            .start();
+    }
+
+    private void onViewVisibleObjects()
+    {
+        if (fieldPaneOwner != null)
+        {
+            editor.unselectAll();
+        }
+
+        changeRightNode(snapshotsPane);
+    }
+
     private void onRenderRegionsChanged()
     {
         editor.requestDraw();
@@ -515,6 +604,10 @@ public class AreaPane extends StackPane
     /////////////////////
     // Private Classes //
     /////////////////////
+
+    //------------//
+    // Edit Modes //
+    //------------//
 
     private class AreaPaneNormalEditMode extends AbstractEditMode
     {
@@ -738,12 +831,19 @@ public class AreaPane extends StackPane
         }
     }
 
-    private class EditSearchMapMode extends LabeledEditMode
+    private class SearchMapEditMode extends LabeledEditMode
     {
+        ///////////////////////////
+        // Private Static Fields //
+        ///////////////////////////
+
+        private static final Color OUTLINE_COLOR = Color.rgb(0, 255, 0);
+
         ////////////////////
         // Private Fields //
         ////////////////////
 
+        private final BrushOutlineState brushOutlineState = new BrushOutlineState();
         private Parent savedToolbarNode;
         private Parent savedRightNode;
         private int drawingPaletteIndex;
@@ -752,7 +852,7 @@ public class AreaPane extends StackPane
         // Public Constructors //
         /////////////////////////
 
-        public EditSearchMapMode()
+        public SearchMapEditMode()
         {
             super(AreaPane.this.editor, "Edit Search Map Mode");
             init();
@@ -763,11 +863,50 @@ public class AreaPane extends StackPane
         ////////////////////
 
         @Override
+        public void onDraw(GraphicsContext canvasContext)
+        {
+            super.onDraw(canvasContext);
+
+            final Canvas canvas = canvasContext.getCanvas();
+            final Point2D mousePositionScreen = GlobalState.getMousePosition();
+            final Point2D mousePositionRelativeCanvas = canvas.screenToLocal(mousePositionScreen);
+
+            if (!canvas.contains(mousePositionRelativeCanvas))
+            {
+                return;
+            }
+
+            final Point2D mousePositionAbsoluteCanvas = canvas.localToParent(mousePositionRelativeCanvas);
+
+            final Point2D imagePoint = searchMapImage.absoluteCanvasToSourceImagePoint(
+                mousePositionAbsoluteCanvas.getX(), mousePositionAbsoluteCanvas.getY());
+
+            final Point2D relativeCanvasPoint = searchMapImage.sourceImageToRelativeCanvasPoint(
+                (int)imagePoint.getX(), (int)imagePoint.getY());
+
+            final Affine savedTransform = canvasContext.getTransform();
+            canvasContext.translate(relativeCanvasPoint.getX(), relativeCanvasPoint.getY());
+            canvasContext.setStroke(OUTLINE_COLOR);
+
+            final ArrayList<Point2D> brushOutlinePoints = brushOutlineState.points;
+            final int limit = brushOutlinePoints.size();
+            for (int i = 0; i < limit; i += 2)
+            {
+                final Point2D p1 = brushOutlinePoints.get(i);
+                final Point2D p2 = brushOutlinePoints.get(i + 1);
+                canvasContext.strokeLine(p1.getX(), p1.getY(), p2.getX(), p2.getY());
+            }
+
+            canvasContext.setTransform(savedTransform);
+        }
+
+        @Override
         public void onModeStart()
         {
             pushPanes();
             super.onModeStart(); // After pushPanes() so that it doesn't consume a draw request
             searchMapImage.setOpacity(searchMapEditModeOpacitySlider.getValue() / 100);
+            calculateOutlinePoints(brushOutlineState, searchMapImage);
         }
 
         @Override
@@ -784,6 +923,18 @@ public class AreaPane extends StackPane
             return renderable instanceof SearchMapImage
                 ? EditModeForceEnableState.ENABLE
                 : EditModeForceEnableState.DISABLE;
+        }
+
+        @Override
+        public void onMouseMoved(final MouseEvent event)
+        {
+            editor.requestDraw();
+        }
+
+        @Override
+        public void onZoomFactorChanged(final double newZoomFactor)
+        {
+            calculateOutlinePoints(brushOutlineState, searchMapImage);
         }
 
         @Override
@@ -832,6 +983,12 @@ public class AreaPane extends StackPane
         }
 
         @Override
+        public void onMouseExited(final MouseEvent event)
+        {
+            editor.requestDraw();
+        }
+
+        @Override
         public void onKeyPressed(final KeyEvent event)
         {
             final KeyCode code = event.getCode();
@@ -855,9 +1012,15 @@ public class AreaPane extends StackPane
                 colorButton.setOnAction(new ColorButtonAction(i));
             }
             setSelectedColorButton(searchMapEditModeToolbarColorButtons.get(0), 0);
+
+            searchMapEditModeBrushSizeSlider.valueProperty().addListener((observable, oldValue, newValue) ->
+            {
+                calculateOutlinePoints(brushOutlineState, searchMapImage);
+                editor.requestDraw();
+            });
         }
 
-        private void setPixelPaletteIndex(final MouseEvent mouseEvent, final SearchMapImage specificSearchMapImage)
+        public void setPixelPaletteIndex(final MouseEvent mouseEvent, final SearchMapImage specificSearchMapImage)
         {
             final double clickX = mouseEvent.getX();
             final double clickY = mouseEvent.getY();
@@ -867,7 +1030,141 @@ public class AreaPane extends StackPane
             final int sourceImageX = (int)srcPoint.getX();
             final int sourceImageY = (int)srcPoint.getY();
 
-            searchMap.setPixelPaletteIndex(sourceImageX, sourceImageY, drawingPaletteIndex);
+            final int brushSize = (int)Math.round(searchMapEditModeBrushSizeSlider.getValue());
+            final int brushSizeSquared = brushSize * brushSize;
+
+            final int xLimit = sourceImageX + brushSize;
+            final int yLimit = sourceImageY + brushSize;
+
+            final BufferedImage searchMapSourceImage = searchMap.getImage();
+            final int searchMapWidth = searchMapSourceImage.getWidth();
+            final int searchMapHeight = searchMapSourceImage.getHeight();
+
+            for (int pixelY = sourceImageY - brushSize; pixelY <= yLimit; ++pixelY)
+            {
+                if (pixelY < 0 || pixelY >= searchMapHeight) continue;
+
+                for (int pixelX = sourceImageX - brushSize; pixelX <= xLimit; ++pixelX)
+                {
+                    if (pixelX < 0 || pixelX >= searchMapWidth) continue;
+
+                    final int offsetX = pixelX - sourceImageX;
+                    final int offsetY = pixelY - sourceImageY;
+
+                    if (offsetX * offsetX + offsetY * offsetY < brushSizeSquared)
+                    {
+                        searchMap.setPixelPaletteIndex(pixelX, pixelY, drawingPaletteIndex);
+                    }
+                }
+            }
+        }
+
+        public void calculateOutlinePoints(
+            final BrushOutlineState brushOutlineState, final SearchMapImage specificSearchMapImage)
+        {
+            final ArrayList<Point2D> points = brushOutlineState.points;
+            points.clear();
+
+            final int brushSize = (int)Math.round(searchMapEditModeBrushSizeSlider.getValue());
+            final int brushSizeSquared = brushSize * brushSize;
+
+            final int xLimit = brushSize * 2;
+            final int yLimit = brushSize * 2;
+
+            final double stretchFactorX = specificSearchMapImage.getStretchFactorX();
+            final double stretchFactorY = specificSearchMapImage.getStretchFactorY();
+
+            double minX = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY;
+            double minY = Double.POSITIVE_INFINITY;
+            double maxY = Double.NEGATIVE_INFINITY;
+
+            // Scan Left
+            for (int pixelY = 0; pixelY <= yLimit; ++pixelY)
+            {
+                for (int pixelX = 0; pixelX <= xLimit; ++pixelX)
+                {
+                    final int offsetX = pixelX - brushSize;
+                    final int offsetY = pixelY - brushSize;
+
+                    if (offsetX * offsetX + offsetY * offsetY < brushSizeSquared)
+                    {
+                        final double topY = offsetY * stretchFactorY * editor.getZoomFactor();
+                        final double bottomY = (offsetY + 1) * stretchFactorY * editor.getZoomFactor();
+                        final double leftLineX = offsetX * stretchFactorX * editor.getZoomFactor();
+                        if (leftLineX < minX) minX = leftLineX;
+                        points.add(new Point2D(leftLineX, topY));
+                        points.add(new Point2D(leftLineX, bottomY));
+                        break;
+                    }
+                }
+            }
+
+            // Scan Right
+            for (int pixelY = 0; pixelY <= yLimit; ++pixelY)
+            {
+                for (int pixelX = xLimit; pixelX >= 0; --pixelX)
+                {
+                    final int offsetX = pixelX - brushSize;
+                    final int offsetY = pixelY - brushSize;
+
+                    if (offsetX * offsetX + offsetY * offsetY < brushSizeSquared)
+                    {
+                        final double topY = offsetY * stretchFactorY * editor.getZoomFactor();
+                        final double bottomY = (offsetY + 1) * stretchFactorY * editor.getZoomFactor();
+                        final double rightLineX = (offsetX + 1) * stretchFactorX * editor.getZoomFactor();
+                        if (rightLineX > maxX) maxX = rightLineX;
+                        points.add(new Point2D(rightLineX, topY));
+                        points.add(new Point2D(rightLineX, bottomY));
+                        break;
+                    }
+                }
+            }
+
+            // Scan Top
+            for (int pixelX = 0; pixelX <= xLimit; ++pixelX)
+            {
+                for (int pixelY = 0; pixelY <= yLimit; ++pixelY)
+                {
+                    final int offsetX = pixelX - brushSize;
+                    final int offsetY = pixelY - brushSize;
+
+                    if (offsetX * offsetX + offsetY * offsetY < brushSizeSquared)
+                    {
+                        final double leftX = offsetX * stretchFactorX * editor.getZoomFactor();
+                        final double rightX = (offsetX + 1) * stretchFactorX * editor.getZoomFactor();
+                        final double topLineY = offsetY * stretchFactorY * editor.getZoomFactor();
+                        if (topLineY < minY) minY = topLineY;
+                        points.add(new Point2D(leftX, topLineY));
+                        points.add(new Point2D(rightX, topLineY));
+                        break;
+                    }
+                }
+            }
+
+            // Scan Bottom
+            for (int pixelX = 0; pixelX <= xLimit; ++pixelX)
+            {
+                for (int pixelY = yLimit; pixelY >= 0; --pixelY)
+                {
+                    final int offsetX = pixelX - brushSize;
+                    final int offsetY = pixelY - brushSize;
+
+                    if (offsetX * offsetX + offsetY * offsetY < brushSizeSquared)
+                    {
+                        final double leftX = offsetX * stretchFactorX * editor.getZoomFactor();
+                        final double rightX = (offsetX + 1) * stretchFactorX * editor.getZoomFactor();
+                        final double bottomLineY = (offsetY + 1) * stretchFactorY * editor.getZoomFactor();
+                        if (bottomLineY > maxY) maxY = bottomLineY;
+                        points.add(new Point2D(leftX, bottomLineY));
+                        points.add(new Point2D(rightX, bottomLineY));
+                        break;
+                    }
+                }
+            }
+
+            brushOutlineState.centerOffsetX = stretchFactorX * editor.getZoomFactor() / -2;
+            brushOutlineState.centerOffsetY = stretchFactorY * editor.getZoomFactor() / -2;
         }
 
         private void pushPanes()
@@ -875,7 +1172,7 @@ public class AreaPane extends StackPane
             savedToolbarNode = curToolbarNode;
             savedRightNode = curRightNode;
             changeToolbarNode(searchMapEditModeToolbarButtonsFlow);
-            changeRightNode(editSearchMapPane);
+            changeRightNode(searchMapEditModeRightPane);
             AreaPane.this.requestFocus(); // Prevent button press from causing focus loss
         }
 
@@ -926,7 +1223,18 @@ public class AreaPane extends StackPane
                 setSelectedColorButton(colorButton, paletteIndex);
             }
         }
+
+        public static class BrushOutlineState
+        {
+            public ArrayList<Point2D> points = new ArrayList<>();
+            public double centerOffsetX;
+            public double centerOffsetY;
+        }
     }
+
+    //--------------------//
+    // Renderable Classes //
+    //--------------------//
 
     private class SearchMapImage extends RenderableImage
     {
@@ -960,7 +1268,7 @@ public class AreaPane extends StackPane
         @Override
         public boolean offerPressCapture(MouseEvent event)
         {
-            return editor.getCurrentEditMode().getClass() == EditSearchMapMode.class;
+            return editor.getCurrentEditMode().getClass() == SearchMapEditMode.class;
         }
 
         @Override
@@ -1413,6 +1721,10 @@ public class AreaPane extends StackPane
             }
         }
     }
+
+    //-------//
+    // Tasks //
+    //-------//
 
     private class SetAreaTask extends TrackedTask<Void>
     {

@@ -85,11 +85,13 @@ public class Editor
     {
         this.zoomPane = zoomPane;
         zoomPane.setDrawCallback(this::onDraw);
+        zoomPane.setMouseMovedListener(this::onMouseMoved);
+        zoomPane.setMousePressedListener(this::onMousePressed);
         zoomPane.setDragDetectedListener(this::onDragDetected);
         zoomPane.setMouseDraggedListener(this::onMouseDragged);
-        zoomPane.setMousePressedListener(this::onMousePressed);
         zoomPane.setMouseReleasedListener(this::onMouseReleased);
         zoomPane.setMouseClickedListener(this::onMouseClicked);
+        zoomPane.setMouseExitedListener(this::onMouseExited);
         zoomPane.setZoomFactorListener(this::onZoomFactorChanged);
         keyPressedNode.setOnKeyPressed(this::onKeyPressed);
     }
@@ -284,6 +286,11 @@ public class Editor
     public Point2D absoluteToRelativeCanvasPosition(final int canvasX, final int canvasY)
     {
         return zoomPane.absoluteToRelativeCanvasPosition(canvasX, canvasY);
+    }
+
+    public Point2D absoluteToRelativeCanvasDoublePosition(final double canvasX, final double canvasY)
+    {
+        return zoomPane.absoluteToRelativeCanvasDoublePosition(canvasX, canvasY);
     }
 
     public Point absoluteCanvasToSourcePosition(final int canvasX, final int canvasY)
@@ -552,6 +559,11 @@ public class Editor
         editMode.onDraw(canvasContext);
     }
 
+    private void onMouseMoved(final MouseEvent event)
+    {
+        editMode.onMouseMoved(event);
+    }
+
     private void onMousePressed(final MouseEvent event)
     {
         final MouseButton customMousePressedButton = editMode.customOnMousePressed(event);
@@ -713,8 +725,18 @@ public class Editor
         event.consume();
     }
 
+    private void onMouseExited(final MouseEvent event)
+    {
+        editMode.onMouseExited(event);
+    }
+
     private void onZoomFactorChanged(final double zoomFactor)
     {
+        if (editMode != null) // Can happen during area pane reset
+        {
+            editMode.onZoomFactorChanged(zoomFactor);
+        }
+
         for (final AbstractRenderable renderable : zoomFactorListenerObjects)
         {
             renderable.onZoomFactorChanged(zoomFactor);

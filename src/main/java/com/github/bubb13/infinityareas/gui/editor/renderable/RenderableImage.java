@@ -68,6 +68,26 @@ public class RenderableImage extends AbstractRenderable
         logic.setPixelARGB(x, y, argb);
     }
 
+    public double getStretchFactorX()
+    {
+        return stretchFactorX;
+    }
+
+    public double getStretchFactorY()
+    {
+        return stretchFactorY;
+    }
+
+    public double getSrcScaleFactorX()
+    {
+        return logic.getSrcScaleFactorX();
+    }
+
+    public double getSrcScaleFactorY()
+    {
+        return logic.getSrcScaleFactorY();
+    }
+
     @Override
     public DoubleCorners getCorners()
     {
@@ -138,6 +158,16 @@ public class RenderableImage extends AbstractRenderable
         final double srcX = (srcPoint.getX() - corners.topLeftX()) / stretchFactorX;
         final double srcY = (srcPoint.getY() - corners.topLeftY()) / stretchFactorY;
         return new Point2D(srcX, srcY);
+    }
+
+    public Point2D sourceImageToRelativeCanvasPoint(final double x, final double y)
+    {
+        final double backgroundTopLeftX = x * stretchFactorX;
+        final double backgroundTopLeftY = y * stretchFactorY;
+        final Point2D canvasTopLeft = editor.sourceToCanvasDoublePosition(backgroundTopLeftX, backgroundTopLeftY);
+        final double canvasTopLeftX = canvasTopLeft.getX();
+        final double canvasTopLeftY = canvasTopLeft.getY();
+        return new Point2D(canvasTopLeftX, canvasTopLeftY);
     }
 
     @Override

@@ -27,6 +27,10 @@ public class AbstractEditMode implements EditMode
         return EditModeForceEnableState.NO;
     }
 
+    @Override public void onZoomFactorChanged(final double newZoomFactor) {}
+
+    @Override public void onMouseMoved(final MouseEvent event) {}
+
     @Override
     public MouseButton customOnMousePressed(final MouseEvent event)
     {
@@ -80,6 +84,8 @@ public class AbstractEditMode implements EditMode
     }
 
     @Override public void onBackgroundClicked(final MouseEvent event) {}
+
+    @Override public void onMouseExited(final MouseEvent event) {}
 
     @Override public void onKeyPressed(final KeyEvent event) {}
 }

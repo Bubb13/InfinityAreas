@@ -43,6 +43,7 @@ public class MainJavaFX extends Application
     {
         GlobalState.setApplication(this);
         GlobalState.setPrimaryStage(primaryStage);
+        GlobalState.createRobot();
         attemptLoadGame(resumeOrAskForGame());
     }
 
