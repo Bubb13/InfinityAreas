@@ -785,6 +785,13 @@ public class AreaPane extends StackPane
             regionEditorObject = null;
         }
 
+        @Override
+        public void reset()
+        {
+            super.reset();
+            regionEditorObject = null;
+        }
+
         ///////////////////////
         // Protected Methods //
         ///////////////////////

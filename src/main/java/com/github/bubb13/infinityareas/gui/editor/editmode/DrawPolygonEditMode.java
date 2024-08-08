@@ -142,6 +142,12 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
         }
     }
 
+    @Override
+    public void reset()
+    {
+        drawingPolygon = null;
+    }
+
     ////////////////////////////////
     // Protected Abstract Methods //
     ////////////////////////////////
