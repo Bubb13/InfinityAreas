@@ -174,7 +174,7 @@ public class GamePickerStage extends Stage
         final FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Game Directory (chitin.key)");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-            "Infinity Engine Key File", "chitin.key"));
+            "Infinity Engine Key File", "*.key", ".KEY"));
 
         GlobalState.pushModalStage(null);
         final File selectedFile = fileChooser.showOpenDialog(this);
