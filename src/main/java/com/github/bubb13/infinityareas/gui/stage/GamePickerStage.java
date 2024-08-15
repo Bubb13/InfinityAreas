@@ -5,6 +5,7 @@ import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.control.DynamicListView;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
+import com.github.bubb13.infinityareas.util.FileUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -155,7 +156,8 @@ public class GamePickerStage extends Stage
     {
         try
         {
-            tryLoadKeyFile(path.resolve("chitin.key"));
+            tryLoadKeyFile(FileUtil.resolveCaseInsensitiveElseError(path, "chitin.key",
+                (errorPathStr) -> String.format("Key file does not exist: \"%s\"", errorPathStr)));
         }
         catch (final Exception e)
         {
@@ -174,7 +176,15 @@ public class GamePickerStage extends Stage
         final FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Game Directory (chitin.key)");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-            "Infinity Engine Key File", "*.key", ".KEY"));
+            "Infinity Engine Key File",
+            "*.key", // Silly case permutations for case-sensitive file systems
+            "*.keY",
+            "*.kEy",
+            "*.kEY",
+            "*.Key",
+            "*.KeY",
+            "*.KEy",
+            "*.KEY"));
 
         GlobalState.pushModalStage(null);
         final File selectedFile = fileChooser.showOpenDialog(this);
@@ -218,7 +228,8 @@ public class GamePickerStage extends Stage
     {
         try
         {
-            if (Files.isRegularFile(path.resolve("chitin.key")))
+            final Path chitinPath = FileUtil.resolveCaseInsensitive(path, "chitin.key");
+            if (chitinPath != null && Files.isRegularFile(chitinPath))
             {
                 suggestedPaths.add(new SuggestedPathEntry(path));
             }
@@ -235,7 +246,7 @@ public class GamePickerStage extends Stage
         catch (final Exception ignored) {}
     }
 
-    private void checkSuggestedGameDirectory(final Path root, String pathStr)
+    private void checkSuggestedGameDirectory(final Path root, final String pathStr)
     {
         try
         {

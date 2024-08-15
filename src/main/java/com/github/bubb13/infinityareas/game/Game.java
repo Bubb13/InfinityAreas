@@ -20,7 +20,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -401,13 +400,14 @@ public class Game
 
     private void registerLooseResources(final TaskTrackerI tracker) throws Exception
     {
-        scanFolder(tracker, "<game>", gameRoot, gameRoot.resolve("override"));
+        scanFolder(tracker, "<game>", gameRoot,
+            FileUtil.resolveCaseInsensitive(gameRoot, "override"));
     }
 
     private void scanFolder(
         final TaskTrackerI tracker, final String rootName, final Path rootPath, final Path path) throws Exception
     {
-        if (!Files.isDirectory(path))
+        if (path == null || !Files.isDirectory(path))
         {
             return;
         }
@@ -548,7 +548,9 @@ public class Game
         tracker.updateMessage("Processing classic game ini ...");
         tracker.updateProgress(0, 1);
 
-        final Path iniPath = gameRoot.resolve(classicININame);
+        final Path iniPath = FileUtil.resolveCaseInsensitiveElseError(gameRoot, classicININame,
+            (errorPathStr) -> String.format("Invalid ini for classic game: \"%s\"", errorPathStr));
+
         if (!Files.isRegularFile(iniPath))
         {
             throw new IllegalStateException(String.format("Invalid ini for classic game: \"%s\"", iniPath));
@@ -567,7 +569,11 @@ public class Game
 
             for (final Path path : aliasHD0)
             {
-                aliasCache.add(path.resolve("cache"));
+                final Path cachePath = FileUtil.resolveCaseInsensitive(path, "cache");
+                if (cachePath != null)
+                {
+                    aliasCache.add(cachePath);
+                }
             }
 
             parseINIPath(alias, "CD1:", aliasCD1);
@@ -592,7 +598,11 @@ public class Game
         final String[] pathStrings = aliasStr.split(";");
         for (final String pathString : pathStrings)
         {
-            aliasPaths.add(Paths.get(pathString));
+            final Path resolvedAlias = FileUtil.resolveCaseInsensitive(pathString);
+            if (resolvedAlias != null)
+            {
+                aliasPaths.add(resolvedAlias);
+            }
         }
     }
 
@@ -607,6 +617,8 @@ public class Game
             ++i;
 
             final String bifName = bifEntry.getName();
+            final Path bifNamePath = FileUtil.pathFromUnnormalizedString(bifName);
+
             String bifRootName = null;
             Path bifRoot = null;
             Path bifPath = null;
@@ -666,7 +678,7 @@ public class Game
 
                 for (final Path testBifRoot : testBifRoots)
                 {
-                    bifPath = checkBifRoot(testBifRoot, bifName);
+                    bifPath = checkBifRoot(testBifRoot, bifNamePath);
                     if (bifPath != null)
                     {
                         bifRootName = testBifRootName;
@@ -682,7 +694,7 @@ public class Game
 
                 if (engineType == Type.SOA || engineType == Type.TOB)
                 {
-                    final String bifOnlyName = Paths.get(bifName).getFileName().toString();
+                    final String bifOnlyName = bifNamePath.getFileName().toString();
                     if (bifOnlyName.equalsIgnoreCase("progtest.bif")
                         || bifOnlyName.equalsIgnoreCase("ProgTes2.bif")
                         || bifOnlyName.equalsIgnoreCase("DeSound.bif"))
@@ -712,35 +724,20 @@ public class Game
         }
     }
 
-    private Path checkBifRoot(final Path testBifRoot, final String bifName)
+    private Path checkBifRoot(final Path testBifRoot, final Path bifNamePath)
     {
-        final Path testBifPath = FileUtil.resolvePathSafe(testBifRoot, bifName);
+        final Path testBifPath = FileUtil.resolveCaseInsensitive(testBifRoot, bifNamePath);
 
-        if (testBifPath == null)
-        {
-            throw new IllegalStateException(String.format(
-                "Attempted to access malformed bif path: \"%s%s%s\"",
-                testBifRoot, File.separator, bifName));
-        }
-
-        //System.out.printf("testBifRootName: \"%s\", testBifRoot: \"%s\", bifName: \"%s\"\n",
-        //    testBifRootName, testBifRoot, bifName);
-
-        //System.out.printf("Checking: \"%s\"\n", testBifPath);
-
-        if (Files.isRegularFile(testBifPath))
+        if (testBifPath != null && Files.isRegularFile(testBifPath))
         {
             return testBifPath;
         }
         else if (engineType == Type.IWD1 || engineType == Type.HOW || engineType == Type.TOTLM)
         {
-            final String bifNameNoPathOrExtension = FileUtil.getFileName(Paths.get(bifName));
-            final Path compressedBifPath = testBifPath.getParent()
-                .resolve(bifNameNoPathOrExtension + ".cbf");
+            final Path compressedBifNamePath = FileUtil.changePathExtension(bifNamePath, "cbf");
+            final Path compressedBifPath = FileUtil.resolveCaseInsensitive(testBifRoot, compressedBifNamePath);
 
-            //System.out.printf("Looking for special: \"%s\"\n", compressedBifPath);
-
-            if (Files.isRegularFile(compressedBifPath))
+            if (compressedBifPath != null && Files.isRegularFile(compressedBifPath))
             {
                 return compressedBifPath;
             }

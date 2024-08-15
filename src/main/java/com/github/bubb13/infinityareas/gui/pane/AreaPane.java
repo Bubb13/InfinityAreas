@@ -546,7 +546,9 @@ public class AreaPane extends StackPane
 
     private void onSave()
     {
-        final Path overridePath = GlobalState.getGame().getRoot().resolve("override");
+        final Path overridePath = FileUtil.resolveCaseInsensitiveDefault(
+            GlobalState.getGame().getRoot(), "override");
+
         try
         {
             Files.createDirectories(overridePath);

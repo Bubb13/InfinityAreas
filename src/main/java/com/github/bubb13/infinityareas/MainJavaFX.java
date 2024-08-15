@@ -6,6 +6,7 @@ import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.scene.PrimaryScene;
 import com.github.bubb13.infinityareas.gui.stage.GamePickerStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.SettingsUtil;
 import com.google.gson.JsonElement;
@@ -136,7 +137,12 @@ public class MainJavaFX extends Application
                 try
                 {
                     // `lastGameDirectoryPath` is a directory, try to load chitin.key
-                    keyFile = new KeyFile(lastGameDirectoryPath.resolve("chitin.key"));
+
+                    final Path chitinPath = FileUtil.resolveCaseInsensitiveElseError(
+                        lastGameDirectoryPath, "chitin.key",
+                        (errorPathStr) -> String.format("Key file does not exist: \"%s\"", errorPathStr));
+
+                    keyFile = new KeyFile(chitinPath);
                 }
                 catch (final Exception e)
                 {

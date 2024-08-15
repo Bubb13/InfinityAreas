@@ -21,6 +21,7 @@ import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.Reference;
 import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -220,7 +221,9 @@ public class WEDPane extends StackPane
 
     private void onSave()
     {
-        final Path overridePath = GlobalState.getGame().getRoot().resolve("override");
+        final Path overridePath = FileUtil.resolveCaseInsensitiveDefault(
+            GlobalState.getGame().getRoot(), "override");
+
         try
         {
             Files.createDirectories(overridePath);
