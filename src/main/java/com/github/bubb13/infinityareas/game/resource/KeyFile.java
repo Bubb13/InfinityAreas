@@ -1,6 +1,9 @@
 
 package com.github.bubb13.infinityareas.game.resource;
 
+import com.github.bubb13.infinityareas.misc.TaskTracker;
+import com.github.bubb13.infinityareas.misc.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 
@@ -22,31 +25,53 @@ public class KeyFile
     ////////////////////
 
     private final Path path;
-    private final ByteBuffer buffer;
     private final ArrayList<BifEntry> bifEntries = new ArrayList<>();
     private final TreeMap<ResourceIdentifier, FileEntry> fileEntries = new TreeMap<>();
+    private ByteBuffer buffer;
 
     /////////////////////////
     // Public Constructors //
     /////////////////////////
 
-    public KeyFile(final Path path) throws IOException
+    public KeyFile(final Path path)
     {
         this.path = path.toAbsolutePath();
-
-        if (!Files.isRegularFile(path))
-        {
-            throw new FileNotFoundException("Key file does not exist: \"" + path + "\"");
-        }
-
-        buffer = ByteBuffer.wrap(Files.readAllBytes(path));
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-        parse();
     }
 
     ////////////////////
     // Public Methods //
     ////////////////////
+
+    //-------//
+    // Tasks //
+    //-------//
+
+    public void load(final TaskTrackerI tracker) throws Exception
+    {
+        tracker.subtask(this::loadInternal);
+    }
+
+    public void load() throws Exception
+    {
+        loadInternal(TaskTracker.DUMMY);
+    }
+
+    public TrackedTask<Void> loadTask()
+    {
+        return new TrackedTask<>()
+        {
+            @Override
+            protected Void doTask() throws Exception
+            {
+                subtask(KeyFile.this::loadInternal);
+                return null;
+            }
+        };
+    }
+
+    //---------//
+    // General //
+    //---------//
 
     public Path getPath()
     {
@@ -102,7 +127,26 @@ public class KeyFile
     // Private Methods //
     /////////////////////
 
-    private void parse()
+    private void loadInternal(final TaskTrackerI tracker) throws IOException
+    {
+        tracker.updateMessage("Parsing key file ...");
+        tracker.updateProgress(0, 1);
+
+        bifEntries.clear();
+        fileEntries.clear();
+
+        if (!Files.isRegularFile(path))
+        {
+            throw new FileNotFoundException("Key file does not exist: \"" + path + "\"");
+        }
+
+        buffer = ByteBuffer.wrap(Files.readAllBytes(path));
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+        parse(tracker);
+    }
+
+    private void parse(final TaskTrackerI tracker)
     {
         position(0x0); final String signature = BufferUtil.readUTF8(buffer, 4);
         if (!signature.equals("KEY "))
@@ -121,11 +165,11 @@ public class KeyFile
         position(0x10); final int bifEntriesOffset = buffer.getInt();
         position(0x14); final int resourceEntriesOffset = buffer.getInt();
 
-        parseBifEntries(bifEntriesOffset, numBifEntries);
-        parseFileEntries(resourceEntriesOffset, numResourceEntries);
+        parseBifEntries(tracker, bifEntriesOffset, numBifEntries);
+        parseFileEntries(tracker, resourceEntriesOffset, numResourceEntries);
     }
 
-    private void parseBifEntries(final int offset, final int count)
+    private void parseBifEntries(final TaskTrackerI tracker, final int offset, final int count)
     {
         int curBase = offset;
         for (int i = 0; i < count; i++)
@@ -143,7 +187,7 @@ public class KeyFile
         }
     }
 
-    private void parseFileEntries(final int offset, final int count)
+    private void parseFileEntries(final TaskTrackerI tracker, final int offset, final int count)
     {
         int curBase = offset;
         for (int i = 0; i < count; i++)

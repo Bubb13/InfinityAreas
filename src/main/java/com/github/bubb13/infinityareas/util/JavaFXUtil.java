@@ -16,6 +16,7 @@ import javafx.stage.WindowEvent;
 
 import java.util.concurrent.Phaser;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public final class JavaFXUtil
 {
@@ -110,6 +111,29 @@ public final class JavaFXUtil
             });
 
             waitLatch.awaitAdvance(waitLatch.getPhase());
+        }
+    }
+
+    public static <T> T waitForFxThreadToExecute(final Supplier<T> supplier)
+    {
+        if (Platform.isFxApplicationThread())
+        {
+            return supplier.get();
+        }
+        else
+        {
+            @SuppressWarnings("unchecked")
+            final T[] result = (T[])new Object[1];
+            final Phaser waitLatch = new Phaser(1);
+
+            Platform.runLater(() ->
+            {
+                result[0] = supplier.get();
+                waitLatch.arrive();
+            });
+
+            waitLatch.awaitAdvance(waitLatch.getPhase());
+            return result[0];
         }
     }
 

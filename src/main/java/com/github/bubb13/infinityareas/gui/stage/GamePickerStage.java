@@ -5,6 +5,7 @@ import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.control.DynamicListView;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
+import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -28,7 +29,6 @@ import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -147,9 +147,18 @@ public class GamePickerStage extends Stage
         this.setTitle("Infinity Areas");
     }
 
-    private void tryLoadKeyFile(final Path path) throws IOException
+    private void tryLoadKeyFile(final Path path)
     {
-        pickedKeyFile = new KeyFile(path);
+        final KeyFile tempKeyFile = new KeyFile(path);
+        tempKeyFile.loadTask()
+            .trackWith(new LoadingStageTracker())
+            .onSucceededFx(() ->
+            {
+                pickedKeyFile = tempKeyFile;
+                this.close();
+            })
+            .onFailedFx((e) -> ErrorAlert.openAndWait("Exception when reading key file: " + e.getMessage()))
+            .start();
     }
 
     private void onSuggestedChosen(final Path path)
@@ -163,11 +172,6 @@ public class GamePickerStage extends Stage
         {
             // Show error message
             ErrorAlert.openAndWait("Exception when reading key file: " + e.getMessage());
-        }
-
-        if (pickedKeyFile != null)
-        {
-            this.close();
         }
     }
 
@@ -216,11 +220,6 @@ public class GamePickerStage extends Stage
         {
             // Show error message
             ErrorAlert.openAndWait(errorMessage);
-        }
-
-        if (pickedKeyFile != null)
-        {
-            this.close();
         }
     }
 

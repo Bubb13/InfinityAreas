@@ -29,6 +29,9 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+/**
+ * Represents an Infinity Engine game installation. Primarily facilitates the reading of game resources.
+ */
 public class Game
 {
     ////////////////////
@@ -38,7 +41,7 @@ public class Game
     private final Path gameRoot;
     private final KeyFile keyFile;
     private final GameResources resources = new GameResources();
-    private final BifFile[] bifFiles;
+    private BifFile[] bifFiles;
     private Type engineType;
 
     private final ArrayList<Path> aliasHD0 = new ArrayList<>();
@@ -58,7 +61,6 @@ public class Game
     {
         this.gameRoot = keyFile.getPath().getParent();
         this.keyFile = keyFile;
-        this.bifFiles = new BifFile[keyFile.getNumBifEntries()];
     }
 
     ////////////////////
@@ -374,6 +376,7 @@ public class Game
 
     private void registerResources(final TaskTrackerI tracker) throws Exception
     {
+        resources.clear();
         registerBifResources(tracker);
         registerLooseResources(tracker);
     }
@@ -514,6 +517,15 @@ public class Game
 
     private void handleAliasPaths(final TaskTrackerI tracker) throws Exception
     {
+        aliasHD0.clear();
+        aliasCache.clear();
+        aliasCD1.clear();
+        aliasCD2.clear();
+        aliasCD3.clear();
+        aliasCD4.clear();
+        aliasCD5.clear();
+        aliasCD6.clear();
+
         final String classicININame = switch (engineType)
         {
             case
@@ -610,6 +622,8 @@ public class Game
     {
         tracker.updateMessage("Processing BIFS ...");
         tracker.updateProgress(0, keyFile.getNumBifEntries());
+
+        bifFiles = new BifFile[keyFile.getNumBifEntries()];
 
         short i = -1;
         for (final KeyFile.BifEntry bifEntry : keyFile.bifEntries())
@@ -788,6 +802,12 @@ public class Game
         // Public Methods //
         ////////////////////
 
+        public void clear()
+        {
+            resources.clear();
+            typeBuckets.clear();
+        }
+
         public void addSource(final ResourceIdentifier identifier, final ResourceSource source)
         {
             final Resource resource = this.resources.computeIfAbsent(identifier, (ignored) ->
@@ -811,6 +831,11 @@ public class Game
         public boolean hasResource(final ResourceIdentifier identifier)
         {
             return this.resources.containsKey(identifier);
+        }
+
+        public Iterable<Resource> getResources()
+        {
+            return MiscUtil.readOnlyIterable(resources.values());
         }
 
         public Iterable<Resource> getResourcesOfType(final short numericType)

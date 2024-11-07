@@ -9,22 +9,6 @@ public abstract class TaskTracker implements TaskTrackerI
 
     public static final TaskTracker DUMMY = new TaskTracker() {};
 
-    ///////////////////////////
-    // Public Static Methods //
-    ///////////////////////////
-
-    public static void subtask(final TaskTrackerI tracker, final ThrowingRunnable<Exception> runnable) throws Exception
-    {
-        try
-        {
-            runnable.run();
-        }
-        finally
-        {
-            tracker.subtaskDone();
-        }
-    }
-
     ////////////////////
     // Public Methods //
     ////////////////////
@@ -36,7 +20,14 @@ public abstract class TaskTracker implements TaskTrackerI
     @Override
     public void subtask(final ThrowingRunnable<Exception> runnable) throws Exception
     {
-        TaskTracker.subtask(this, runnable);
+        try
+        {
+            runnable.run();
+        }
+        finally
+        {
+            subtaskDone();
+        }
     }
 
     @Override
@@ -45,6 +36,19 @@ public abstract class TaskTracker implements TaskTrackerI
         try
         {
             consumer.accept(this);
+        }
+        finally
+        {
+            subtaskDone();
+        }
+    }
+
+    @Override
+    public <T> T subtaskFunc(final ThrowingFunction<TaskTrackerI, T, Exception> function) throws Exception
+    {
+        try
+        {
+            return function.apply(this);
         }
         finally
         {

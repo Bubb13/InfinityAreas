@@ -6,6 +6,8 @@ import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
 import com.github.bubb13.infinityareas.gui.scene.PrimaryScene;
 import com.github.bubb13.infinityareas.gui.stage.GamePickerStage;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.JavaFXUtil;
 import com.github.bubb13.infinityareas.util.SettingsUtil;
@@ -45,7 +47,12 @@ public class MainJavaFX extends Application
         GlobalState.setApplication(this);
         GlobalState.setPrimaryStage(primaryStage);
         GlobalState.createRobot();
-        attemptLoadGame(resumeOrAskForGame());
+
+        resumeOrAskForGameTask()
+            .trackWith(new LoadingStageTracker())
+            .chainOnSuccess(MainJavaFX::attemptLoadGameTask)
+            .onFailedFx(ErrorAlert::openAndWait)
+            .start();
     }
 
     @Override
@@ -60,12 +67,131 @@ public class MainJavaFX extends Application
         primaryStage.close();
 
         GlobalState.cleanTemp();
-        attemptLoadGame(onInvalidAskForGame(GlobalState.getSettingsFile().getRoot()));
+        doNewAttemptLoadGameTask(onInvalidAskForGame(GlobalState.getSettingsFile().getRoot()));
     }
 
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    //-------//
+    // Tasks //
+    //-------//
+
+    private static TrackedTask<KeyFile> resumeOrAskForGameTask()
+    {
+        return new TrackedTask<>()
+        {
+            @Override
+            protected KeyFile doTask() throws Exception
+            {
+                return subtaskFunc(MainJavaFX::resumeOrAskForGameInternal);
+            }
+        };
+    }
+
+    private static TrackedTask<Void> attemptLoadGameTask(final KeyFile keyFile)
+    {
+        if (keyFile == null)
+        {
+            // User exited out of the game selection dialog, do nothing
+            return null;
+        }
+
+        return GlobalState.loadGameTask(keyFile)
+            .chainOnFail((final Throwable exception) ->
+            {
+                final KeyFile retryKeyFile = JavaFXUtil.waitForFxThreadToExecute(() ->
+                {
+                    ErrorAlert.openAndWait("An exception occurred while loading game " +
+                        "resources. You will be asked to select a new game install.", exception);
+
+                    return onInvalidAskForGame(GlobalState.getSettingsFile().getRoot());
+                });
+
+                return attemptLoadGameTask(retryKeyFile);
+            })
+            .onSucceededFx(MainJavaFX::showPrimaryStage);
+    }
+
+    //----------------//
+    // Task Internals //
+    //----------------//
+
+    private static KeyFile resumeOrAskForGameInternal(final TaskTrackerI tracker)
+    {
+        final JsonObject settingsRoot = GlobalState.getSettingsFile().getRoot();
+        final JsonElement lastGameDirectoryElement = settingsRoot.get("lastGameDirectory");
+        KeyFile keyFile = null;
+
+        if (lastGameDirectoryElement == null)
+        {
+            // 'lastGameDirectory' not set, ask for game
+            keyFile = showGamePicker();
+        }
+        else
+        {
+            // 'lastGameDirectory' set, try to use it
+            final String lastGameDirectory = lastGameDirectoryElement.getAsString();
+            Path lastGameDirectoryPath = null;
+            boolean fallback = false;
+
+            // Attempt to load `lastGameDirectoryPath`
+            try
+            {
+                lastGameDirectoryPath = Path.of(lastGameDirectory);
+            }
+            catch (final Exception ignored) {}
+
+            // Check if `lastGameDirectoryPath` is valid
+            if (lastGameDirectoryPath != null && Files.isDirectory(lastGameDirectoryPath))
+            {
+                try
+                {
+                    // `lastGameDirectoryPath` is a directory, try to load chitin.key
+
+                    final Path chitinPath = FileUtil.resolveCaseInsensitiveElseError(
+                        lastGameDirectoryPath, "chitin.key",
+                        (errorPathStr) -> String.format("Key file does not exist: \"%s\"", errorPathStr));
+
+                    keyFile = new KeyFile(chitinPath);
+                    keyFile.load(tracker);
+                }
+                catch (final Exception e)
+                {
+                    ErrorAlert.openAndWait("An exception occurred while loading the previously " +
+                        "opened key file. You will be asked to select a new game install.", e);
+
+                    // chitin.key was invalid, fallback
+                    fallback = true;
+                }
+            }
+            else
+            {
+                // `lastGameDirectoryPath` was invalid, fallback
+                fallback = true;
+            }
+
+            if (fallback)
+            {
+                // 'lastGameDirectory' is invalid, remove 'lastGameDirectory' and ask for game
+                keyFile = onInvalidAskForGame(settingsRoot);
+            }
+        }
+
+        return keyFile;
+    }
+
+    private static void doNewAttemptLoadGameTask(final KeyFile keyFile)
+    {
+        attemptLoadGameTask(keyFile)
+            .trackWith(new LoadingStageTracker())
+            .start();
+    }
+
+    //---------//
+    // General //
+    //---------//
 
     private static void saveMainWindowLocation(final int x, final int y, final int w, final int h)
     {
@@ -106,90 +232,6 @@ public class MainJavaFX extends Application
         settingsRoot.addProperty("mainWindowMaximized", newValue);
     }
 
-    private static KeyFile resumeOrAskForGame()
-    {
-        final JsonObject settingsRoot = GlobalState.getSettingsFile().getRoot();
-        final JsonElement lastGameDirectoryElement = settingsRoot.get("lastGameDirectory");
-        KeyFile keyFile = null;
-
-        if (lastGameDirectoryElement == null)
-        {
-            // 'lastGameDirectory' not set, ask for game
-            keyFile = showGamePicker();
-        }
-        else
-        {
-            // 'lastGameDirectory' set, try to use it
-            final String lastGameDirectory = lastGameDirectoryElement.getAsString();
-            Path lastGameDirectoryPath = null;
-            boolean fallback = false;
-
-            // Attempt to load `lastGameDirectoryPath`
-            try
-            {
-                lastGameDirectoryPath = Path.of(lastGameDirectory);
-            }
-            catch (final Exception ignored) {}
-
-            // Check if `lastGameDirectoryPath` is valid
-            if (lastGameDirectoryPath != null && Files.isDirectory(lastGameDirectoryPath))
-            {
-                try
-                {
-                    // `lastGameDirectoryPath` is a directory, try to load chitin.key
-
-                    final Path chitinPath = FileUtil.resolveCaseInsensitiveElseError(
-                        lastGameDirectoryPath, "chitin.key",
-                        (errorPathStr) -> String.format("Key file does not exist: \"%s\"", errorPathStr));
-
-                    keyFile = new KeyFile(chitinPath);
-                }
-                catch (final Exception e)
-                {
-                    ErrorAlert.openAndWait("An exception occurred while loading the previously " +
-                        "opened key file. You will be asked to select a new game install.", e);
-
-                    // chitin.key was invalid, fallback
-                    fallback = true;
-                }
-            }
-            else
-            {
-                // `lastGameDirectoryPath` was invalid, fallback
-                fallback = true;
-            }
-
-            if (fallback)
-            {
-                // 'lastGameDirectory' is invalid, remove 'lastGameDirectory' and ask for game
-                keyFile = onInvalidAskForGame(settingsRoot);
-            }
-        }
-
-        return keyFile;
-    }
-
-    private static void attemptLoadGame(final KeyFile keyFile)
-    {
-        if (keyFile == null)
-        {
-            // User exited out of the game selection dialog, do nothing
-            return;
-        }
-
-        GlobalState.loadGameTask(keyFile)
-            .trackWith(new LoadingStageTracker())
-            .onSucceededFx(MainJavaFX::showPrimaryStage)
-            .onFailedFx((final Throwable exception) ->
-            {
-                ErrorAlert.openAndWait("An exception occurred while loading game " +
-                    "resources. You will be asked to select a new game install.", exception);
-
-                attemptLoadGame(onInvalidAskForGame(GlobalState.getSettingsFile().getRoot()));
-            })
-            .start();
-    }
-
     private static KeyFile onInvalidAskForGame(final JsonObject settingsRoot)
     {
         settingsRoot.remove("lastGameDirectory");
@@ -198,12 +240,15 @@ public class MainJavaFX extends Application
 
     private static KeyFile showGamePicker()
     {
-        final GamePickerStage gamePickerStage = new GamePickerStage();
-        GlobalState.registerStage(gamePickerStage);
-        gamePickerStage.setOnCloseRequest((ignored) -> Platform.exit());
-        gamePickerStage.showAndWait();
-        GlobalState.deregisterStage(gamePickerStage);
-        return gamePickerStage.getPickedKeyFile();
+        return JavaFXUtil.waitForFxThreadToExecute(() ->
+        {
+            final GamePickerStage gamePickerStage = new GamePickerStage();
+            GlobalState.registerStage(gamePickerStage);
+            gamePickerStage.setOnCloseRequest((ignored) -> Platform.exit());
+            gamePickerStage.showAndWait();
+            GlobalState.deregisterStage(gamePickerStage);
+            return gamePickerStage.getPickedKeyFile();
+        });
     }
 
     private static void showPrimaryStage()

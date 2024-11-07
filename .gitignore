@@ -3,7 +3,9 @@
 InfinityAreasTemp
 settings.json
 
+bin
 .idea/**/codeStyles
+.idea/compiler.xml
 
 # Created by https://www.toptal.com/developers/gitignore/api/java,gradle,intellij
 # Edit at https://www.toptal.com/developers/gitignore?templates=java,gradle,intellij

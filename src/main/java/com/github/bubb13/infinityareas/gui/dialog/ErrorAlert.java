@@ -40,6 +40,11 @@ public class ErrorAlert extends Alert
         openAndWait(errorMessage, null);
     }
 
+    public static void openAndWait(final Throwable throwable)
+    {
+        openAndWait(null, throwable);
+    }
+
     ////////////////////////////
     // Private Static Methods //
     ////////////////////////////
@@ -72,16 +77,19 @@ public class ErrorAlert extends Alert
         final VBox vbox = new VBox();
         final ObservableList<Node> vboxChildren = vbox.getChildren();
 
-        final Label errorMessageLabel = new Label("Error Message:");
-        errorMessageLabel.setFont(Font.font(16));
-        errorMessageLabel.setPadding(new Insets(10, 10, 10, 0));
+        if (errorMessage != null)
+        {
+            final Label errorMessageLabel = new Label("Error Message:");
+            errorMessageLabel.setFont(Font.font(16));
+            errorMessageLabel.setPadding(new Insets(10, 10, 10, 0));
 
-        final TextArea messageArea = new TextArea(errorMessage);
-        messageArea.setPrefHeight(200);
-        messageArea.setWrapText(true);
-        messageArea.setEditable(false);
+            final TextArea messageArea = new TextArea(errorMessage);
+            messageArea.setPrefHeight(200);
+            messageArea.setWrapText(true);
+            messageArea.setEditable(false);
 
-        vboxChildren.addAll(errorMessageLabel, messageArea);
+            vboxChildren.addAll(errorMessageLabel, messageArea);
+        }
 
         if (throwable != null)
         {

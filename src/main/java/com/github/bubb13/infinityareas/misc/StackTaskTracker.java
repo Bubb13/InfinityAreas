@@ -41,6 +41,13 @@ public class StackTaskTracker extends TaskTracker
     }
 
     @Override
+    public <T> T subtaskFunc(final ThrowingFunction<TaskTrackerI, T, Exception> function) throws Exception
+    {
+        savedProgressStack.push(new SavedProgress(messageProperty.get(), progressProperty.get()));
+        return super.subtaskFunc(function);
+    }
+
+    @Override
     public void subtaskDone()
     {
         final SavedProgress savedProgress = savedProgressStack.pop();

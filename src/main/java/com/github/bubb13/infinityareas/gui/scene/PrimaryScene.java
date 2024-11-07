@@ -45,6 +45,7 @@ public final class PrimaryScene extends Stage
     private final TISPane tisPane = new TISPane();
     private final WEDPane wedPane = new WEDPane();
 
+    private SimpleTreeView<Object> treeView;
     private Node curRightNode = null;
 
     /////////////////////////
@@ -76,9 +77,11 @@ public final class PrimaryScene extends Stage
             toolbar.setPadding(new Insets(5, 5, 5, 5));
 
             final MenuButton gameDropdown = new MenuButton("Game");
+            final MenuItem refreshButton = new MenuItem("Refresh");
+            refreshButton.setOnAction((ignored) -> this.onSelectRefreshGame());
             final MenuItem changeButton = new MenuItem("Change");
             changeButton.setOnAction((ignored) -> this.onSelectChangeGame());
-            gameDropdown.getItems().addAll(changeButton);
+            gameDropdown.getItems().addAll(refreshButton, changeButton);
 
             final MenuButton debugDropdown = new MenuButton("Debug");
             final MenuItem stepButton = new MenuItem("Step through all areas");
@@ -104,8 +107,7 @@ public final class PrimaryScene extends Stage
                     // TreeView //
                     //////////////
 
-                    final TreeItem<Object> rootNode = createAreaTreeViewNodes();
-                    final SimpleTreeView<Object> treeView = new SimpleTreeView<>(rootNode);
+                    treeView = new SimpleTreeView<>(createTreeViewNodes());
                     treeView.setShowRoot(false);
                     treeView.setOnActivate((selected) -> this.onSelectResourceSource(((ResourceSourceHolder)selected).source()));
 
@@ -134,7 +136,12 @@ public final class PrimaryScene extends Stage
     // Private Methods //
     /////////////////////
 
-    private TreeItem<Object> createAreaTreeViewNodes()
+    private void reinitTreeView()
+    {
+        treeView.setRoot(createTreeViewNodes());
+    }
+
+    private TreeItem<Object> createTreeViewNodes()
     {
         final TreeItem<Object> areNode = new TreeItem<>("ARE");
         final TreeItem<Object> tisNode = new TreeItem<>("TIS");
@@ -197,6 +204,32 @@ public final class PrimaryScene extends Stage
         }
     }
 
+    private void onSelectRefreshGame()
+    {
+        final Game game = GlobalState.getGame();
+        final KeyFile keyFile = game.getKeyFile();
+
+        final TrackedTask<Void> task = new TrackedTask<>()
+        {
+            @Override
+            protected Void doTask() throws Exception
+            {
+                subtask(keyFile::load);
+                subtask(game::load);
+                return null;
+            }
+        };
+
+        task.trackWith(new LoadingStageTracker())
+            .onFailedFx((e) -> ErrorAlert.openAndWait("Failed to refresh game.", e))
+            .onSucceededFx(() ->
+            {
+                reinitTreeView();
+                changeRightNode(null);
+            })
+            .start();
+    }
+
     private void onSelectChangeGame()
     {
         MainJavaFX.closePrimaryStageAndAskForGame();
@@ -243,7 +276,11 @@ public final class PrimaryScene extends Stage
             curRightNode = newNode;
             final ObservableList<Node> children = rightPane.getChildren();
             children.clear();
-            children.add(newNode);
+
+            if (newNode != null)
+            {
+                children.add(newNode);
+            }
         }
     }
 
