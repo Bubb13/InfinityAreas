@@ -10,66 +10,105 @@ import javafx.util.Duration;
 
 public class LoadingStageTracker extends StackTaskTracker
 {
-    private final Object loadingStageInitLock = new Object();
+    private final Object loadingStageStateLock = new Object();
 
-    private boolean loadingStageInitQueued;
+    private final Timeline delayedInitStage = new Timeline(new KeyFrame(
+        Duration.millis(300),
+        event -> checkInitStage()
+    ));
+
+    private boolean loadingStageState;
     private LoadingStage loadingStage;
+
+    /////////////////////////
+    // Public Constructors //
+    /////////////////////////
+
+    public LoadingStageTracker()
+    {
+        delayedInitStage.setCycleCount(1);
+    }
+
+    ////////////////////
+    // Public Methods //
+    ////////////////////
 
     @Override
     public void init()
     {
-        GlobalState.pushModalStage(null);
-        loadingStageInitQueued = true;
-
-        // Open the loading stage if the task takes more than 300 milliseconds
-        final Timeline timeline = new Timeline(new KeyFrame(
-            Duration.millis(300),
-            event -> initStage()
-        ));
-        timeline.setCycleCount(1);
-        timeline.play();
-    }
-
-    private void initStage()
-    {
-        synchronized (loadingStageInitLock)
+        synchronized (loadingStageStateLock)
         {
-            if (!loadingStageInitQueued) return;
-            loadingStageInitQueued = false;
-            loadingStage = new LoadingStage();
-            loadingStage.bind(messageProperty, progressProperty);
-            loadingStage.show();
+            if (loadingStageState) return;
+
+            loadingStageState = true;
+            GlobalState.pushModalStage(null);
+
+            // Open the loading stage if the task takes more than 300 milliseconds
+            delayedInitStage.play();
         }
     }
 
     @Override
     public void done()
     {
-        boolean wasLoadingStageInitQueued = false;
-
         // Stop the loading stage from opening if it hasn't already
-        synchronized (loadingStageInitLock)
+        synchronized (loadingStageStateLock)
         {
-            if (loadingStageInitQueued)
-            {
-                loadingStageInitQueued = false;
-                wasLoadingStageInitQueued = true;
-            }
-        }
+            if (!loadingStageState) return;
 
-        // Close the loading stage if it is open
-        if (!wasLoadingStageInitQueued)
-        {
+            loadingStageState = false;
+            GlobalState.popModalStage(null);
+            delayedInitStage.stop();
+
             if (Platform.isFxApplicationThread())
             {
-                loadingStage.close();
+                if (loadingStage != null) loadingStage.close();
             }
             else
             {
-                Platform.runLater(loadingStage::close);
+                Platform.runLater(this::checkCloseStage);
             }
         }
+    }
 
-        GlobalState.popModalStage(null);
+    @Override
+    public void hide()
+    {
+        done();
+    }
+
+    @Override
+    public void show()
+    {
+        init();
+    }
+
+    /////////////////////
+    // Private Methods //
+    /////////////////////
+
+    private void checkInitStage()
+    {
+        synchronized (loadingStageStateLock)
+        {
+            if (!loadingStageState) return;
+
+            if (loadingStage == null)
+            {
+                loadingStage = new LoadingStage();
+                loadingStage.bind(messageProperty, progressProperty);
+            }
+
+            loadingStage.show();
+        }
+    }
+
+    private void checkCloseStage()
+    {
+        synchronized (loadingStageStateLock)
+        {
+            if (loadingStageState) return;
+            if (loadingStage != null) loadingStage.close();
+        }
     }
 }

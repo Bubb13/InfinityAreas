@@ -71,4 +71,16 @@ public interface TaskTrackerI
      * being thrown.
      */
     void done();
+
+    /**
+     * Hides the tracker if the given {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclass blocks
+     * user interaction.
+     */
+    void hide();
+
+    /**
+     * Shows the tracker if the given {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclass blocks
+     * user interaction.
+     */
+    void show();
 }

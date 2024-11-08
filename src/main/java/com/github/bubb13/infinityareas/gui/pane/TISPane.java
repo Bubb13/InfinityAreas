@@ -178,9 +178,8 @@ public class TISPane extends StackPane
         }
 
         @Override
-        protected Void doTask() throws Exception
+        protected Void doTask(final TaskTrackerI tracker) throws Exception
         {
-            final TaskTrackerI tracker = getTracker();
             tracker.updateMessage("Processing TIS ...");
             tracker.updateProgress(0, 1);
 

@@ -55,7 +55,7 @@ public class AreaSearchMap
         return new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 subtask(AreaSearchMap.this::loadInternal);
                 return null;

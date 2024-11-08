@@ -13,6 +13,7 @@ import com.github.bubb13.infinityareas.gui.pane.AreaPane;
 import com.github.bubb13.infinityareas.gui.pane.TISPane;
 import com.github.bubb13.infinityareas.gui.pane.WEDPane;
 import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.TrackedTask;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -212,7 +213,7 @@ public final class PrimaryScene extends Stage
         final TrackedTask<Void> task = new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 subtask(keyFile::load);
                 subtask(game::load);
@@ -289,7 +290,7 @@ public final class PrimaryScene extends Stage
         new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 for (final Game.Resource resource : GlobalState.getGame()
                     .getResourcesOfType(KeyFile.NumericResourceType.ARE))
@@ -319,7 +320,7 @@ public final class PrimaryScene extends Stage
         new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 final Game game = GlobalState.getGame();
                 final Path debugPath = game.getRoot().resolve("debug");

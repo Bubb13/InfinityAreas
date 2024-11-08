@@ -1757,9 +1757,8 @@ public class AreaPane extends StackPane
         ///////////////////////
 
         @Override
-        protected Void doTask() throws Exception
+        protected Void doTask(final TaskTrackerI tracker) throws Exception
         {
-            final TaskTrackerI tracker = getTracker();
             tracker.updateMessage("Processing area ...");
             tracker.updateProgress(0, 1);
 
@@ -1805,9 +1804,8 @@ public class AreaPane extends StackPane
         ///////////////////////
 
         @Override
-        protected Void doTask() throws Exception
+        protected Void doTask(final TaskTrackerI tracker) throws Exception
         {
-            final TaskTrackerI tracker = getTracker();
             tracker.updateMessage("Saving ...");
             tracker.updateProgress(0, 1);
 

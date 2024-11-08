@@ -634,9 +634,8 @@ public class WEDPane extends StackPane
         ///////////////////////
 
         @Override
-        protected Void doTask() throws Exception
+        protected Void doTask(final TaskTrackerI tracker) throws Exception
         {
-            final TaskTrackerI tracker = getTracker();
             tracker.updateMessage("Processing WED ...");
             tracker.updateProgress(0, 1);
 

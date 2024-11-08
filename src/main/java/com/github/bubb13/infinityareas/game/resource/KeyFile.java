@@ -61,7 +61,7 @@ public class KeyFile
         return new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 subtask(KeyFile.this::loadInternal);
                 return null;

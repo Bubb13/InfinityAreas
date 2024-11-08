@@ -1225,7 +1225,7 @@ public class WED
         ///////////////////////
 
         @Override
-        protected BufferedImage doTask() throws Exception
+        protected BufferedImage doTask(final TaskTrackerI tracker) throws Exception
         {
             final Overlay baseOverlay = overlays.get(0);
             final BufferedImage image = new BufferedImage(
@@ -1264,7 +1264,7 @@ public class WED
         ///////////////////////
 
         @Override
-        protected Void doTask() throws Exception
+        protected Void doTask(final TaskTrackerI tracker) throws Exception
         {
             save();
             return null;

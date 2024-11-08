@@ -85,7 +85,7 @@ public class TIS
         return new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 subtask(TIS.this::loadInternal);
                 return null;

@@ -77,7 +77,7 @@ public class PVRZ
         return new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 subtask(PVRZ.this::loadInternal);
                 return null;

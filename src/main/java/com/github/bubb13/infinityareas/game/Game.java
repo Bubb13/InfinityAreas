@@ -82,7 +82,7 @@ public class Game
         return new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 subtask(Game.this::loadInternal);
                 return null;

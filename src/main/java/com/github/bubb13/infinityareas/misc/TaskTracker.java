@@ -58,4 +58,7 @@ public abstract class TaskTracker implements TaskTrackerI
 
     @Override public void subtaskDone() {}
     @Override public void done() {}
+
+    @Override public void hide() {}
+    @Override public void show() {}
 }

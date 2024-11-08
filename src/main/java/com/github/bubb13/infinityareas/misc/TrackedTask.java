@@ -4,7 +4,10 @@ package com.github.bubb13.infinityareas.misc;
 import javafx.application.Platform;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.Phaser;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -14,8 +17,10 @@ public abstract class TrackedTask<T>
     // Private Fields //
     ////////////////////
 
+    private final LinkedList<TrackedTask<T>> toDoQueue = new LinkedList<>();
+
     private final ArrayList<Function<T, TrackedTask<?>>> chainOnSuccess = new ArrayList<>();
-    private final ArrayList<Function<Throwable, TrackedTask<?>>> chainOnFail = new ArrayList<>();
+    private final ArrayList<BiFunction<TaskTrackerI, Throwable, TrackedTask<T>>> chainOnFail = new ArrayList<>();
 
     private final ArrayList<Consumer<T>> onSucceeded = new ArrayList<>();
     private final ArrayList<Consumer<T>> onSucceededFx = new ArrayList<>();
@@ -73,7 +78,7 @@ public abstract class TrackedTask<T>
      * @param chain The task to chain.
      * @return {@code this}
      */
-    public TrackedTask<T> chainOnFail(final Function<Throwable, TrackedTask<?>> chain)
+    public TrackedTask<T> chainOnFail(final BiFunction<TaskTrackerI, Throwable, TrackedTask<T>> chain)
     {
         this.chainOnFail.add(chain);
         return this;
@@ -230,7 +235,7 @@ public abstract class TrackedTask<T>
     /**
      * The main method of the task - does the work, and returns the task's result.
      */
-    protected T doTask() throws Exception
+    protected T doTask(final TaskTrackerI tracker) throws Exception
     {
         return null;
     }
@@ -253,6 +258,26 @@ public abstract class TrackedTask<T>
     protected void subtask(final ThrowingConsumer<TaskTrackerI, Exception> consumer) throws Exception
     {
         tracker.subtask(consumer);
+    }
+
+    /**
+     * Executes {@code trackedTask} as a subtask of the current task.
+     * @param trackedTask The subtask.
+     * @throws Exception The exception thrown by {@code trackedTask}.
+     */
+    protected <SubtaskReturnType> SubtaskReturnType subtask(
+        final TrackedTask<SubtaskReturnType> trackedTask) throws Exception
+    {
+        tracker.subtask(() -> trackedTask.trackWith(tracker).runChain());
+
+        if (trackedTask.exception == null)
+        {
+            return trackedTask.value;
+        }
+        else
+        {
+            throw trackedTask.exception;
+        }
     }
 
     /**
@@ -290,51 +315,72 @@ public abstract class TrackedTask<T>
     // Private Methods //
     /////////////////////
 
+    /**
+     * Thread-entry for the task.
+     */
     private void runThread()
     {
-        run(false);
+        toDoQueue.add(this);
+        loop(false);
+    }
+
+    /**
+     * Runs the current task as a chain, i.e. the tracker isn't automatically closed on task end.
+     */
+    private void runChain()
+    {
+        toDoQueue.add(this);
+        loop(true);
     }
 
     /**
      * Runs the task by calling {@link com.github.bubb13.infinityareas.misc.TrackedTask#doTask} and handling
      * any relevant callbacks.
      */
-    private void run(final boolean isChain)
+    private void loop(final boolean isChain)
     {
-        try
+        final TrackedTask<T> toDoTask = toDoQueue.removeFirst();
+
+        do
         {
-            value = doTask();
+            try
+            {
+                value = toDoTask.doTask(tracker);
+                exception = null;
+            }
+            catch (final Exception e)
+            {
+                value = null;
+                exception = e;
+            }
+            finally
+            {
+                boolean ignoreFailed = false;
+
+                if (exception == null)
+                {
+                    doChainOnSuccess();
+                }
+                else
+                {
+                    ignoreFailed = doChainOnFail(toDoQueue);
+                }
+
+                if (exception == null)
+                {
+                    doOnSucceeded();
+                }
+                else if (!ignoreFailed)
+                {
+                    doOnFailed();
+                }
+            }
         }
-        catch (final Exception e)
+        while (!toDoTask.toDoQueue.isEmpty());
+
+        if (!isChain)
         {
-            exception = e;
-        }
-        finally
-        {
-            boolean ignoreFailed = false;
-
-            if (exception == null)
-            {
-                doChainOnSuccess();
-            }
-            else
-            {
-                ignoreFailed = doChainOnFail();
-            }
-
-            if (!isChain)
-            {
-                tracker.done();
-            }
-
-            if (exception == null)
-            {
-                doOnSucceeded();
-            }
-            else if (!ignoreFailed)
-            {
-                doOnFailed();
-            }
+            tracker.done();
         }
     }
 
@@ -348,27 +394,28 @@ public abstract class TrackedTask<T>
             final TrackedTask<?> chainedTask = chain.apply(value);
             if (chainedTask != null)
             {
-                chainedTask.trackWith(tracker).run(true);
+                chainedTask.trackWith(tracker).runChain();
             }
         }
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#chainOnFail}.
+     * Schedules the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#chainOnFail}
+     * to run on the current task's thread.
      *
-     * @return {@code true} if a chain was executed, {@code false} otherwise.
+     * @return {@code true} if a chain was registered, {@code false} otherwise.
      */
-    private boolean doChainOnFail()
+    private boolean doChainOnFail(final Queue<TrackedTask<T>> toDoQueue)
     {
         boolean ranChain = false;
 
-        for (final Function<Throwable, TrackedTask<?>> chain : chainOnFail)
+        for (final BiFunction<TaskTrackerI, Throwable, TrackedTask<T>> chain : chainOnFail)
         {
-            final TrackedTask<?> chainedTask = chain.apply(exception);
+            final TrackedTask<T> chainedTask = chain.apply(tracker, exception);
             if (chainedTask != null)
             {
                 ranChain = true;
-                chainedTask.trackWith(tracker).run(true);
+                toDoQueue.add(chainedTask.trackWith(tracker));
             }
         }
 
@@ -411,9 +458,9 @@ public abstract class TrackedTask<T>
      */
     private void doOnFailed()
     {
-        for (final Consumer<Throwable> callback : onFailed)
+        for (final Consumer<Throwable> consumer : onFailed)
         {
-            callback.accept(exception);
+            consumer.accept(exception);
         }
 
         if (!onFailedFx.isEmpty())

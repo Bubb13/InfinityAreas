@@ -157,7 +157,7 @@ public class GamePickerStage extends Stage
                 pickedKeyFile = tempKeyFile;
                 this.close();
             })
-            .onFailedFx((e) -> ErrorAlert.openAndWait("Exception when reading key file: " + e.getMessage()))
+            .onFailedFx((e) -> ErrorAlert.openAndWait("Exception when reading key file.", e))
             .start();
     }
 
@@ -194,32 +194,17 @@ public class GamePickerStage extends Stage
         final File selectedFile = fileChooser.showOpenDialog(this);
         GlobalState.popModalStage(null);
 
-        String errorMessage = null;
-
         if (selectedFile != null)
         {
-            try
+            final Path path = selectedFile.toPath();
+            if (path.getFileName().toString().equalsIgnoreCase("chitin.key"))
             {
-                final Path path = selectedFile.toPath();
-                if (path.getFileName().toString().equalsIgnoreCase("chitin.key"))
-                {
-                    tryLoadKeyFile(path);
-                }
-                else
-                {
-                    errorMessage = "Not a key file. Please navigate to chitin.key.";
-                }
+                tryLoadKeyFile(path);
             }
-            catch (final Exception e)
+            else
             {
-                errorMessage = "Exception when reading key file: " + e.getMessage();
+                ErrorAlert.openAndWait("Not a key file. Please navigate to chitin.key.");
             }
-        }
-
-        if (errorMessage != null)
-        {
-            // Show error message
-            ErrorAlert.openAndWait(errorMessage);
         }
     }
 

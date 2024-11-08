@@ -93,7 +93,7 @@ public class Area
         return new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 subtask(Area.this::loadInternal);
                 return null;
@@ -118,7 +118,7 @@ public class Area
         return new TrackedTask<>()
         {
             @Override
-            protected Void doTask() throws Exception
+            protected Void doTask(final TaskTrackerI tracker) throws Exception
             {
                 final SaveAreaState saveAreaState = new SaveAreaState(path);
                 subtask(saveAreaState::save);
