@@ -293,26 +293,39 @@ public class AreaPane extends StackPane
 
                 defaultToolbarNode.setPadding(new Insets(0, 0, 5, 0));
 
-                final Button saveButton = new Button("Save");
-                saveButton.setOnAction((ignored) -> this.onSave());
+                    //////////////////////////////
+                    // Default Toolbar FlowPane //
+                    //////////////////////////////
 
-                final Button viewVisibleObjectsButton = new UnderlinedButton("View Visible Objects");
-                viewVisibleObjectsButton.setOnAction((ignored) -> this.onViewVisibleObjects());
+                    final FlowPane defaultToolbarFlowPane = new FlowPane(Orientation.HORIZONTAL, 5, 5);
+                    defaultToolbarFlowPane.prefWrapLengthProperty().bind(zoomPane.widthProperty());
 
-                final Button drawPolygonButton = new UnderlinedButton("Draw Region Polygon");
-                drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
+                        //////////////////////////////////////
+                        // Default Toolbar FlowPane Buttons //
+                        //////////////////////////////////////
 
-                final Button bisectLine = new UnderlinedButton("Bisect Segment");
-                bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
+                        final Button saveButton = new Button("Save");
+                        saveButton.setOnAction((ignored) -> this.onSave());
 
-                final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
-                quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
+                        final Button viewVisibleObjectsButton = new UnderlinedButton("View Visible Objects");
+                        viewVisibleObjectsButton.setOnAction((ignored) -> this.onViewVisibleObjects());
 
-                final Button editSearchMap = new Button("Edit Search Map");
-                editSearchMap.setOnAction((ignored) -> editor.enterEditMode(SearchMapEditMode.class));
+                        final Button drawPolygonButton = new UnderlinedButton("Draw Region Polygon");
+                        drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
 
-                defaultToolbarNode.getChildren().addAll(saveButton, viewVisibleObjectsButton,
-                    drawPolygonButton, bisectLine, quickSelect, editSearchMap);
+                        final Button bisectLine = new UnderlinedButton("Bisect Segment");
+                        bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
+
+                        final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
+                        quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
+
+                        final Button editSearchMap = new Button("Edit Search Map");
+                        editSearchMap.setOnAction((ignored) -> editor.enterEditMode(SearchMapEditMode.class));
+
+                    defaultToolbarFlowPane.getChildren().addAll(saveButton, viewVisibleObjectsButton,
+                        drawPolygonButton, bisectLine, quickSelect, editSearchMap);
+
+                defaultToolbarNode.getChildren().addAll(defaultToolbarFlowPane);
 
                 ///////////////////////////////////////
                 // Edit Search Map Mode Toolbar HBox //

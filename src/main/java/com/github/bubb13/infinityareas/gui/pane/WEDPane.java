@@ -25,6 +25,7 @@ import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -34,8 +35,10 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -134,26 +137,46 @@ public class WEDPane extends StackPane
             // Toolbar HBox //
             //////////////////
 
-            final HBox toolbar = new HBox(5);
-            toolbar.setPadding(new Insets(0, 0, 5, 0));
+            final HBox toolbarAndCornerHBox = new HBox(5);
+            toolbarAndCornerHBox.setPadding(new Insets(0, 0, 5, 0));
 
-            final Button saveButton = new Button("Save");
-            saveButton.setOnAction((ignored) -> this.onSave());
+                //////////////////////
+                // Toolbar FlowPane //
+                //////////////////////
 
-            final Button viewVisibleObjectsButton = new UnderlinedButton("View Visible Objects");
-            viewVisibleObjectsButton.setOnAction((ignored) -> this.onViewVisibleObjects());
+                final FlowPane toolbarFlowPane = new FlowPane(Orientation.HORIZONTAL, 5, 5);
+                toolbarFlowPane.prefWrapLengthProperty().bind(zoomPane.widthProperty());
 
-            final Button drawPolygonButton = new UnderlinedButton("Draw Wall Polygon");
-            drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
+                    //////////////////////////////
+                    // Toolbar FlowPane Buttons //
+                    //////////////////////////////
 
-            final Button bisectLine = new UnderlinedButton("Bisect Segment");
-            bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
+                    final Button saveButton = new Button("Save");
+                    saveButton.setOnAction((ignored) -> this.onSave());
 
-            final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
-            quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
+                    final Button viewVisibleObjectsButton = new UnderlinedButton("View Visible Objects");
+                    viewVisibleObjectsButton.setOnAction((ignored) -> this.onViewVisibleObjects());
 
-            toolbar.getChildren().addAll(saveButton, viewVisibleObjectsButton,
-                drawPolygonButton, bisectLine, quickSelect);
+                    final Button drawPolygonButton = new UnderlinedButton("Draw Wall Polygon");
+                    drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
+
+                    final Button bisectLine = new UnderlinedButton("Bisect Segment");
+                    bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
+
+                    final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
+                    quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
+
+                toolbarFlowPane.getChildren().addAll(saveButton, viewVisibleObjectsButton,
+                    drawPolygonButton, bisectLine, quickSelect);
+
+                ///////////////////
+                // Corner Region //
+                ///////////////////
+
+                final Region cornerRegion = new Region();
+                cornerRegion.minWidthProperty().bind(rightNodeParent.widthProperty());
+
+            toolbarAndCornerHBox.getChildren().addAll(toolbarFlowPane, cornerRegion);
 
             ////////////////////
             // Side Pane VBox //
@@ -189,7 +212,7 @@ public class WEDPane extends StackPane
 
                 changeRightNode(defaultRightNode);
 
-        mainVBox.getChildren().addAll(toolbar, zoomPaneSidePaneHBox);
+        mainVBox.getChildren().addAll(toolbarAndCornerHBox, zoomPaneSidePaneHBox);
         getChildren().add(mainVBox);
 
         editor.registerEditMode(WEDPaneNormalEditMode.class, () -> new WEDPaneNormalEditMode(editor));
