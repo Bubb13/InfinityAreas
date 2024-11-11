@@ -13,9 +13,10 @@ repositories {
 
 def javaVersion = "17"
 
-compileJava {
+tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
+    options.compilerArgs << "--release" << javaVersion
 }
 
 def javaFXVersion = "22.0.1"
