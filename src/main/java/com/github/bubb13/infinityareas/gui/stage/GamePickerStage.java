@@ -171,7 +171,7 @@ public class GamePickerStage extends Stage
         catch (final Exception e)
         {
             // Show error message
-            ErrorAlert.openAndWait("Exception when reading key file: " + e.getMessage());
+            ErrorAlert.openAndWait("Exception when reading key file.", e);
         }
     }
 

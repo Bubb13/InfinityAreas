@@ -555,14 +555,14 @@ public class Editor
     // Manual Undo-Redo Stack Management //
     //-----------------------------------//
 
-    public void addUndo(final IUndoRedo undoRedo)
+    public void pushUndo(final IUndoRedo undoRedo)
     {
-        undoRedoBuffer.addUndo(undoRedo);
+        undoRedoBuffer.pushUndo(undoRedo);
     }
 
-    public void addUndo(final Runnable undo)
+    public void pushUndo(final Runnable undo)
     {
-        undoRedoBuffer.addUndo(undo);
+        undoRedoBuffer.pushUndo(undo);
     }
 
     public void clearRedo()

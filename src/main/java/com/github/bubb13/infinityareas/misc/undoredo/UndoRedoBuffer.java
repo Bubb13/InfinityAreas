@@ -1,7 +1,8 @@
 
 package com.github.bubb13.infinityareas.misc.undoredo;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Stack;
 
 public class UndoRedoBuffer
@@ -68,7 +69,7 @@ public class UndoRedoBuffer
     {
         clearRedo();
         undoRedo.perform();
-        addUndo(undoRedo);
+        pushUndo(undoRedo);
     }
 
     public void perform(final Runnable perform, final Runnable undo)
@@ -148,7 +149,7 @@ public class UndoRedoBuffer
     // Manual Undo-Redo Stack Management //
     //-----------------------------------//
 
-    public void addUndo(final IUndoRedo undoRedo)
+    public void pushUndo(final IUndoRedo undoRedo)
     {
         if (transactionNestCount == 0)
         {
@@ -158,13 +159,13 @@ public class UndoRedoBuffer
         else
         {
             debugPrintInternal("  Added undoRedo to the current transaction");
-            currentTransaction.addUndoRedo(undoRedo);
+            currentTransaction.pushUndo(undoRedo);
         }
     }
 
-    public void addUndo(final Runnable undo)
+    public void pushUndo(final Runnable undo)
     {
-        addUndo(new AbstractUndo()
+        pushUndo(new AbstractUndo()
         {
             @Override
             public void undo()
@@ -262,7 +263,7 @@ public class UndoRedoBuffer
         // Private Fields //
         ////////////////////
 
-        private final ArrayList<IUndoRedo> undoStack = new ArrayList<>();
+        private final Deque<IUndoRedo> undoStack = new ArrayDeque<>();
 
         /////////////////////////
         // Public Constructors //
@@ -272,21 +273,21 @@ public class UndoRedoBuffer
 
         public TransactionInternal(final IUndoRedo undoRedo)
         {
-            addUndoRedo(undoRedo);
+            pushUndo(undoRedo);
         }
 
         ////////////////////
         // Public Methods //
         ////////////////////
 
-        public void addUndoRedo(final IUndoRedo undoRedo)
+        public void pushUndo(final IUndoRedo undoRedo)
         {
-            undoStack.add(undoRedo);
+            undoStack.push(undoRedo);
         }
 
         public void undoAll()
         {
-            undoStack.reversed().forEach(IUndoRedo::undo);
+            undoStack.forEach(IUndoRedo::undo);
         }
     }
 }

@@ -206,7 +206,7 @@ public class RenderableVertex extends AbstractRenderable
         final Point newSourcePos = editor.getEventSourcePosition(event);
         final int deltaX = newSourcePos.x - dragStartPoint.x;
         final int deltaY = newSourcePos.y - dragStartPoint.y;
-        editor.addUndo(() -> moveVertexUsingDeltaUndoable(-deltaX, -deltaY));
+        editor.pushUndo(() -> moveVertexUsingDeltaUndoable(-deltaX, -deltaY));
     }
 
     @Override
@@ -285,7 +285,7 @@ public class RenderableVertex extends AbstractRenderable
             () -> moveVertexUsingDelta(deltaX, deltaY),
             () -> {
                 moveVertexUsingDelta(-deltaX, -deltaY);
-                editor.addUndo(() -> moveVertexUsingDeltaUndoable(deltaX, deltaY));
+                editor.pushUndo(() -> moveVertexUsingDeltaUndoable(deltaX, deltaY));
             }
         );
     }
