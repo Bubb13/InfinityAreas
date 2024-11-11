@@ -26,6 +26,7 @@ public class RenderableVertex extends AbstractRenderable
     private final DoubleCorners corners = new DoubleCorners();
 
     private boolean selected = false;
+    private Point dragStartPoint;
 
     /////////////////////////
     // Public Constructors //
@@ -153,26 +154,29 @@ public class RenderableVertex extends AbstractRenderable
     @Override
     public void onClicked(final MouseEvent event)
     {
-        if (!event.isShiftDown() && !event.isControlDown())
+        editor.runAsTransaction(() ->
         {
-            editor.unselectAll();
-        }
-
-        if (event.isControlDown())
-        {
-            if (selected)
+            if (!event.isShiftDown() && !event.isControlDown())
             {
-                editor.unselect(this);
+                editor.unselectAll();
+            }
+
+            if (event.isControlDown())
+            {
+                if (selected)
+                {
+                    editor.unselect(this);
+                }
+                else
+                {
+                    editor.select(this);
+                }
             }
             else
             {
                 editor.select(this);
             }
-        }
-        else
-        {
-            editor.select(this);
-        }
+        });
     }
 
     @Override
@@ -182,37 +186,27 @@ public class RenderableVertex extends AbstractRenderable
     }
 
     @Override
-    public void onDragged(MouseEvent event)
+    public void onDragStart(final MouseEvent event)
     {
-        boolean wasNotSelected = false;
-        if (!selected)
-        {
-            wasNotSelected = true;
-            editor.select(this);
-        }
+        dragStartPoint = editor.getEventSourcePosition(event);
+    }
 
+    @Override
+    public void onDragged(final MouseEvent event)
+    {
         final Point newSourcePos = editor.getEventSourcePosition(event);
         final int deltaX = newSourcePos.x - vertex.x();
         final int deltaY = newSourcePos.y - vertex.y();
+        moveVertexUsingDelta(deltaX, deltaY);
+    }
 
-        for (final AbstractRenderable renderable : editor.selectedObjects())
-        {
-            if (!(renderable instanceof RenderableVertex movingRenderableVertex))
-            {
-                continue;
-            }
-
-            final GenericPolygon.Vertex movingVertex = movingRenderableVertex.getVertex();
-            final int newX = movingVertex.x() + deltaX;
-            final int newY = movingVertex.y() + deltaY;
-
-            movingRenderableVertex.move(newX, newY);
-        }
-
-        if (wasNotSelected)
-        {
-            editor.unselect(this);
-        }
+    @Override
+    public void onDragEnd(final MouseEvent event)
+    {
+        final Point newSourcePos = editor.getEventSourcePosition(event);
+        final int deltaX = newSourcePos.x - dragStartPoint.x;
+        final int deltaY = newSourcePos.y - dragStartPoint.y;
+        editor.addUndo(() -> moveVertexUsingDeltaUndoable(-deltaX, -deltaY));
     }
 
     @Override
@@ -252,5 +246,47 @@ public class RenderableVertex extends AbstractRenderable
         corners.setBottomRightExclusiveX(x + 1);
         corners.setBottomRightExclusiveY(y + 1);
         editor.addRenderable(this);
+    }
+
+    private void moveVertexUsingDelta(final int deltaX, final int deltaY)
+    {
+        editor.clearRedo();
+
+        boolean wasNotSelected = false;
+        if (!selected)
+        {
+            wasNotSelected = true;
+            editor.runWithUndoRedoSuppressed(() -> editor.select(this));
+        }
+
+        for (final AbstractRenderable renderable : editor.selectedObjects())
+        {
+            if (!(renderable instanceof RenderableVertex movingRenderableVertex))
+            {
+                continue;
+            }
+
+            final GenericPolygon.Vertex movingVertex = movingRenderableVertex.getVertex();
+            final int newX = movingVertex.x() + deltaX;
+            final int newY = movingVertex.y() + deltaY;
+
+            movingRenderableVertex.move(newX, newY);
+        }
+
+        if (wasNotSelected)
+        {
+            editor.runWithUndoRedoSuppressed(() -> editor.unselect(this));
+        }
+    }
+
+    private void moveVertexUsingDeltaUndoable(final int deltaX, final int deltaY)
+    {
+        editor.perform(
+            () -> moveVertexUsingDelta(deltaX, deltaY),
+            () -> {
+                moveVertexUsingDelta(-deltaX, -deltaY);
+                editor.addUndo(() -> moveVertexUsingDeltaUndoable(deltaX, deltaY));
+            }
+        );
     }
 }

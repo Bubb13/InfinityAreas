@@ -19,7 +19,9 @@ public interface RenderableInterface
     boolean offerPressCapture(MouseEvent event);
     void onClicked(MouseEvent event);
     boolean offerDragCapture(MouseEvent event);
+    void onDragStart(MouseEvent event);
     void onDragged(MouseEvent event);
+    void onDragEnd(MouseEvent event);
     void onBeforeSelected();
     void onBeforeAdditionalObjectSelected(AbstractRenderable renderable);
     void onReceiveKeyPress(KeyEvent event);

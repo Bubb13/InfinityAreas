@@ -10,6 +10,8 @@ import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.undoredo.IUndoRedo;
+import com.github.bubb13.infinityareas.misc.undoredo.UndoRedoBuffer;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -20,6 +22,7 @@ import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.WritableImage;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -72,6 +75,8 @@ public class Editor
     private AbstractRenderable pressObject = null;
     private boolean dragOccurred = false;
     private AbstractRenderable dragObject = null;
+
+    private final UndoRedoBuffer undoRedoBuffer = new UndoRedoBuffer();
 
     private final ArrayList<Snapshot> snapshots = new ArrayList<>();
     private final ObservableList<Snapshot> observableSnapshots = FXCollections.observableList(snapshots);
@@ -180,39 +185,78 @@ public class Editor
 
     public void select(final AbstractRenderable renderable)
     {
-        if (selectedObjects.contains(renderable))
+        if (isSelected(renderable))
         {
             return;
         }
 
-        renderable.onBeforeSelected();
+        performAsTransaction(
+            () ->
+            {
+                renderable.onBeforeSelected();
 
-        for (final AbstractRenderable selectedObject : selectedObjects)
-        {
-            selectedObject.onBeforeAdditionalObjectSelected(renderable);
-        }
+                for (final AbstractRenderable selectedObject : selectedObjects)
+                {
+                    selectedObject.onBeforeAdditionalObjectSelected(renderable);
+                }
 
-        selectedObjects.addTail(renderable);
+                selectedObjects.addTail(renderable);
+            },
+            () -> unselect(renderable)
+        );
     }
 
     public void unselect(final AbstractRenderable renderable)
     {
-        if (!selectedObjects.contains(renderable))
+        if (!isSelected(renderable))
         {
             return;
         }
 
-        renderable.onUnselected();
-        selectedObjects.remove(renderable);
+        performAsTransaction(
+            () -> {
+                renderable.onUnselected();
+                selectedObjects.remove(renderable);
+            },
+            () -> select(renderable)
+        );
     }
 
     public void unselectAll()
     {
-        for (final AbstractRenderable renderable : selectedObjects)
+        final int numSelectedObjects = selectedCount();
+        if (numSelectedObjects <= 0)
         {
-            renderable.onUnselected();
+            return;
         }
-        selectedObjects.clear();
+
+        // Maintain references to the currently selected renderables so they can be reverted in an undo operation
+        final AbstractRenderable[] selectedCopy = new AbstractRenderable[numSelectedObjects];
+        {
+            int i = 0;
+            for (final AbstractRenderable renderable : selectedObjects)
+            {
+                selectedCopy[i++] = renderable;
+            }
+        }
+
+        performAsTransaction(
+            () ->
+            {
+                for (final AbstractRenderable renderable : selectedObjects)
+                {
+                    renderable.onUnselected();
+                }
+                selectedObjects.clear();
+            },
+            () ->
+            {
+                for (final AbstractRenderable renderable : selectedCopy)
+                {
+                    select(renderable);
+                }
+            }
+        );
     }
 
     //--------//
@@ -456,6 +500,76 @@ public class Editor
         pressButton = button;
     }
 
+    //------------------//
+    // Undo-Redo Buffer //
+    //------------------//
+
+    //-----------//
+    // Undo-Redo //
+    //-----------//
+
+    public void undo()
+    {
+        undoRedoBuffer.undo();
+    }
+
+    public void redo()
+    {
+        undoRedoBuffer.redo();
+    }
+
+    //---------//
+    // Perform //
+    //---------//
+
+    public void perform(final IUndoRedo undoRedo)
+    {
+        undoRedoBuffer.perform(undoRedo);
+    }
+
+    public void perform(final Runnable perform, final Runnable undo)
+    {
+        undoRedoBuffer.perform(perform, undo);
+    }
+
+    //------------------------//
+    // Transaction Management //
+    //------------------------//
+
+    public void runAsTransaction(final Runnable runnable)
+    {
+        undoRedoBuffer.runAsTransaction(runnable);
+    }
+
+    public void performAsTransaction(final Runnable perform, final Runnable undo)
+    {
+        undoRedoBuffer.performAsTransaction(perform, undo);
+    }
+
+    public void runWithUndoRedoSuppressed(final Runnable runnable)
+    {
+        undoRedoBuffer.runWithUndoRedoSuppressed(runnable);
+    }
+
+    //-----------------------------------//
+    // Manual Undo-Redo Stack Management //
+    //-----------------------------------//
+
+    public void addUndo(final IUndoRedo undoRedo)
+    {
+        undoRedoBuffer.addUndo(undoRedo);
+    }
+
+    public void addUndo(final Runnable undo)
+    {
+        undoRedoBuffer.addUndo(undo);
+    }
+
+    public void clearRedo()
+    {
+        undoRedoBuffer.clearRedo();
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
@@ -670,6 +784,7 @@ public class Editor
             && pressObject.offerDragCapture(event))
         {
             dragObject = pressObject;
+            dragObject.onDragStart(event);
         }
 
         if (dragObject == null)
@@ -713,6 +828,11 @@ public class Editor
                     }
                 }
             }
+            else if (dragObject != null)
+            {
+                dragObject.onDragEnd(event);
+            }
+
             pressButton = null;
             pressObject = null;
             dragObject = null;
@@ -745,6 +865,27 @@ public class Editor
 
     private void onKeyPressed(final KeyEvent event)
     {
+        if (event.isControlDown()
+            && !event.isAltDown()
+            && !event.isMetaDown()
+            && !event.isShiftDown())
+        {
+            final KeyCode keyCode = event.getCode();
+
+            if (keyCode == KeyCode.Z)
+            {
+                event.consume();
+                undo();
+                return;
+            }
+            else if (keyCode == KeyCode.Y)
+            {
+                event.consume();
+                redo();
+                return;
+            }
+        }
+
         editMode.onKeyPressed(event);
 
         if (event.isConsumed())

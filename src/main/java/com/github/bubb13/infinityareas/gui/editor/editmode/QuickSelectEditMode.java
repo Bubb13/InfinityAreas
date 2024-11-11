@@ -85,7 +85,12 @@ public class QuickSelectEditMode extends LabeledEditMode
     @Override
     public boolean customOnMouseReleased(final MouseEvent event)
     {
-        if (event.getButton() == editor.getPressButton())
+        if (event.getButton() != editor.getPressButton())
+        {
+            return true;
+        }
+
+        editor.runAsTransaction(() ->
         {
             if (!event.isShiftDown() && !event.isControlDown())
             {
@@ -119,11 +124,11 @@ public class QuickSelectEditMode extends LabeledEditMode
                     }
                 }
             }
+        });
 
-            editor.setPressButton(null);
-            quickSelectRender = false;
-            editor.exitEditMode();
-        }
+        editor.setPressButton(null);
+        quickSelectRender = false;
+        editor.exitEditMode();
         return true;
     }
 

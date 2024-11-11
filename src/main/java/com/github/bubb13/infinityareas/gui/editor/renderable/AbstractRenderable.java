@@ -71,7 +71,9 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     @Override public void onBeforeAdditionalObjectSelected(final AbstractRenderable renderable) {}
     @Override public void onReceiveKeyPress(final KeyEvent event) {}
     @Override public void onUnselected() {}
+    @Override public void onDragStart(final MouseEvent event) {}
     @Override public void onDragged(final MouseEvent event) {}
+    @Override public void onDragEnd(final MouseEvent event) {}
     @Override public boolean listensToZoomFactorChanges() { return false; }
     @Override public void onZoomFactorChanged(final double zoomFactor) {}
     @Override public void onBeforeRemoved() {}
