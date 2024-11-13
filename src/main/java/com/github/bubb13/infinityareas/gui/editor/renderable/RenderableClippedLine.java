@@ -24,7 +24,6 @@ public abstract class RenderableClippedLine<BackingPointType extends ReadableDou
     // Protected Fields //
     //////////////////////
 
-    protected final Editor editor;
     protected final DoubleCorners corners = new DoubleCorners();
     protected BackingPointType backingPoint1;
     protected BackingPointType backingPoint2;
@@ -35,7 +34,7 @@ public abstract class RenderableClippedLine<BackingPointType extends ReadableDou
 
     public RenderableClippedLine(final Editor editor)
     {
-        this.editor = editor;
+        super(editor);
     }
 
     ////////////////////

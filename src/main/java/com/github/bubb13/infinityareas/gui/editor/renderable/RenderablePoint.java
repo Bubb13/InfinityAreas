@@ -15,7 +15,6 @@ public class RenderablePoint<BackingObjectType extends IntPoint> extends Abstrac
     // Protected Fields //
     //////////////////////
 
-    protected final Editor editor;
     protected final DoubleCorners corners = new DoubleCorners();
     protected BackingObjectType backingObject;
 
@@ -25,7 +24,7 @@ public class RenderablePoint<BackingObjectType extends IntPoint> extends Abstrac
 
     public RenderablePoint(final Editor editor)
     {
-        this.editor = editor;
+        super(editor);
     }
 
     ////////////////////
@@ -94,7 +93,7 @@ public class RenderablePoint<BackingObjectType extends IntPoint> extends Abstrac
     public void delete()
     {
         super.delete();
-        editor.removeRenderable(this);
+        editor.removeRenderable(this, false);
     }
 
     ///////////////////////

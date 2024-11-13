@@ -1,6 +1,9 @@
 
-package com.github.bubb13.infinityareas.misc;
+package com.github.bubb13.infinityareas.misc.tasktracking;
 
+import com.github.bubb13.infinityareas.misc.ThrowingConsumer;
+import com.github.bubb13.infinityareas.misc.ThrowingFunction;
+import com.github.bubb13.infinityareas.misc.ThrowingRunnable;
 import javafx.application.Platform;
 
 import java.util.ArrayList;
@@ -44,7 +47,7 @@ public abstract class TrackedTask<T>
 
     /**
      * Tracks this task with {@code tracker}.
-     * @param tracker The {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} to track this task with.
+     * @param tracker The {@link TaskTrackerI} to track this task with.
      * @return {@code this}
      */
     public TrackedTask<T> trackWith(final TaskTrackerI tracker)
@@ -71,8 +74,8 @@ public abstract class TrackedTask<T>
      *
      * <br><br>
      * <b>Note:</b> If a failure chain
-     * is executed, the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onFailed}
-     * / {@link com.github.bubb13.infinityareas.misc.TrackedTask#onFailedFx} will not be executed, as it is assumed
+     * is executed, the callbacks registered by {@link TrackedTask#onFailed}
+     * / {@link TrackedTask#onFailedFx} will not be executed, as it is assumed
      * that the failure chain will handle the exception.
      *
      * @param chain The task to chain.
@@ -203,7 +206,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * @return The {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} tracking the task.
+     * @return The {@link TaskTrackerI} tracking the task.
      */
     public TaskTrackerI getTracker()
     {
@@ -211,7 +214,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * @return The value returned by the task's {@link com.github.bubb13.infinityareas.misc.TrackedTask#doTask} method,
+     * @return The value returned by the task's {@link TrackedTask#doTask} method,
      * or {@code null} if the task is not yet completed / failed.
      */
     public T getValue()
@@ -220,7 +223,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * @return The exception thrown by the task's {@link com.github.bubb13.infinityareas.misc.TrackedTask#doTask}
+     * @return The exception thrown by the task's {@link TrackedTask#doTask}
      * method, or {@code null} if the task is not yet completed / succeeded.
      */
     public Exception getException()
@@ -334,7 +337,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the task by calling {@link com.github.bubb13.infinityareas.misc.TrackedTask#doTask} and handling
+     * Runs the task by calling {@link TrackedTask#doTask} and handling
      * any relevant callbacks.
      */
     private void loop(final boolean isChain)
@@ -385,7 +388,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#chainOnSuccess}.
+     * Runs the callbacks registered by {@link TrackedTask#chainOnSuccess}.
      */
     private void doChainOnSuccess()
     {
@@ -400,7 +403,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Schedules the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#chainOnFail}
+     * Schedules the callbacks registered by {@link TrackedTask#chainOnFail}
      * to run on the current task's thread.
      *
      * @return {@code true} if a chain was registered, {@code false} otherwise.
@@ -423,9 +426,9 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onSucceeded}
+     * Runs the callbacks registered by {@link TrackedTask#onSucceeded}
      * and schedules the callbacks registered
-     * by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onSucceededFx}.
+     * by {@link TrackedTask#onSucceededFx}.
      */
     private void doOnSucceeded()
     {
@@ -441,7 +444,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onSucceededFx}.
+     * Runs the callbacks registered by {@link TrackedTask#onSucceededFx}.
      */
     private void doOnSucceededFx()
     {
@@ -452,9 +455,9 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onFailed}.
+     * Runs the callbacks registered by {@link TrackedTask#onFailed}.
      * and schedules the callbacks registered
-     * by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onFailedFx}.
+     * by {@link TrackedTask#onFailedFx}.
      */
     private void doOnFailed()
     {
@@ -470,7 +473,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onFailedFx}.
+     * Runs the callbacks registered by {@link TrackedTask#onFailedFx}.
      */
     private void doOnFailedFx()
     {
@@ -481,9 +484,9 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onCancelled}.
+     * Runs the callbacks registered by {@link TrackedTask#onCancelled}.
      * and schedules the callbacks registered
-     * by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onCancelledFx}.
+     * by {@link TrackedTask#onCancelledFx}.
      */
     private void doOnCancelled()
     {
@@ -499,7 +502,7 @@ public abstract class TrackedTask<T>
     }
 
     /**
-     * Runs the callbacks registered by {@link com.github.bubb13.infinityareas.misc.TrackedTask#onCancelledFx}.
+     * Runs the callbacks registered by {@link TrackedTask#onCancelledFx}.
      */
     private void doOnCancelledFx()
     {

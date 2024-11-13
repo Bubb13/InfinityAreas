@@ -21,22 +21,22 @@ public class GenericPolygon
     private final OrderedInstanceSet<Vertex> vertices = new OrderedInstanceSet<>()
     {
         @Override
-        protected void onAdd(final SimpleLinkedList<Vertex>.Node node)
+        protected void onAdd(final SimpleLinkedList<Vertex>.Node node, final boolean fromHide)
         {
-            super.onAdd(node);
+            super.onAdd(node, fromHide);
 
-            if (node.next() == null)
+            final Node nextNode = node.next();
+            if (nextNode == null)
             {
                 node.value().index = size() - 1;
             }
             else
             {
-                node.value().index = node.previous().value().index + 1;
+                node.value().index = nextNode.value().index;
 
-                var nextNode = node.next();
-                for (; nextNode != null; nextNode = nextNode.next())
+                for (var itrNode = node.next(); itrNode != null; itrNode = itrNode.next())
                 {
-                    ++nextNode.value().index;
+                    ++itrNode.value().index;
                 }
             }
 
@@ -44,9 +44,9 @@ public class GenericPolygon
         }
 
         @Override
-        protected void onRemove(final Node node)
+        protected void onRemove(final Node node, final boolean fromHide)
         {
-            super.onRemove(node);
+            super.onRemove(node, fromHide);
 
             var nextNode = node.next();
             var curItrNode = nextNode;

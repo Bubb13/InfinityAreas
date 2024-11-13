@@ -1,5 +1,9 @@
 
-package com.github.bubb13.infinityareas.misc;
+package com.github.bubb13.infinityareas.misc.tasktracking;
+
+import com.github.bubb13.infinityareas.misc.ThrowingConsumer;
+import com.github.bubb13.infinityareas.misc.ThrowingFunction;
+import com.github.bubb13.infinityareas.misc.ThrowingRunnable;
 
 public abstract class TaskTracker implements TaskTrackerI
 {

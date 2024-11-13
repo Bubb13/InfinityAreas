@@ -19,7 +19,6 @@ public class RenderableVertex extends AbstractRenderable
     // Private Fields //
     ////////////////////
 
-    private final Editor editor;
     private final RenderablePolygon<? extends GenericPolygon> renderablePolygon;
     private final GenericPolygon.Vertex vertex;
     private final SimpleLinkedList<RenderableVertex>.Node renderableVertexNode;
@@ -38,7 +37,7 @@ public class RenderableVertex extends AbstractRenderable
         final GenericPolygon.Vertex vertex,
         final SimpleLinkedList<RenderableVertex>.Node renderableVertexNode)
     {
-        this.editor = editor;
+        super(editor);
         this.renderablePolygon = renderablePolygon;
         this.vertex = vertex;
         this.renderableVertexNode = renderableVertexNode;
@@ -103,6 +102,10 @@ public class RenderableVertex extends AbstractRenderable
         return vertex;
     }
 
+    //------------------------------//
+    // AbstractRenderable Overrides //
+    //------------------------------//
+
     @Override
     public int sortWeight()
     {
@@ -154,7 +157,7 @@ public class RenderableVertex extends AbstractRenderable
     @Override
     public void onClicked(final MouseEvent event)
     {
-        editor.runAsTransaction(() ->
+        editor.performAsTransaction(() ->
         {
             if (!event.isShiftDown() && !event.isControlDown())
             {
@@ -206,7 +209,8 @@ public class RenderableVertex extends AbstractRenderable
         final Point newSourcePos = editor.getEventSourcePosition(event);
         final int deltaX = newSourcePos.x - dragStartPoint.x;
         final int deltaY = newSourcePos.y - dragStartPoint.y;
-        editor.pushUndo(() -> moveVertexUsingDeltaUndoable(-deltaX, -deltaY));
+        if (deltaX == 0 && deltaY == 0) return;
+        editor.pushUndo("RenderableVertex::onDragEnd", () -> moveVertexUsingDeltaUndoable(-deltaX, -deltaY));
     }
 
     @Override
@@ -223,12 +227,32 @@ public class RenderableVertex extends AbstractRenderable
         editor.requestDraw();
     }
 
+    //------------------------------//
+    // ReferenceTrackable Overrides //
+    //------------------------------//
+
+    @Override
+    public void softDelete()
+    {
+        editor.performAsTransaction(() ->
+        {
+            editor.pushUndo("RenderableVertex::softDelete", () ->
+            {
+                vertex.getNode().setHidden(false);
+                renderablePolygon.recalculateBoundsAndCornersFromVertices();
+            });
+
+            super.softDelete();
+            vertex.getNode().setHidden(true);
+            renderablePolygon.recalculateBoundsAndCornersFromVertices();
+        });
+    }
+
     @Override
     public void delete()
     {
         super.delete();
-        editor.removeRenderable(this);
-        renderableVertexNode.remove();
+        editor.removeRenderable(this, false);
         vertex.getNode().remove();
         renderablePolygon.recalculateBoundsAndCornersFromVertices();
     }
@@ -256,7 +280,7 @@ public class RenderableVertex extends AbstractRenderable
         if (!selected)
         {
             wasNotSelected = true;
-            editor.runWithUndoRedoSuppressed(() -> editor.select(this));
+            editor.runWithUndoSuppressed(() -> editor.select(this));
         }
 
         for (final AbstractRenderable renderable : editor.selectedObjects())
@@ -275,18 +299,18 @@ public class RenderableVertex extends AbstractRenderable
 
         if (wasNotSelected)
         {
-            editor.runWithUndoRedoSuppressed(() -> editor.unselect(this));
+            editor.runWithUndoSuppressed(() -> editor.unselect(this));
         }
     }
 
     private void moveVertexUsingDeltaUndoable(final int deltaX, final int deltaY)
     {
-        editor.perform(
-            () -> moveVertexUsingDelta(deltaX, deltaY),
-            () -> {
-                moveVertexUsingDelta(-deltaX, -deltaY);
-                editor.pushUndo(() -> moveVertexUsingDeltaUndoable(deltaX, deltaY));
-            }
-        );
+        editor.performAsTransaction(() ->
+        {
+            editor.pushUndo("RenderableVertex::moveVertexUsingDeltaUndoable",
+                () -> moveVertexUsingDeltaUndoable(-deltaX, -deltaY));
+
+            moveVertexUsingDelta(deltaX, deltaY);
+        });
     }
 }

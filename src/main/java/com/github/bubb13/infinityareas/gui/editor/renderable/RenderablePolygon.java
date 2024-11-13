@@ -5,6 +5,7 @@ import com.github.bubb13.infinityareas.gui.editor.Editor;
 import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
+import com.github.bubb13.infinityareas.misc.referencetracking.TrackingOrderedInstanceSet;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
@@ -19,9 +20,11 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     // Private Fields //
     ////////////////////
 
-    private final Editor editor;
     private final PolygonType polygon;
-    private final SimpleLinkedList<RenderableVertex> renderableVertices = new SimpleLinkedList<>();
+
+    private final TrackingOrderedInstanceSet<RenderableVertex> renderableVertices
+        = new TrackingOrderedInstanceSet<>("RenderablePolygon Vertices");
+
     private final DoubleCorners corners = new DoubleCorners();
 
     private boolean renderFill = false;
@@ -34,7 +37,7 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
 
     public RenderablePolygon(final Editor editor, final PolygonType polygon)
     {
-        this.editor = editor;
+        super(editor);
         this.polygon = polygon;
 
         for (final GenericPolygon.Vertex vertex : polygon.getVertices())
@@ -131,14 +134,14 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
         this.renderFill = renderFill;
     }
 
-    public void removeRenderable()
+    public void removeRenderable(final boolean undoable)
     {
-        for (final RenderableVertex renderable : renderableVertices)
-        {
-            editor.removeRenderable(renderable);
-        }
-        editor.removeRenderable(this);
+        editor.removeRenderable(this, undoable);
     }
+
+    //------------------------------//
+    // AbstractRenderable Overrides //
+    //------------------------------//
 
     @Override
     public boolean isEnabled()
@@ -182,10 +185,23 @@ public abstract class RenderablePolygon<PolygonType extends GenericPolygon> exte
     }
 
     @Override
+    public void onBeforeRemoved(final boolean undoable)
+    {
+        for (final RenderableVertex renderable : renderableVertices)
+        {
+            editor.removeRenderable(renderable, undoable);
+        }
+    }
+
+    //------------------------------//
+    // ReferenceTrackable Overrides //
+    //------------------------------//
+
+    @Override
     public void delete()
     {
         super.delete();
-        removeRenderable();
+        removeRenderable(false);
     }
 
     ///////////////////////

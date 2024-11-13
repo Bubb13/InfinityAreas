@@ -90,7 +90,7 @@ public class QuickSelectEditMode extends LabeledEditMode
             return true;
         }
 
-        editor.runAsTransaction(() ->
+        editor.performAsTransaction(() ->
         {
             if (!event.isShiftDown() && !event.isControlDown())
             {
@@ -162,6 +162,7 @@ public class QuickSelectEditMode extends LabeledEditMode
 
         public QuickSelectRectangle()
         {
+            super(QuickSelectEditMode.this.editor);
             editor.addRenderable(this);
         }
 

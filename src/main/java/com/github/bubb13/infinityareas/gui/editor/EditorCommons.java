@@ -68,6 +68,15 @@ public final class EditorCommons
 
     public static void deleteSelected(final Editor editor)
     {
+        editor.performAsTransaction(() -> deleteSelectedInternal(editor));
+    }
+
+    ////////////////////////////
+    // Private Static Methods //
+    ////////////////////////////
+
+    private static void deleteSelectedInternal(final Editor editor)
+    {
         final InstanceHashMap<RenderablePolygon<?>, VerticesDeleteInfo> verticesDeleteInfoMap = new InstanceHashMap<>();
         final ArrayList<AbstractRenderable> otherSelectedObjects = new ArrayList<>();
 
@@ -125,20 +134,20 @@ public final class EditorCommons
 
             if (!polygon.isDrawing() && remainingVertices < 3)
             {
-                polygon.delete();
+                polygon.softDelete();
             }
             else
             {
                 for (final RenderableVertex vertex : deleteInfo.toDelete)
                 {
-                    vertex.delete();
+                    vertex.softDelete();
                 }
             }
         }
 
         for (final AbstractRenderable renderable : otherSelectedObjects)
         {
-            renderable.delete();
+            renderable.softDelete();
         }
     }
 

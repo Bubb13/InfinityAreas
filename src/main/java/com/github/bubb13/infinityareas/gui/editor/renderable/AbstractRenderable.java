@@ -1,21 +1,37 @@
 
 package com.github.bubb13.infinityareas.gui.editor.renderable;
 
-import com.github.bubb13.infinityareas.misc.ReferenceHolder;
-import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
-import com.github.bubb13.infinityareas.misc.ReferenceTracker;
+import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHolder;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTrackable;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTracker;
 import javafx.geometry.Point2D;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 public abstract class AbstractRenderable implements RenderableInterface, ReferenceTrackable
 {
+    //////////////////////
+    // Protected Fields //
+    //////////////////////
+
+    protected final Editor editor;
+
     ////////////////////
     // Private Fields //
     ////////////////////
 
     private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
     private boolean isHidden = false;
+
+    /////////////////////////
+    // Public Constructors //
+    /////////////////////////
+
+    public AbstractRenderable(final Editor editor)
+    {
+        this.editor = editor;
+    }
 
     ////////////////////
     // Public Methods //
@@ -25,6 +41,10 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     {
         isHidden = hidden;
     }
+
+    //-------------------------------//
+    // RenderableInterface Overrides //
+    //-------------------------------//
 
     @Override
     public boolean isHidden()
@@ -36,24 +56,6 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     public boolean snapshotable()
     {
         return false;
-    }
-
-    @Override
-    public void addedTo(final ReferenceHolder<?> referenceHolder)
-    {
-        referenceTracker.addedTo(referenceHolder);
-    }
-
-    @Override
-    public void removedFrom(final ReferenceHolder<?> referenceHolder)
-    {
-        referenceTracker.removedFrom(referenceHolder);
-    }
-
-    @Override
-    public void delete()
-    {
-        referenceTracker.delete();
     }
 
     @Override public int sortWeight() { return 0; }
@@ -76,5 +78,49 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     @Override public void onDragEnd(final MouseEvent event) {}
     @Override public boolean listensToZoomFactorChanges() { return false; }
     @Override public void onZoomFactorChanged(final double zoomFactor) {}
-    @Override public void onBeforeRemoved() {}
+    @Override public void onBeforeRemoved(final boolean undoable) {}
+
+    //------------------------------//
+    // ReferenceTrackable Overrides //
+    //------------------------------//
+
+    @Override
+    public void addedTo(final ReferenceHolder<?> referenceHolder)
+    {
+        referenceTracker.addedTo(referenceHolder);
+    }
+
+    @Override
+    public void removedFrom(final ReferenceHolder<?> referenceHolder)
+    {
+        referenceTracker.removedFrom(referenceHolder);
+    }
+
+    @Override
+    public void softDelete()
+    {
+        editor.performAsTransaction(() ->
+        {
+            editor.pushUndo("AbstractRenderable::softDelete", () ->
+            {
+                restore();
+                editor.pushUndo("AbstractRenderable::softDelete", this::softDelete);
+            });
+
+            editor.removeRenderable(this, true);
+            referenceTracker.softDelete();
+        });
+    }
+
+    @Override
+    public void restore()
+    {
+        referenceTracker.restore();
+    }
+
+    @Override
+    public void delete()
+    {
+        referenceTracker.delete();
+    }
 }

@@ -8,7 +8,7 @@ import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
-import com.github.bubb13.infinityareas.misc.ReferenceHolder;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHolder;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -21,8 +21,26 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     ////////////////////
 
     private RenderablePolygon<BackingPolygonType> drawingPolygon;
-    private final ReferenceHolder<RenderablePolygon<BackingPolygonType>> drawingPolygonRef =
-        (reference) -> drawingPolygon = null;
+    private final ReferenceHolder<RenderablePolygon<BackingPolygonType>> drawingPolygonRef = new ReferenceHolder<>()
+    {
+        @Override
+        public void referencedObjectSoftDeleted(final RenderablePolygon<BackingPolygonType> reference)
+        {
+            // TODO
+        }
+
+        @Override
+        public void restoreSoftDeletedObject(final RenderablePolygon<BackingPolygonType> reference)
+        {
+            // TODO
+        }
+
+        @Override
+        public void referencedObjectDeleted(final RenderablePolygon<BackingPolygonType> reference)
+        {
+            drawingPolygon = null;
+        }
+    };
 
     /////////////////////////
     // Public Constructors //
@@ -163,9 +181,9 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
         // Remove all renderable objects from the quadtree
         for (final RenderableVertex vertex : drawingPolygon.getRenderablePolygonVertices())
         {
-            editor.removeRenderable(vertex);
+            editor.removeRenderable(vertex, false);
         }
-        editor.removeRenderable(drawingPolygon);
+        editor.removeRenderable(drawingPolygon, false);
     }
 
     /////////////////////

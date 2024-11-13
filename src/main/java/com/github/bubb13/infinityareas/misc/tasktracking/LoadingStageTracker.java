@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas.misc;
+package com.github.bubb13.infinityareas.misc.tasktracking;
 
 import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.gui.stage.LoadingStage;

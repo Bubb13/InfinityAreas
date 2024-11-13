@@ -4,6 +4,7 @@ package com.github.bubb13.infinityareas.misc.undoredo;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 public class UndoRedoBuffer
 {
@@ -21,7 +22,7 @@ public class UndoRedoBuffer
     private final Stack<TransactionInternal> redoStack = new Stack<>();
     private TransactionInternal currentTransaction;
     private int transactionNestCount = 0;
-    private boolean suppressStackManipulation;
+    private int suppressStackManipulationMode = 0;
 
     ////////////////////
     // Public Methods //
@@ -35,14 +36,14 @@ public class UndoRedoBuffer
     {
         if (undoStack.isEmpty()) return;
 
+        debugPrintInternal("  Undoing transaction: " + undoStack.peek());
         final TransactionInternal transaction = collectTransactionInternal(() -> undoStack.pop().undoAll());
-
         debugPrintInternal("  Undid transaction");
 
         if (transaction != null)
         {
-            debugPrintInternal("  Pushed undo transaction to redo stack");
             redoStack.push(transaction);
+            debugPrintInternal("  Pushed transaction to redo stack");
         }
     }
 
@@ -50,44 +51,14 @@ public class UndoRedoBuffer
     {
         if (redoStack.isEmpty()) return;
 
+        debugPrintInternal("  Redoing transaction: " + redoStack.peek());
         final TransactionInternal transaction = collectTransactionInternal(() -> redoStack.pop().undoAll());
-
         debugPrintInternal("  Redid transaction");
 
-        if (transaction != null)
+        if (transaction != null && pushToUndoStackInternal(transaction))
         {
-            debugPrintInternal("  Pushed redo transaction to undo stack");
-            pushToUndoStackInternal(transaction);
+            debugPrintInternal("  Pushed transaction to undo stack");
         }
-    }
-
-    //---------//
-    // Perform //
-    //---------//
-
-    public void perform(final IUndoRedo undoRedo)
-    {
-        clearRedo();
-        undoRedo.perform();
-        pushUndo(undoRedo);
-    }
-
-    public void perform(final Runnable perform, final Runnable undo)
-    {
-        perform(new AbstractUndoRedo()
-        {
-            @Override
-            public void perform()
-            {
-                perform.run();
-            }
-
-            @Override
-            public void undo()
-            {
-                undo.run();
-            }
-        });
     }
 
     //------------------------//
@@ -105,43 +76,30 @@ public class UndoRedoBuffer
         {
             final TransactionInternal transaction = endTransactionInternal();
 
-            if (transaction != null)
+            if (transaction != null && pushToUndoStackInternal(transaction))
             {
                 debugPrintInternal("  Pushed transaction to undo stack");
-                pushToUndoStackInternal(transaction);
             }
         }
     }
 
-    public void performAsTransaction(final Runnable perform, final Runnable undo)
+    public void performAsTransaction(final Runnable runnable)
     {
-        runAsTransaction(() -> perform(new AbstractUndoRedo()
-        {
-            @Override
-            public void perform()
-            {
-                perform.run();
-            }
-
-            @Override
-            public void undo()
-            {
-                undo.run();
-            }
-        }));
+        clearRedo();
+        runAsTransaction(runnable);
     }
 
-    public void runWithUndoRedoSuppressed(final Runnable runnable)
+    public void runWithUndoSuppressed(final Runnable runnable)
     {
-        final boolean savedValue = suppressStackManipulation;
-        suppressStackManipulation = true;
+        final int savedValue = suppressStackManipulationMode;
+        suppressStackManipulationMode = 2;
         try
         {
             runnable.run();
         }
         finally
         {
-            suppressStackManipulation = savedValue;
+            suppressStackManipulationMode = savedValue;
         }
     }
 
@@ -149,23 +107,23 @@ public class UndoRedoBuffer
     // Manual Undo-Redo Stack Management //
     //-----------------------------------//
 
-    public void pushUndo(final IUndoRedo undoRedo)
+    public void pushUndo(final IUndo undo)
     {
         if (transactionNestCount == 0)
         {
-            debugPrintInternal("  Pushed lone undoRedo to undo stack");
-            pushToUndoStackInternal(new TransactionInternal(undoRedo));
+            pushToUndoStackInternal(new TransactionInternal(undo));
+            debugPrintInternal("  Pushed lone undo to undo stack: " + undo);
         }
-        else
+        else if (suppressStackManipulationMode < 2)
         {
-            debugPrintInternal("  Added undoRedo to the current transaction");
-            currentTransaction.pushUndo(undoRedo);
+            currentTransaction.pushUndo(undo);
+            debugPrintInternal("  Added undo to the current transaction: " + undo);
         }
     }
 
-    public void pushUndo(final Runnable undo)
+    public void pushUndo(final String name, final Runnable undo)
     {
-        pushUndo(new AbstractUndo()
+        pushUndo(new NamedUndo(name)
         {
             @Override
             public void undo()
@@ -177,10 +135,10 @@ public class UndoRedoBuffer
 
     public void clearRedo()
     {
-        if (!suppressStackManipulation)
+        if (suppressStackManipulationMode == 0)
         {
-            debugPrintInternal("  Cleared redo stack");
             redoStack.clear();
+            debugPrintInternal("  Cleared redo stack");
         }
     }
 
@@ -192,8 +150,8 @@ public class UndoRedoBuffer
     {
         if (transactionNestCount++ == 0)
         {
-            debugPrintInternal("Started new transaction");
             currentTransaction = new TransactionInternal();
+            debugPrintInternal("Started new transaction");
         }
         else
         {
@@ -212,24 +170,25 @@ public class UndoRedoBuffer
         {
             final TransactionInternal savedTransaction = currentTransaction;
             currentTransaction = null;
-            return savedTransaction;
+            return !savedTransaction.isEmpty() ? savedTransaction : null;
         }
 
         return null;
     }
 
-    private void pushToUndoStackInternal(final TransactionInternal transaction)
+    private boolean pushToUndoStackInternal(final TransactionInternal transaction)
     {
-        if (suppressStackManipulation) return;
+        if (suppressStackManipulationMode > 0) return false;
         undoStack.push(transaction);
+        return true;
     }
 
     private TransactionInternal collectTransactionInternal(final Runnable runnable)
     {
         TransactionInternal toReturn;
 
-        final boolean savedValue = suppressStackManipulation;
-        suppressStackManipulation = true;
+        final int savedValue = suppressStackManipulationMode;
+        suppressStackManipulationMode = 1;
 
         startTransactionInternal();
         try
@@ -239,7 +198,7 @@ public class UndoRedoBuffer
         finally
         {
             toReturn = endTransactionInternal();
-            suppressStackManipulation = savedValue;
+            suppressStackManipulationMode = savedValue;
         }
 
         return toReturn;
@@ -247,7 +206,7 @@ public class UndoRedoBuffer
 
     private void debugPrintInternal(final String toPrint)
     {
-        if (DEBUG && !suppressStackManipulation)
+        if (DEBUG && suppressStackManipulationMode == 0)
         {
             System.out.println(toPrint);
         }
@@ -257,13 +216,45 @@ public class UndoRedoBuffer
     // Private Static Classes //
     ////////////////////////////
 
+    private static abstract class NamedUndo implements IUndo
+    {
+        ////////////////////
+        // Private Fields //
+        ////////////////////
+
+        private final String name;
+
+        /////////////////////////
+        // Public Constructors //
+        /////////////////////////
+
+        public NamedUndo(final String name)
+        {
+            this.name = name;
+        }
+
+        ////////////////////
+        // Public Methods //
+        ////////////////////
+
+        //------------------//
+        // Object Overrides //
+        //------------------//
+
+        @Override
+        public String toString()
+        {
+            return name;
+        }
+    }
+
     private static class TransactionInternal
     {
         ////////////////////
         // Private Fields //
         ////////////////////
 
-        private final Deque<IUndoRedo> undoStack = new ArrayDeque<>();
+        private final Deque<IUndo> undoStack = new ArrayDeque<>();
 
         /////////////////////////
         // Public Constructors //
@@ -271,23 +262,42 @@ public class UndoRedoBuffer
 
         public TransactionInternal() {}
 
-        public TransactionInternal(final IUndoRedo undoRedo)
+        public TransactionInternal(final IUndo undo)
         {
-            pushUndo(undoRedo);
+            pushUndo(undo);
         }
 
         ////////////////////
         // Public Methods //
         ////////////////////
 
-        public void pushUndo(final IUndoRedo undoRedo)
+        public void pushUndo(final IUndo undo)
         {
-            undoStack.push(undoRedo);
+            undoStack.push(undo);
         }
 
         public void undoAll()
         {
-            undoStack.forEach(IUndoRedo::undo);
+            undoStack.forEach(IUndo::undo);
+        }
+
+        public boolean isEmpty()
+        {
+            return undoStack.isEmpty();
+        }
+
+        //------------------//
+        // Object Overrides //
+        //------------------//
+
+        @Override
+        public String toString()
+        {
+            return "[" +
+                undoStack.stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(", "))
+            + "]";
         }
     }
 }

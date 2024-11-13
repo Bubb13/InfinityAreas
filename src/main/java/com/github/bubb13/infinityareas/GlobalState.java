@@ -4,7 +4,7 @@ package com.github.bubb13.infinityareas;
 import com.github.bubb13.infinityareas.game.Game;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
-import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.application.Application;

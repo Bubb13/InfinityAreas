@@ -9,10 +9,10 @@ import com.github.bubb13.infinityareas.misc.AppendOnlyOrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.InstanceHashMap;
 import com.github.bubb13.infinityareas.misc.SimpleCache;
-import com.github.bubb13.infinityareas.misc.TaskTracker;
-import com.github.bubb13.infinityareas.misc.TaskTrackerI;
-import com.github.bubb13.infinityareas.misc.TrackedTask;
-import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTracker;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
+import com.github.bubb13.infinityareas.misc.referencetracking.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import com.github.bubb13.infinityareas.util.TileUtil;
@@ -55,7 +55,7 @@ public class WED
 
     private final ArrayList<TiledObject> tiledObjects = new ArrayList<>();
     private final InstanceHashMap<Polygon, TiledObject> tiledObjectByReferencedPolygon = new InstanceHashMap<>();
-    private final TrackingOrderedInstanceSet<Polygon> polygons = new TrackingOrderedInstanceSet<>();
+    private final TrackingOrderedInstanceSet<Polygon> polygons = new TrackingOrderedInstanceSet<>("WED Polygons");
 
     private final ResourceDataCache resourceDataCache = new ResourceDataCache();
     private final SimpleCache<String, PVRZ> pvrzCache = new SimpleCache<>();
@@ -766,7 +766,8 @@ public class WED
         final int polygonsEndIndexBounded = Math.min(
             polygonsStartIndex + numPolygons, secondaryHeaderInfo.maxReferencedPolygonIndex() + 1);
 
-        final TrackingOrderedInstanceSet<Polygon> referencedPolygons = new TrackingOrderedInstanceSet<>();
+        final TrackingOrderedInstanceSet<Polygon> referencedPolygons
+            = new TrackingOrderedInstanceSet<>("WED Tiled Object Polygons");
 
         if (polygonsStartIndexBounded < polygonsEndIndexBounded)
         {

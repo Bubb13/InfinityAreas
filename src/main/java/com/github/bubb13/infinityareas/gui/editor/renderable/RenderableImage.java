@@ -16,7 +16,6 @@ public class RenderableImage extends AbstractRenderable
     // Private Fields //
     ////////////////////
 
-    private final Editor editor;
     private final DoubleCorners corners = new DoubleCorners();
     private final PartiallyRenderedImageLogic logic = new PartiallyRenderedImageLogic();
     private double stretchFactorX;
@@ -30,7 +29,7 @@ public class RenderableImage extends AbstractRenderable
         final Editor editor, final BufferedImage image,
         final double x, final double y, final double width, final double height, final double opacity)
     {
-        this.editor = editor;
+        super(editor);
         logic.setSourceImage(image);
         logic.setOpacity(opacity);
         setRectangle(x, y, width, height);

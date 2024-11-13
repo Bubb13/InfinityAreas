@@ -1,6 +1,9 @@
 
-package com.github.bubb13.infinityareas.misc;
+package com.github.bubb13.infinityareas.misc.tasktracking;
 
+import com.github.bubb13.infinityareas.misc.ThrowingConsumer;
+import com.github.bubb13.infinityareas.misc.ThrowingFunction;
+import com.github.bubb13.infinityareas.misc.ThrowingRunnable;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;

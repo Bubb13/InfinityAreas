@@ -2,9 +2,9 @@
 package com.github.bubb13.infinityareas.game.resource;
 
 import com.github.bubb13.infinityareas.game.Game;
-import com.github.bubb13.infinityareas.misc.TaskTracker;
-import com.github.bubb13.infinityareas.misc.TaskTrackerI;
-import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTracker;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 
 import java.io.ByteArrayInputStream;

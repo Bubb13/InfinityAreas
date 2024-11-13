@@ -5,7 +5,7 @@ import com.github.bubb13.infinityareas.GlobalState;
 import com.github.bubb13.infinityareas.game.resource.KeyFile;
 import com.github.bubb13.infinityareas.gui.control.DynamicListView;
 import com.github.bubb13.infinityareas.gui.dialog.ErrorAlert;
-import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.tasktracking.LoadingStageTracker;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;

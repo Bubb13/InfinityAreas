@@ -1,9 +1,9 @@
 
 package com.github.bubb13.infinityareas.game.resource;
 
-import com.github.bubb13.infinityareas.misc.TaskTracker;
-import com.github.bubb13.infinityareas.misc.TaskTrackerI;
-import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTracker;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

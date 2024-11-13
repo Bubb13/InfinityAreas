@@ -30,10 +30,10 @@ import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePoint;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.IntPoint;
-import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.ReadableDoublePoint;
-import com.github.bubb13.infinityareas.misc.TaskTrackerI;
-import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.misc.tasktracking.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
@@ -848,7 +848,7 @@ public class AreaPane extends StackPane
         {
             if (regionEditorObject != null)
             {
-                regionEditorObject.removeRenderable();
+                regionEditorObject.removeRenderable(false);
             }
         }
     }
@@ -1272,7 +1272,7 @@ public class AreaPane extends StackPane
 
         public SearchMapImage(final double x, final double y, final double width, final double height)
         {
-            super(editor, searchMap.getImage(), x, y, width, height, searchMapOpacitySlider.getValue() / 100);
+            super(AreaPane.this.editor, searchMap.getImage(), x, y, width, height, searchMapOpacitySlider.getValue() / 100);
             listener = this::onPixelPaletteIndexChanged;
             searchMap.addOnPixelPaletteIndexChangedListener(listener);
         }
@@ -1294,7 +1294,7 @@ public class AreaPane extends StackPane
         }
 
         @Override
-        public void onBeforeRemoved()
+        public void onBeforeRemoved(final boolean undoable) // TODO
         {
             searchMap.removeOnPixelPaletteIndexChangedListener(listener);
             listener = null;
@@ -1319,7 +1319,7 @@ public class AreaPane extends StackPane
 
         public AreaActor(final Area.Actor actor)
         {
-            super(editor, actor);
+            super(AreaPane.this.editor, actor);
         }
 
         ////////////////////
@@ -1388,11 +1388,20 @@ public class AreaPane extends StackPane
             this.regionBeingDrawn = regionBeingDrawn;
         }
 
-        public void removeRenderable()
+        public void removeRenderable(final boolean undoable)
         {
-            regionEditorObjectPolygon.removeRenderable();
-            regionEditorObjectLaunchPosition.removeRenderable();
-            regionEditorObjectActivationPosition.removeRenderable();
+            regionEditorObjectPolygon.removeRenderable(undoable);
+            removeConnectedRenderables(undoable);
+        }
+
+        ///////////////////////
+        // Private Functions //
+        ///////////////////////
+
+        public void removeConnectedRenderables(final boolean undoable)
+        {
+            regionEditorObjectLaunchPosition.removeRenderable(undoable);
+            regionEditorObjectActivationPosition.removeRenderable(undoable);
         }
 
         ////////////////////
@@ -1407,7 +1416,7 @@ public class AreaPane extends StackPane
 
             public RegionEditorObjectPolygon()
             {
-                super(editor, region.getPolygon());
+                super(AreaPane.this.editor, region.getPolygon());
                 setRenderFill(true);
             }
 
@@ -1506,10 +1515,25 @@ public class AreaPane extends StackPane
             }
 
             @Override
+            public void onBeforeRemoved(final boolean undoable)
+            {
+                super.onBeforeRemoved(undoable);
+                RegionEditorObject.this.removeConnectedRenderables(undoable);
+            }
+
+            @Override
+            public void softDelete()
+            {
+                super.softDelete();
+                region.softDelete();
+                editor.pushUndo(region::restore);
+            }
+
+            @Override
             public void delete()
             {
                 super.delete();
-                RegionEditorObject.this.removeRenderable();
+                RegionEditorObject.this.removeRenderable(false);
                 region.delete();
             }
 
@@ -1593,10 +1617,10 @@ public class AreaPane extends StackPane
                 launchPositionLine.recalculateCorners();
             }
 
-            public void removeRenderable()
+            public void removeRenderable(final boolean undoable)
             {
-                editor.removeRenderable(this);
-                editor.removeRenderable(launchPositionLine);
+                editor.removeRenderable(this, undoable);
+                editor.removeRenderable(launchPositionLine, undoable);
             }
 
             @Override

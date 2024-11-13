@@ -1,5 +1,9 @@
 
-package com.github.bubb13.infinityareas.misc;
+package com.github.bubb13.infinityareas.misc.tasktracking;
+
+import com.github.bubb13.infinityareas.misc.ThrowingConsumer;
+import com.github.bubb13.infinityareas.misc.ThrowingFunction;
+import com.github.bubb13.infinityareas.misc.ThrowingRunnable;
 
 public interface TaskTrackerI
 {
@@ -10,7 +14,7 @@ public interface TaskTrackerI
 
     /**
      * Updates the message corresponding to the task's status. This may or may not be shown to the user
-     * depending on the specific {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclass.
+     * depending on the specific {@link TaskTrackerI} subclass.
      *
      * @param message The message to set.
      */
@@ -18,7 +22,7 @@ public interface TaskTrackerI
 
     /**
      * Updates the progress corresponding to the task's status. This may or may not be shown to the user
-     * depending on the specific {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclass.
+     * depending on the specific {@link TaskTrackerI} subclass.
      *
      * @param workDone The current amount of work completed by the task.
      * @param max The maximum amount of work expected of the task.
@@ -27,7 +31,7 @@ public interface TaskTrackerI
 
     /**
      * Executes {@code runnable} as a subtask of the current task. While implementation differences exist
-     * between {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclasses, the general expectation
+     * between {@link TaskTrackerI} subclasses, the general expectation
      * is that the act of executing a subtask involves pushing/popping any relevant state (such as the
      * current message / progress) of the parent task before/after the subtask's execution.
      *
@@ -38,7 +42,7 @@ public interface TaskTrackerI
 
     /**
      * Executes {@code consumer} as a subtask of the current task. While implementation differences exist
-     * between {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclasses, the general expectation
+     * between {@link TaskTrackerI} subclasses, the general expectation
      * is that the act of executing a subtask involves pushing/popping any relevant state (such as the
      * current message / progress) of the parent task before/after the subtask's execution.
      *
@@ -49,7 +53,7 @@ public interface TaskTrackerI
 
     /**
      * Executes {@code function} as a subtask of the current task. While implementation differences exist
-     * between {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclasses, the general expectation
+     * between {@link TaskTrackerI} subclasses, the general expectation
      * is that the act of executing a subtask involves pushing/popping any relevant state (such as the
      * current message / progress) of the parent task before/after the subtask's execution.
      *
@@ -73,13 +77,13 @@ public interface TaskTrackerI
     void done();
 
     /**
-     * Hides the tracker if the given {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclass blocks
+     * Hides the tracker if the given {@link TaskTrackerI} subclass blocks
      * user interaction.
      */
     void hide();
 
     /**
-     * Shows the tracker if the given {@link com.github.bubb13.infinityareas.misc.TaskTrackerI} subclass blocks
+     * Shows the tracker if the given {@link TaskTrackerI} subclass blocks
      * user interaction.
      */
     void show();

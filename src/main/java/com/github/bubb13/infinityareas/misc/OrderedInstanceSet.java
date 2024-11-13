@@ -3,6 +3,9 @@ package com.github.bubb13.infinityareas.misc;
 
 import java.util.function.Function;
 
+/**
+ * Simple set implementation using a backing linked list for order, and a backing hashmap for duplicate lookups.
+ */
 public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
 {
     ////////////////////
@@ -17,7 +20,8 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
 
     public boolean contains(final T value)
     {
-        return valueToNode.containsKey(value);
+        final Node node = valueToNode.get(value);
+        return node != null && !node.isHidden();
     }
 
     public void remove(final T value)
@@ -27,21 +31,21 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
         node.remove();
     }
 
-    public void clear()
-    {
-        super.clear();
-        valueToNode.clear();
-    }
-
-    //////////////////////
-    // Public Overrides //
-    //////////////////////
+    //----------------------------//
+    // SimpleLinkedList Overrides //
+    //----------------------------//
 
     @Override
     public Node addTail(final T value)
     {
         final var existingNode = valueToNode.get(value);
-        if (existingNode != null) return existingNode;
+
+        if (existingNode != null)
+        {
+            existingNode.setHidden(false);
+            return existingNode;
+        }
+
         return addTailInternal(new Node(value));
     }
 
@@ -50,17 +54,39 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
     {
         final Node newTail = new Node();
         final T value = consumer.apply(newTail);
-
         final var existingNode = valueToNode.get(value);
-        if (existingNode != null) return existingNode;
+
+        if (existingNode != null)
+        {
+            existingNode.setHidden(false);
+            return existingNode;
+        }
 
         newTail.value = value;
         return addTailInternal(newTail);
     }
 
-    /////////////////////////
-    // Protected Overrides //
-    /////////////////////////
+    @Override
+    public void clear()
+    {
+        super.clear();
+        valueToNode.clear();
+    }
+
+    ///////////////////////
+    // Protected Methods //
+    ///////////////////////
+
+    protected void setHidden(final T value, final boolean hidden)
+    {
+        final var node = valueToNode.get(value);
+        if (node == null) return;
+        node.setHidden(hidden);
+    }
+
+    //----------------------------//
+    // SimpleLinkedList Overrides //
+    //----------------------------//
 
     @Override
     protected Node addAfter(final Node node, final T value)
@@ -84,14 +110,16 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
     }
 
     @Override
-    protected void onAdd(final Node node)
+    protected void onAdd(final Node node, final boolean fromHide)
     {
+        if (fromHide) return;
         valueToNode.put(node.value, node);
     }
 
     @Override
-    protected void onRemove(final Node node)
+    protected void onRemove(final Node node, final boolean fromHide)
     {
+        if (fromHide) return;
         valueToNode.remove(node.value);
     }
 }

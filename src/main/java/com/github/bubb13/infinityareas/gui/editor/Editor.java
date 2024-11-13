@@ -9,8 +9,9 @@ import com.github.bubb13.infinityareas.misc.CanvasCache;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
-import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
-import com.github.bubb13.infinityareas.misc.undoredo.IUndoRedo;
+import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
+import com.github.bubb13.infinityareas.misc.referencetracking.TrackingOrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.undoredo.IUndo;
 import com.github.bubb13.infinityareas.misc.undoredo.UndoRedoBuffer;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.collections.FXCollections;
@@ -53,13 +54,21 @@ public class Editor
     private final HashMap<Class<? extends EditMode>, EditMode> cachedEditModes = new HashMap<>();
     private final Stack<EditMode> previousEditModesStack = new Stack<>();
 
-    private final TrackingOrderedInstanceSet<AbstractRenderable> selectedObjects = new TrackingOrderedInstanceSet<>()
+    private final TrackingOrderedInstanceSet<AbstractRenderable> selectedObjects
+        = new TrackingOrderedInstanceSet<>("Editor Selected Objects")
     {
         @Override
-        public void referencedObjectDeleted(final AbstractRenderable reference)
+        public void restoreSoftDeletedObject(final AbstractRenderable reference)
         {
-            super.referencedObjectDeleted(reference);
-            reference.onUnselected();
+            doBeforeSelectedCalls(reference);
+            super.restoreSoftDeletedObject(reference);
+        }
+
+        @Override
+        protected void onRemove(final SimpleLinkedList<AbstractRenderable>.Node node, final boolean fromHide)
+        {
+            super.onRemove(node, fromHide);
+            node.value().onUnselected();
         }
     };
 
@@ -145,13 +154,25 @@ public class Editor
         requestDraw();
     }
 
-    public void removeRenderable(final AbstractRenderable renderable)
+    public void removeRenderable(final AbstractRenderable renderable, final boolean undoable)
     {
-        renderable.onBeforeRemoved();
-        zoomFactorListenerObjects.remove(renderable);
-        selectedObjects.remove(renderable);
-        quadTree.remove(renderable);
-        requestDraw();
+        if (undoable)
+        {
+            final boolean wasSelected = isSelected(renderable);
+            performAsTransaction(() ->
+            {
+                removeRenderableInternal(renderable, true);
+                pushUndo("Editor::removeRenderableUndoable", () ->
+                {
+                    addRenderable(renderable);
+                    if (wasSelected) select(renderable);
+                });
+            });
+        }
+        else
+        {
+            runWithUndoSuppressed(() -> removeRenderableInternal(renderable, false));
+        }
     }
 
     public void requestDraw()
@@ -190,20 +211,12 @@ public class Editor
             return;
         }
 
-        performAsTransaction(
-            () ->
-            {
-                renderable.onBeforeSelected();
-
-                for (final AbstractRenderable selectedObject : selectedObjects)
-                {
-                    selectedObject.onBeforeAdditionalObjectSelected(renderable);
-                }
-
-                selectedObjects.addTail(renderable);
-            },
-            () -> unselect(renderable)
-        );
+        performAsTransaction(() ->
+        {
+            doBeforeSelectedCalls(renderable);
+            selectedObjects.addTail(renderable);
+            pushUndo("Editor::select - undo", () -> unselect(renderable));
+        });
     }
 
     public void unselect(final AbstractRenderable renderable)
@@ -213,13 +226,11 @@ public class Editor
             return;
         }
 
-        performAsTransaction(
-            () -> {
-                renderable.onUnselected();
-                selectedObjects.remove(renderable);
-            },
-            () -> select(renderable)
-        );
+        performAsTransaction(() ->
+        {
+            pushUndo("Editor::unselect", () -> select(renderable));
+            selectedObjects.remove(renderable);
+        });
     }
 
     public void unselectAll()
@@ -240,23 +251,18 @@ public class Editor
             }
         }
 
-        performAsTransaction(
-            () ->
-            {
-                for (final AbstractRenderable renderable : selectedObjects)
-                {
-                    renderable.onUnselected();
-                }
-                selectedObjects.clear();
-            },
-            () ->
+        performAsTransaction(() ->
+        {
+            pushUndo("Editor::unselectAll - undo", () ->
             {
                 for (final AbstractRenderable renderable : selectedCopy)
                 {
                     select(renderable);
                 }
-            }
-        );
+            });
+
+            selectedObjects.clear(true);
+        });
     }
 
     //--------//
@@ -518,20 +524,6 @@ public class Editor
         undoRedoBuffer.redo();
     }
 
-    //---------//
-    // Perform //
-    //---------//
-
-    public void perform(final IUndoRedo undoRedo)
-    {
-        undoRedoBuffer.perform(undoRedo);
-    }
-
-    public void perform(final Runnable perform, final Runnable undo)
-    {
-        undoRedoBuffer.perform(perform, undo);
-    }
-
     //------------------------//
     // Transaction Management //
     //------------------------//
@@ -541,28 +533,28 @@ public class Editor
         undoRedoBuffer.runAsTransaction(runnable);
     }
 
-    public void performAsTransaction(final Runnable perform, final Runnable undo)
+    public void performAsTransaction(final Runnable runnable)
     {
-        undoRedoBuffer.performAsTransaction(perform, undo);
+        undoRedoBuffer.performAsTransaction(runnable);
     }
 
-    public void runWithUndoRedoSuppressed(final Runnable runnable)
+    public void runWithUndoSuppressed(final Runnable runnable)
     {
-        undoRedoBuffer.runWithUndoRedoSuppressed(runnable);
+        undoRedoBuffer.runWithUndoSuppressed(runnable);
     }
 
     //-----------------------------------//
     // Manual Undo-Redo Stack Management //
     //-----------------------------------//
 
-    public void pushUndo(final IUndoRedo undoRedo)
-    {
-        undoRedoBuffer.pushUndo(undoRedo);
-    }
-
-    public void pushUndo(final Runnable undo)
+    public void pushUndo(final IUndo undo)
     {
         undoRedoBuffer.pushUndo(undo);
+    }
+
+    public void pushUndo(final String name, final Runnable undo)
+    {
+        undoRedoBuffer.pushUndo(name, undo);
     }
 
     public void clearRedo()
@@ -573,6 +565,25 @@ public class Editor
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    private void doBeforeSelectedCalls(final AbstractRenderable renderable)
+    {
+        renderable.onBeforeSelected();
+
+        for (final AbstractRenderable selectedObject : selectedObjects)
+        {
+            selectedObject.onBeforeAdditionalObjectSelected(renderable);
+        }
+    }
+
+    private void removeRenderableInternal(final AbstractRenderable renderable, final boolean undoable)
+    {
+        renderable.onBeforeRemoved(undoable);
+        zoomFactorListenerObjects.remove(renderable);
+        selectedObjects.remove(renderable);
+        quadTree.remove(renderable);
+        requestDraw();
+    }
 
     private void onDraw(final GraphicsContext canvasContext)
     {

@@ -8,14 +8,14 @@ import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.IntPoint;
 import com.github.bubb13.infinityareas.misc.IntPointImpl;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
-import com.github.bubb13.infinityareas.misc.ReferenceHolder;
-import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
-import com.github.bubb13.infinityareas.misc.ReferenceTracker;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHolder;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTrackable;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTracker;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
-import com.github.bubb13.infinityareas.misc.TaskTracker;
-import com.github.bubb13.infinityareas.misc.TaskTrackerI;
-import com.github.bubb13.infinityareas.misc.TrackedTask;
-import com.github.bubb13.infinityareas.misc.TrackingOrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTracker;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
+import com.github.bubb13.infinityareas.misc.referencetracking.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 
@@ -41,23 +41,45 @@ public class Area
     private WED wed;
 
     private byte[] unimplemented1;
-    private final TrackingOrderedInstanceSet<Actor> actors = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<Region> regions = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<SpawnPoint> spawnPoints = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<Entrance> entrances = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<Container> containers = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<Ambient> ambients = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<Variable> variables = new TrackingOrderedInstanceSet<>();
+    private final TrackingOrderedInstanceSet<Actor> actors = new TrackingOrderedInstanceSet<>("Area Actors");
+    private final TrackingOrderedInstanceSet<Region> regions = new TrackingOrderedInstanceSet<>("Area Regions");
+
+    private final TrackingOrderedInstanceSet<SpawnPoint> spawnPoints
+        = new TrackingOrderedInstanceSet<>("Area Spawn Points");
+
+    private final TrackingOrderedInstanceSet<Entrance> entrances
+        = new TrackingOrderedInstanceSet<>("Area Entrances");
+
+    private final TrackingOrderedInstanceSet<Container> containers
+        = new TrackingOrderedInstanceSet<>("Area Containers");
+
+    private final TrackingOrderedInstanceSet<Ambient> ambients
+        = new TrackingOrderedInstanceSet<>("Area Ambients");
+
+    private final TrackingOrderedInstanceSet<Variable> variables
+        = new TrackingOrderedInstanceSet<>("Area Variables");
+
     private String areaScript;
     private ExploredBitmask exploredBitmask;
-    private final TrackingOrderedInstanceSet<Door> doors = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<Animation> animations = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<TiledObject> tiledObjects = new TrackingOrderedInstanceSet<>();
+
+    private final TrackingOrderedInstanceSet<Door> doors = new TrackingOrderedInstanceSet<>("Area Doors");
+
+    private final TrackingOrderedInstanceSet<Animation> animations
+        = new TrackingOrderedInstanceSet<>("Area Animations");
+
+    private final TrackingOrderedInstanceSet<TiledObject> tiledObjects
+        = new TrackingOrderedInstanceSet<>("Area Tiled Objects");
+
     private SongEntries songEntries;
     private RestInterruptions restInterruptions;
     private int specialPSTField;
-    private final TrackingOrderedInstanceSet<MapNote> mapNotes = new TrackingOrderedInstanceSet<>();
-    private final TrackingOrderedInstanceSet<ProjectileTrap> projectileTraps = new TrackingOrderedInstanceSet<>();
+
+    private final TrackingOrderedInstanceSet<MapNote> mapNotes
+        = new TrackingOrderedInstanceSet<>("Area Map Notes");
+
+    private final TrackingOrderedInstanceSet<ProjectileTrap> projectileTraps
+        = new TrackingOrderedInstanceSet<>("Area Projectile Traps");
+
     private byte[] unimplemented2;
 
     /////////////////////////
@@ -494,7 +516,10 @@ public class Area
 
             final int firstItemIndex = buffer.getInt();
             final int numItems = buffer.getInt();
-            final TrackingOrderedInstanceSet<Item> items = new TrackingOrderedInstanceSet<>();
+
+            final TrackingOrderedInstanceSet<Item> items
+                = new TrackingOrderedInstanceSet<>("Area Container Items");
+
             parseItems(items, itemsOffset, firstItemIndex, numItems);
             container.setItems(items);
 
@@ -993,6 +1018,10 @@ public class Area
             return orientationToDegree(orientation);
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1003,6 +1032,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1259,6 +1300,10 @@ public class Area
             this.unknown = unknown;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1269,6 +1314,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1303,6 +1360,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1313,6 +1374,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1347,6 +1420,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1357,6 +1434,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1435,6 +1524,10 @@ public class Area
             this.unimplemented3 = unimplemented3;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1445,6 +1538,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1479,6 +1584,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1489,6 +1598,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1523,6 +1644,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1533,6 +1658,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1567,6 +1704,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1577,6 +1718,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1690,6 +1843,10 @@ public class Area
             this.unimplemented2 = unimplemented2;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1700,6 +1857,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1734,6 +1903,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1744,6 +1917,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1778,6 +1963,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1788,6 +1977,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1823,6 +2024,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1833,6 +2038,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override
@@ -1868,6 +2085,10 @@ public class Area
             this.unimplemented = unimplemented;
         }
 
+        //------------------------------//
+        // ReferenceTrackable Overrides //
+        //------------------------------//
+
         @Override
         public void addedTo(final ReferenceHolder<?> referenceHolder)
         {
@@ -1878,6 +2099,18 @@ public class Area
         public void removedFrom(final ReferenceHolder<?> referenceHolder)
         {
             referenceTracker.removedFrom(referenceHolder);
+        }
+
+        @Override
+        public void softDelete()
+        {
+            referenceTracker.softDelete();
+        }
+
+        @Override
+        public void restore()
+        {
+            referenceTracker.restore();
         }
 
         @Override

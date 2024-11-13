@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas.misc;
+package com.github.bubb13.infinityareas.misc.referencetracking;
 
 public class SimpleReferenceHolder<T extends ReferenceTrackable> implements ReferenceHolder<T>
 {
@@ -7,6 +7,7 @@ public class SimpleReferenceHolder<T extends ReferenceTrackable> implements Refe
     // Private Fields //
     ////////////////////
 
+    private T referenceSoftDeleted;
     private T reference;
 
     /////////////////////////
@@ -30,9 +31,27 @@ public class SimpleReferenceHolder<T extends ReferenceTrackable> implements Refe
         reference.addedTo(this);
     }
 
-    public T get(final T reference)
+    public T get()
     {
         return reference;
+    }
+
+    //---------------------------//
+    // ReferenceHolder Overrides //
+    //---------------------------//
+
+    @Override
+    public void referencedObjectSoftDeleted(final T reference)
+    {
+        this.reference = null;
+        referenceSoftDeleted = reference;
+    }
+
+    @Override
+    public void restoreSoftDeletedObject(final T reference)
+    {
+        this.reference = referenceSoftDeleted;
+        referenceSoftDeleted = null;
     }
 
     @Override

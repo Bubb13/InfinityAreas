@@ -27,7 +27,6 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
     // Private Fields //
     ////////////////////
 
-    private final Editor editor;
     private final RenderableActor renderableActor;
     private final DoubleCorners corners = new DoubleCorners();
 
@@ -43,7 +42,7 @@ public class RenderableActorOrientationHandle extends AbstractRenderable
 
     public RenderableActorOrientationHandle(final Editor editor, final RenderableActor renderableActor)
     {
-        this.editor = editor;
+        super(editor);
         this.renderableActor = renderableActor;
     }
 

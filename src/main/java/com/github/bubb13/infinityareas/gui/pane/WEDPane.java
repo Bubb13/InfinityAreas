@@ -17,10 +17,10 @@ import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
-import com.github.bubb13.infinityareas.misc.LoadingStageTracker;
-import com.github.bubb13.infinityareas.misc.Reference;
-import com.github.bubb13.infinityareas.misc.TaskTrackerI;
-import com.github.bubb13.infinityareas.misc.TrackedTask;
+import com.github.bubb13.infinityareas.misc.tasktracking.LoadingStageTracker;
+import com.github.bubb13.infinityareas.misc.reference.Reference;
+import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
+import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import javafx.collections.ObservableList;
@@ -534,7 +534,7 @@ public class WEDPane extends StackPane
 
         public WallPolygon(final WED.Polygon wedPolygon)
         {
-            super(editor, wedPolygon);
+            super(WEDPane.this.editor, wedPolygon);
         }
 
         ////////////////////
@@ -625,6 +625,16 @@ public class WEDPane extends StackPane
                     canvasPointBottomRight.getY() - canvasPointTopLeft.getY()
                 );
             }
+        }
+
+        @Override
+        public void softDelete()
+        {
+            super.softDelete();
+
+            final WED.Polygon polygon = getPolygon();
+            polygon.softDelete();
+            editor.pushUndo(polygon::restore);
         }
 
         @Override

@@ -1,5 +1,5 @@
 
-package com.github.bubb13.infinityareas.misc;
+package com.github.bubb13.infinityareas.misc.reference;
 
 public class ReadOnlyReference<T>
 {

@@ -1,9 +1,9 @@
 
 package com.github.bubb13.infinityareas.gui.editor;
 
-import com.github.bubb13.infinityareas.misc.ReferenceHolder;
-import com.github.bubb13.infinityareas.misc.ReferenceTrackable;
-import com.github.bubb13.infinityareas.misc.ReferenceTracker;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHolder;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTrackable;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTracker;
 
 public class TrackedGenericPolygon extends GenericPolygon implements ReferenceTrackable
 {
@@ -16,6 +16,10 @@ public class TrackedGenericPolygon extends GenericPolygon implements ReferenceTr
         super(boundingBoxLeft, boundingBoxRight, boundingBoxTop, boundingBoxBottom);
     }
 
+    //------------------------------//
+    // ReferenceTrackable Overrides //
+    //------------------------------//
+
     @Override
     public void addedTo(ReferenceHolder<?> referenceHolder)
     {
@@ -26,6 +30,18 @@ public class TrackedGenericPolygon extends GenericPolygon implements ReferenceTr
     public void removedFrom(ReferenceHolder<?> referenceHolder)
     {
         referenceTracker.removedFrom(referenceHolder);
+    }
+
+    @Override
+    public void softDelete()
+    {
+        referenceTracker.softDelete();
+    }
+
+    @Override
+    public void restore()
+    {
+        referenceTracker.restore();
     }
 
     @Override

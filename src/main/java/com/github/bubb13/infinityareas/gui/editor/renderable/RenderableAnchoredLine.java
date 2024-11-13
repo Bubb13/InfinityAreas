@@ -14,7 +14,6 @@ public abstract class RenderableAnchoredLine<BackingPointType extends ReadableDo
     // Protected Fields //
     //////////////////////
 
-    protected final Editor editor;
     protected final DoubleCorners corners = new DoubleCorners();
     protected BackingPointType backingPoint1;
     protected BackingPointType backingPoint2;
@@ -27,7 +26,7 @@ public abstract class RenderableAnchoredLine<BackingPointType extends ReadableDo
 
     public RenderableAnchoredLine(final Editor editor)
     {
-        this.editor = editor;
+        super(editor);
     }
 
     ////////////////////
