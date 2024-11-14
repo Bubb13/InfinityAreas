@@ -26,8 +26,8 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
 
     public void remove(final T value)
     {
-        final var node = valueToNode.remove(value);
-        if (node == null) return;
+        final var node = valueToNode.get(value);
+        if (node == null || node.isHidden()) return;
         node.remove();
     }
 
@@ -42,6 +42,7 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
 
         if (existingNode != null)
         {
+            moveToTailInternal(existingNode);
             existingNode.setHidden(false);
             return existingNode;
         }
@@ -54,12 +55,11 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
     {
         final Node newTail = new Node();
         final T value = consumer.apply(newTail);
-        final var existingNode = valueToNode.get(value);
 
+        final var existingNode = valueToNode.get(value);
         if (existingNode != null)
         {
-            existingNode.setHidden(false);
-            return existingNode;
+            throw new IllegalStateException("Passed bad node to consumer");
         }
 
         newTail.value = value;
@@ -70,7 +70,13 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
     public void clear()
     {
         super.clear();
+
+        // Rebuild mapping between the preserved hidden elements and their nodes
         valueToNode.clear();
+        for (final Node itrNode : nodesInternal())
+        {
+            valueToNode.put(itrNode.value(), itrNode);
+        }
     }
 
     ///////////////////////
@@ -89,21 +95,31 @@ public class OrderedInstanceSet<T> extends SimpleLinkedList<T>
     //----------------------------//
 
     @Override
-    protected Node addAfter(final Node node, final T value)
+    protected Node addAfterInternal(final Node node, final T value)
     {
         final var existingNode = valueToNode.get(value);
-        if (existingNode != null) return existingNode;
+
+        if (existingNode != null)
+        {
+            moveAfterInternal(node, existingNode);
+            existingNode.setHidden(false);
+            return existingNode;
+        }
+
         return addAfterInternal(node, new Node(value));
     }
 
     @Override
-    protected Node addAfter(final Node node, final Function<Node, T> consumer)
+    protected Node addAfterInternal(final Node node, final Function<Node, T> consumer)
     {
         final Node newNode = new Node();
         final T value = consumer.apply(newNode);
 
         final var existingNode = valueToNode.get(value);
-        if (existingNode != null) return existingNode;
+        if (existingNode != null)
+        {
+            throw new IllegalStateException("Passed bad node to consumer");
+        }
 
         newNode.value = value;
         return addAfterInternal(node, newNode);

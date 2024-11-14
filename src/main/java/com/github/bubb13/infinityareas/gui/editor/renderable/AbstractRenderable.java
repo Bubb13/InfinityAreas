@@ -107,8 +107,12 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
                 editor.pushUndo("AbstractRenderable::softDelete", this::softDelete);
             });
 
-            editor.removeRenderable(this, true);
+            // Needs to be before Editor::removeRenderable() so that selection is preserved.
+            //   Renderable needs to be soft-deleted from the 'selected' list before the renderable
+            //   is removed from the editor, otherwise the renderable's removal results in a hard-removal
+            //   from the 'selected' list.
             referenceTracker.softDelete();
+            editor.removeRenderable(this, true);
         });
     }
 

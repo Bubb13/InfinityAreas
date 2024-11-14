@@ -158,15 +158,10 @@ public class Editor
     {
         if (undoable)
         {
-            final boolean wasSelected = isSelected(renderable);
             performAsTransaction(() ->
             {
                 removeRenderableInternal(renderable, true);
-                pushUndo("Editor::removeRenderableUndoable", () ->
-                {
-                    addRenderable(renderable);
-                    if (wasSelected) select(renderable);
-                });
+                pushUndo("Editor::removeRenderableUndoable", () -> addRenderable(renderable));
             });
         }
         else

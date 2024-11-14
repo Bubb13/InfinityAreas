@@ -65,18 +65,51 @@ public class SimpleLinkedList<T> implements Iterable<T>
 
     public void clear(final boolean runRemove)
     {
-        if (runRemove)
+        if (hiddenNodeCount <= 0)
         {
-            for (final var node : nodes())
+            if (runRemove)
             {
-                onRemove(node, false);
+                for (final var node : nodes())
+                {
+                    onRemove(node, false);
+                }
             }
-        }
 
-        head.next = tail;
-        tail.previous = head;
-        nodeCount = 0;
-        hiddenNodeCount = 0;
+            head.next = tail;
+            tail.previous = head;
+            nodeCount = 0;
+            hiddenNodeCount = 0;
+        }
+        else
+        {
+            // If hidden nodes are present, perform O(n) filtering of the
+            // list to preserve the hidden nodes and their relative order
+
+            Node curAppendPoint = head;
+
+            int numHiddenNodesFound = 0;
+            for (Node itrNode = head.next; itrNode != tail; itrNode = itrNode.next)
+            {
+                if (!itrNode.isHidden())
+                {
+                    onRemove(itrNode, false);
+                    continue;
+                }
+
+                curAppendPoint.next = itrNode;
+                itrNode.previous = curAppendPoint;
+                curAppendPoint = itrNode;
+
+                if (++numHiddenNodesFound == hiddenNodeCount)
+                {
+                    break;
+                }
+            }
+
+            curAppendPoint.next = tail;
+            tail.previous = curAppendPoint;
+            nodeCount = hiddenNodeCount;
+        }
     }
 
     public void clear()
@@ -138,8 +171,9 @@ public class SimpleLinkedList<T> implements Iterable<T>
             @Override
             public Node next()
             {
-                current = getNext(current);
-                if (current == null) throw new NoSuchElementException();
+                final Node next = getNext(current);
+                if (next == null) throw new NoSuchElementException();
+                current = next;
                 return current;
             }
 
@@ -216,43 +250,113 @@ public class SimpleLinkedList<T> implements Iterable<T>
      */
     protected void onRemove(final Node node, final boolean fromHide) {}
 
-    protected Node addAfter(final Node node, final T value)
+    protected Node addAfterInternal(final Node node, final T value)
     {
         return addAfterInternal(node, new Node(value));
     }
 
-    protected Node addAfter(final Node node, final Function<Node, T> consumer)
+    protected Node addAfterInternal(final Node node, final Function<Node, T> consumer)
     {
         final Node newNode = new Node();
         newNode.value = consumer.apply(newNode);
         return addAfterInternal(node, newNode);
     }
 
-    protected Node addTailInternal(final Node newTail)
+    protected Node addAfterInternal(final Node stationaryNode, final Node newNode)
     {
-        newTail.previous = tail.previous;
-        newTail.next = tail;
-        tail.previous.next = newTail;
-        tail.previous = newTail;
-        ++nodeCount;
-        onAdd(newTail, false);
-        return newTail;
-    }
-
-    protected Node addAfterInternal(final Node node, final Node newNode)
-    {
-        newNode.previous = node;
-        newNode.next = node.next;
-        node.next.previous = newNode;
-        node.next = newNode;
+        physicallyInsertAfter(stationaryNode, newNode);
         ++nodeCount;
         onAdd(newNode, false);
         return newNode;
     }
 
+    protected Node addTailInternal(final Node newTail)
+    {
+        physicallyInsertAfter(tail.previous, newTail);
+        ++nodeCount;
+        onAdd(newTail, false);
+        return newTail;
+    }
+
+    protected void moveAfterInternal(final Node stationaryNode, final Node movingNode)
+    {
+        physicallyRemove(movingNode);
+        physicallyInsertAfter(stationaryNode, movingNode);
+    }
+
+    protected void moveToTailInternal(final Node movingNode)
+    {
+        physicallyRemove(movingNode);
+        physicallyInsertAfter(tail.previous, movingNode);
+    }
+
+    /**
+     * Returns an iterator that traverses all nodes in the list, including hidden nodes.
+     * @return The iterator.
+     */
+    protected Iterator<Node> nodeIteratorInternal()
+    {
+        return new Iterator<>()
+        {
+            ////////////////////
+            // Private Fields //
+            ////////////////////
+
+            private Node current = head;
+
+            ////////////////////
+            // Public Methods //
+            ////////////////////
+
+            //--------------------//
+            // Iterator Overrides //
+            //--------------------//
+
+            @Override
+            public boolean hasNext()
+            {
+                return current.next != tail;
+            }
+
+            @Override
+            public Node next()
+            {
+                if (current.next == tail) throw new NoSuchElementException();
+                current = current.next;
+                return current;
+            }
+
+            @Override
+            public void remove()
+            {
+                if (current == head) throw new NoSuchElementException();
+                current.remove();
+            }
+        };
+    }
+
+    protected Iterable<Node> nodesInternal()
+    {
+        return this::nodeIteratorInternal;
+    }
+
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    private void physicallyInsertAfter(final Node stationaryNode, final Node newNode)
+    {
+        newNode.previous = stationaryNode;
+        newNode.next = stationaryNode.next;
+        stationaryNode.next.previous = newNode;
+        stationaryNode.next = newNode;
+    }
+
+    private void physicallyRemove(final Node nodeBeingRemoved)
+    {
+        nodeBeingRemoved.previous.next = nodeBeingRemoved.next;
+        nodeBeingRemoved.next.previous = nodeBeingRemoved.previous;
+    }
 
     private Node getPrevious(final Node node)
     {
@@ -328,18 +432,17 @@ public class SimpleLinkedList<T> implements Iterable<T>
             --nodeCount;
             if (hidden) --hiddenNodeCount;
             onRemove(this, false);
-            previous.next = next;
-            next.previous = previous;
+            physicallyRemove(this);
         }
 
         public Node addAfter(final T value)
         {
-            return SimpleLinkedList.this.addAfter(this, value);
+            return SimpleLinkedList.this.addAfterInternal(this, value);
         }
 
         public Node addAfter(final Function<Node, T> consumer)
         {
-            return SimpleLinkedList.this.addAfter(this, consumer);
+            return SimpleLinkedList.this.addAfterInternal(this, consumer);
         }
 
         public T value()
