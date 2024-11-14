@@ -65,16 +65,17 @@ public class SimpleLinkedList<T> implements Iterable<T>
 
     public void clear(final boolean runRemove)
     {
+        // Running `onRemove()` here so that the chain is physically intact at the time of execution
+        if (runRemove)
+        {
+            for (final Node node : nodes())
+            {
+                onRemove(node, false);
+            }
+        }
+
         if (hiddenNodeCount <= 0)
         {
-            if (runRemove)
-            {
-                for (final var node : nodes())
-                {
-                    onRemove(node, false);
-                }
-            }
-
             head.next = tail;
             tail.previous = head;
             nodeCount = 0;
@@ -88,13 +89,9 @@ public class SimpleLinkedList<T> implements Iterable<T>
             Node curAppendPoint = head;
 
             int numHiddenNodesFound = 0;
-            for (Node itrNode = head.next; itrNode != tail; itrNode = itrNode.next)
+            for (final Node itrNode : nodesInternal())
             {
-                if (!itrNode.isHidden())
-                {
-                    onRemove(itrNode, false);
-                    continue;
-                }
+                if (!itrNode.isHidden()) continue;
 
                 curAppendPoint.next = itrNode;
                 itrNode.previous = curAppendPoint;
