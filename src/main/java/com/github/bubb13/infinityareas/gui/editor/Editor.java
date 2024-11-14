@@ -816,22 +816,24 @@ public class Editor
         {
             if (!dragOccurred)
             {
-                if (pressObject == null)
-                {
-                    editMode.onBackgroundClicked(event);
-                }
-                else
+                boolean objectClicked = false;
+
+                if (pressObject != null)
                 {
                     final Point2D sourcePoint = zoomPane.absoluteCanvasToSourceDoublePosition(
                         event.getX(), event.getY());
 
-                    if (pointInObjectExact(sourcePoint, pressObject))
+                    if (pointInObjectExact(sourcePoint, pressObject)
+                        && !editMode.customOnObjectClicked(event, pressObject))
                     {
-                        if (!editMode.customOnObjectClicked(event, pressObject))
-                        {
-                            pressObject.onClicked(event);
-                        }
+                        pressObject.onClicked(event);
+                        objectClicked = true;
                     }
+                }
+
+                if (!objectClicked)
+                {
+                    editMode.onBackgroundClicked(event);
                 }
             }
             else if (dragObject != null)
