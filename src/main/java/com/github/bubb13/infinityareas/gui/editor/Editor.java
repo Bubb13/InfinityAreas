@@ -158,10 +158,19 @@ public class Editor
     {
         if (undoable)
         {
+            final boolean wasSelected = isSelected(renderable);
             performAsTransaction(() ->
             {
                 removeRenderableInternal(renderable, true);
-                pushUndo("Editor::removeRenderableUndoable", () -> addRenderable(renderable));
+                pushUndo("Editor::removeRenderableUndoable", () ->
+                {
+                    addRenderable(renderable);
+                    // While renderables that are directly softDelete()'d will have their selection
+                    // restored by their reference tracker, renderables that are removed directly,
+                    // such as sub-renderables that make up a larger composite object, need an
+                    // explicit undo routine to restore their selection state.
+                    if (wasSelected) select(renderable);
+                });
             });
         }
         else
