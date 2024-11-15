@@ -340,7 +340,7 @@ public class AreaPane extends StackPane
                     ////////////////
 
                     final Button searchMapEditModeEndButton = new Button("End");
-                    searchMapEditModeEndButton.setOnAction((ignored) -> editor.exitEditModeUndoable());
+                    searchMapEditModeEndButton.setOnAction((ignored) -> editor.cancelEditModeUndoable()); // TODO Undoable
                     searchMapEditModeToolbarButtonsFlow.getChildren().addAll(searchMapEditModeEndButton);
 
                     ///////////////////
@@ -795,9 +795,9 @@ public class AreaPane extends StackPane
         }
 
         @Override
-        public void onModeEnd()
+        public void onModeExit()
         {
-            super.onModeEnd();
+            super.onModeExit();
             regionEditorObject = null;
         }
 
@@ -845,7 +845,7 @@ public class AreaPane extends StackPane
         }
 
         @Override
-        protected void cleanUpPolygonDrawingModeRenderObjects()
+        protected void removeDrawingPolygonRenderObjects()
         {
             if (regionEditorObject != null)
             {
@@ -933,10 +933,10 @@ public class AreaPane extends StackPane
         }
 
         @Override
-        public void onModeEnd()
+        public void onModeExit()
         {
             popPanes();
-            super.onModeEnd(); // After popPanes() so that it doesn't consume a draw request
+            super.onModeExit(); // After popPanes() so that it doesn't consume a draw request
             searchMapImage.setOpacity(searchMapOpacitySlider.getValue() / 100);
         }
 
@@ -1019,7 +1019,7 @@ public class AreaPane extends StackPane
             if (code == KeyCode.ESCAPE)
             {
                 event.consume();
-                editor.exitEditModeUndoable();
+                editor.endEditModeUndoable(); // TODO Undoable
             }
         }
 
@@ -1295,7 +1295,7 @@ public class AreaPane extends StackPane
         }
 
         @Override
-        public void onBeforeRemoved(final boolean undoable) // TODO
+        public void onBeforeRemoved(final boolean undoable)
         {
             searchMap.removeOnPixelPaletteIndexChangedListener(listener);
             listener = null;

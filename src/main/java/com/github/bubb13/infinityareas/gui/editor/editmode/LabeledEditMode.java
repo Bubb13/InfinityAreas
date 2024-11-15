@@ -67,9 +67,9 @@ public class LabeledEditMode extends AbstractEditMode
     }
 
     @Override
-    public void onModeEnd()
+    public void onModeExit()
     {
-        super.onModeEnd();
+        super.onModeExit();
         editor.requestDraw();
     }
 

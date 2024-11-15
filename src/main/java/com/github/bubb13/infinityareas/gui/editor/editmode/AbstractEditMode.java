@@ -40,8 +40,12 @@ public class AbstractEditMode implements EditMode
 
     @Override public void onModeSuspend() {}
 
+    @Override public void onModeEnd() {}
+
+    @Override public void onModeCancelled() {}
+
     @Override
-    public void onModeEnd()
+    public void onModeExit()
     {
         ownedUndo = null;
     }

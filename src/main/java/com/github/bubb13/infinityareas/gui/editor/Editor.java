@@ -481,18 +481,24 @@ public class Editor
         runWithUndoSuppressed(() -> enterEditModeUndoable(nextEditModeClass));
     }
 
-    public void exitEditModeUndoable()
+    public void endEditModeUndoable()
     {
-        final EditMode endingEditMode = editMode;
-        endingEditMode.onModeEnd();
-        editMode = previousEditModesStack.pop();
-        editMode.onModeResume();
-        pushUndo("Editor::exitEditModeUndoable", () -> enterEditModeInternal(endingEditMode));
+        exitEditModeInternal(false);
     }
 
-    public void exitEditMode()
+    public void endEditMode()
     {
-        runWithUndoSuppressed(this::exitEditModeUndoable);
+        runWithUndoSuppressed(this::endEditModeUndoable);
+    }
+
+    public void cancelEditModeUndoable()
+    {
+        exitEditModeInternal(true);
+    }
+
+    public void cancelEditMode()
+    {
+        runWithUndoSuppressed(this::cancelEditModeUndoable);
     }
 
     public EditMode getCurrentEditMode()
@@ -580,8 +586,27 @@ public class Editor
         }
         editMode = nextEditMode;
 
-        final IUndoHandle ownedUndo = pushUndo("Editor::enterEditModeInternal", this::exitEditModeUndoable);
+        final IUndoHandle ownedUndo = pushUndo("Editor::enterEditModeInternal", this::cancelEditModeUndoable);
         editMode.onModeStart(ownedUndo);
+    }
+
+    private void exitEditModeInternal(final boolean isCancelled)
+    {
+        final EditMode endingEditMode = editMode;
+
+        if (isCancelled)
+        {
+            endingEditMode.onModeCancelled();
+        }
+        else
+        {
+            endingEditMode.onModeEnd();
+        }
+
+        endingEditMode.onModeExit();
+        editMode = previousEditModesStack.pop();
+        editMode.onModeResume();
+        pushUndo("Editor::exitEditModeUndoable", () -> enterEditModeInternal(endingEditMode));
     }
 
     private void doBeforeSelectedCalls(final AbstractRenderable renderable)

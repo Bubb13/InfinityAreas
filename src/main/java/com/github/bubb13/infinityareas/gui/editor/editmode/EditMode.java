@@ -33,6 +33,17 @@ public interface EditMode
      */
     void onModeEnd();
 
+    /**
+     * Called after the {@link EditMode} has been cancelled.
+     */
+    void onModeCancelled();
+
+    /**
+     * Called after the {@link EditMode} has been ended OR cancelled,
+     * (and after the respective function has been called).
+     */
+    void onModeExit();
+
     void onDraw(GraphicsContext canvasContext);
     EditModeForceEnableState forceObjectEnableState(AbstractRenderable renderable);
 

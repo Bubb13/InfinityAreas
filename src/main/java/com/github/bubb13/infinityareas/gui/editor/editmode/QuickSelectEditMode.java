@@ -129,7 +129,7 @@ public class QuickSelectEditMode extends LabeledEditMode
 
         editor.setPressButton(null);
         quickSelectRender = false;
-        editor.exitEditMode();
+        editor.endEditMode();
         return true;
     }
 
@@ -139,15 +139,15 @@ public class QuickSelectEditMode extends LabeledEditMode
         if (event.getCode() == KeyCode.ESCAPE)
         {
             event.consume();
-            editor.exitEditMode();
+            editor.endEditMode();
         }
     }
 
     @Override
-    public void onModeEnd()
+    public void onModeExit()
     {
         ownedUndo.delete();
-        super.onModeEnd();
+        super.onModeExit();
     }
 
     /////////////////////

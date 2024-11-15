@@ -129,7 +129,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
                 else
                 {
                     event.consume();
-                    cancelDrawPolygonMode();
+                    editor.cancelEditMode();
                 }
             }
             case ENTER, SPACE ->
@@ -159,7 +159,21 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     public void reset()
     {
         super.reset();
-        drawingPolygon = null;
+        detachFromDrawingPolygon();
+    }
+
+    @Override
+    public void onModeEnd()
+    {
+        super.onModeEnd();
+        detachFromDrawingPolygon();
+    }
+
+    @Override
+    public void onModeCancelled()
+    {
+        super.onModeCancelled();
+        removeDrawingPolygon();
     }
 
     ///////////////////////
@@ -170,7 +184,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     protected abstract RenderablePolygon<BackingPolygonType> createRenderablePolygon(BackingPolygonType backingPolygon);
     protected abstract void saveBackingPolygon(BackingPolygonType polygon);
 
-    protected void cleanUpPolygonDrawingModeRenderObjects()
+    protected void removeDrawingPolygonRenderObjects()
     {
         if (drawingPolygon == null) return;
 
@@ -186,11 +200,17 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     // Private Methods //
     /////////////////////
 
-    private void cancelDrawPolygonMode()
+    private void detachFromDrawingPolygon()
     {
-        cleanUpPolygonDrawingModeRenderObjects();
+        if (drawingPolygon == null) return;
+        drawingPolygon.removedFrom(drawingPolygonRef);
         drawingPolygon = null;
-        editor.exitEditModeUndoable();
+    }
+
+    private void removeDrawingPolygon()
+    {
+        removeDrawingPolygonRenderObjects();
+        detachFromDrawingPolygon();
     }
 
     private void endDrawPolygonMode()
@@ -215,8 +235,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
                 // Delete the drawn polygon if prompted to
                 if (deletePolygon[0])
                 {
-                    cleanUpPolygonDrawingModeRenderObjects();
-                    drawingPolygon = null;
+                    removeDrawingPolygon();
                 }
                 else
                 {
@@ -227,14 +246,14 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
             {
                 drawingPolygon.setDrawing(false);
                 drawingPolygon.setRenderImpliedFinalLine(true);
-                drawingPolygon = null;
+                detachFromDrawingPolygon();
                 saveBackingPolygon(polygon);
             }
         }
 
         if (endMode)
         {
-            editor.exitEditModeUndoable();
+            editor.endEditModeUndoable(); // TODO Undoable
         }
     }
 }
