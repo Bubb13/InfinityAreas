@@ -798,7 +798,7 @@ public class Editor
             return;
         }
 
-        if (!editMode.onBackgroundPressed(event, sourcePressX, sourcePressY))
+        if (editMode.shouldCaptureBackgroundPress(event, sourcePressX, sourcePressY))
         {
             pressButton = event.getButton();
         }

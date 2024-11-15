@@ -65,7 +65,8 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     }
 
     @Override
-    public boolean onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY)
+    public boolean shouldCaptureBackgroundPress(
+        final MouseEvent event, final double sourcePressX, final double sourcePressY)
     {
         if (event.getButton() != MouseButton.PRIMARY) return false;
 

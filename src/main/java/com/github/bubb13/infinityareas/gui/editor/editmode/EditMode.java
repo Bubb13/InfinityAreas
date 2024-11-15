@@ -52,7 +52,7 @@ public interface EditMode
 
     MouseButton customOnMousePressed(MouseEvent event);
     boolean shouldCaptureObjectPress(MouseEvent event, AbstractRenderable renderable);
-    boolean onBackgroundPressed(MouseEvent event, double sourcePressX, double sourcePressY);
+    boolean shouldCaptureBackgroundPress(MouseEvent event, double sourcePressX, double sourcePressY);
 
     void onDragDetected(MouseEvent event);
     boolean customOnMouseDragged(MouseEvent event);

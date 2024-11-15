@@ -72,6 +72,13 @@ public class QuickSelectEditMode extends LabeledEditMode
     }
 
     @Override
+    public boolean shouldCaptureBackgroundPress(
+        final MouseEvent event, final double sourcePressX, final double sourcePressY)
+    {
+        return event.getButton() == MouseButton.PRIMARY;
+    }
+
+    @Override
     public boolean customOnMouseDragged(final MouseEvent event)
     {
         if (event.getButton() == editor.getPressButton())

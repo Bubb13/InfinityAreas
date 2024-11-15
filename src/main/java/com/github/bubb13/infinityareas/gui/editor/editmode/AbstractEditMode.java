@@ -75,9 +75,9 @@ public class AbstractEditMode implements EditMode
     }
 
     @Override
-    public boolean onBackgroundPressed(final MouseEvent event, final double sourcePressX, final double sourcePressY)
+    public boolean shouldCaptureBackgroundPress(final MouseEvent event, final double sourcePressX, final double sourcePressY)
     {
-        return false;
+        return true;
     }
 
     @Override public void onDragDetected(final MouseEvent event) {}
