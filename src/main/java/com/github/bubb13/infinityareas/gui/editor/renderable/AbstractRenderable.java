@@ -2,6 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor.renderable;
 
 import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHandle;
 import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHolder;
 import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTrackable;
 import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTracker;
@@ -21,7 +22,7 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     // Private Fields //
     ////////////////////
 
-    private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+    private final ReferenceTracker referenceTracker = new ReferenceTracker();
     private boolean isHidden = false;
 
     /////////////////////////
@@ -85,9 +86,9 @@ public abstract class AbstractRenderable implements RenderableInterface, Referen
     //------------------------------//
 
     @Override
-    public void addedTo(final ReferenceHolder<?> referenceHolder)
+    public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
     {
-        referenceTracker.addedTo(referenceHolder);
+        referenceTracker.addedTo(referenceHolder, referenceHandle);
     }
 
     @Override

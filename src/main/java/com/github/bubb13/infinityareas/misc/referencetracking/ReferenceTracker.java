@@ -13,19 +13,9 @@ public class ReferenceTracker implements ReferenceTrackable
     // Private Fields //
     ////////////////////
 
-    private final ReferenceTrackable object;
-    private final SimpleLinkedList<ReferenceHolder<?>> referenceHolders = new SimpleLinkedList<>();
-    private final InstanceHashMap<ReferenceHolder<?>, SimpleLinkedList<ReferenceHolder<?>>.Node> referenceHolderToNode
+    private final SimpleLinkedList<ReferenceHolderPair> referenceHolderPairs = new SimpleLinkedList<>();
+    private final InstanceHashMap<ReferenceHolder<?>, SimpleLinkedList<ReferenceHolderPair>.Node> referenceHolderToNode
         = new InstanceHashMap<>();
-
-    /////////////////////////
-    // Public Constructors //
-    /////////////////////////
-
-    public ReferenceTracker(final ReferenceTrackable object)
-    {
-        this.object = object;
-    }
 
     ////////////////////
     // Public Methods //
@@ -36,10 +26,11 @@ public class ReferenceTracker implements ReferenceTrackable
     //------------------------------//
 
     @Override
-    public void addedTo(final ReferenceHolder<?> referenceHolder)
+    public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
     {
         // Add `referenceHolder` to `referenceHolders` and add node mapping to `referenceHolderToNode`
-        referenceHolderToNode.put(referenceHolder, referenceHolders.addTail(referenceHolder));
+        final var node = referenceHolderPairs.addTail(new ReferenceHolderPair(referenceHolder, referenceHandle));
+        referenceHolderToNode.put(referenceHolder, node);
     }
 
     @Override
@@ -52,33 +43,33 @@ public class ReferenceTracker implements ReferenceTrackable
     @Override
     public void softDelete()
     {
-        //noinspection rawtypes
-        for (final ReferenceHolder referenceHolder : referenceHolders)
+        for (final ReferenceHolderPair referenceHolderPair : referenceHolderPairs)
         {
-            //noinspection unchecked
-            referenceHolder.referencedObjectSoftDeleted(object);
+            referenceHolderPair.holder().referencedObjectSoftDeleted(referenceHolderPair.handle());
         }
     }
 
     @Override
     public void restore()
     {
-        //noinspection rawtypes
-        for (final ReferenceHolder referenceHolder : referenceHolders)
+        for (final ReferenceHolderPair referenceHolderPair : referenceHolderPairs)
         {
-            //noinspection unchecked
-            referenceHolder.restoreSoftDeletedObject(object);
+            referenceHolderPair.holder().restoreSoftDeletedObject(referenceHolderPair.handle());
         }
     }
 
     @Override
     public void delete()
     {
-        //noinspection rawtypes
-        for (final ReferenceHolder referenceHolder : referenceHolders)
+        for (final ReferenceHolderPair referenceHolderPair : referenceHolderPairs)
         {
-            //noinspection unchecked
-            referenceHolder.referencedObjectDeleted(object);
+            referenceHolderPair.holder().referencedObjectDeleted(referenceHolderPair.handle());
         }
     }
+
+    ////////////////////////////
+    // Private Static Classes //
+    ////////////////////////////
+
+    private record ReferenceHolderPair(ReferenceHolder<?> holder, ReferenceHandle handle) {}
 }

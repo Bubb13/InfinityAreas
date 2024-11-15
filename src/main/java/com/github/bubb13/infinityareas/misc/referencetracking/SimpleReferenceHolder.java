@@ -7,7 +7,6 @@ public class SimpleReferenceHolder<T extends ReferenceTrackable> implements Refe
     // Private Fields //
     ////////////////////
 
-    private T referenceSoftDeleted;
     private T reference;
 
     /////////////////////////
@@ -25,10 +24,27 @@ public class SimpleReferenceHolder<T extends ReferenceTrackable> implements Refe
     // Public Methods //
     ////////////////////
 
-    public void set(final T reference)
+    public void set(final T newReference)
     {
-        this.reference = reference;
-        reference.addedTo(this);
+        if (newReference == null)
+        {
+            if (reference != null)
+            {
+                reference.removedFrom(this);
+            }
+
+            reference = null;
+        }
+        else if (newReference != reference)
+        {
+            if (reference != null)
+            {
+                reference.removedFrom(this);
+            }
+
+            reference = newReference;
+            reference.addedTo(this, ReferenceHandle.create(reference));
+        }
     }
 
     public T get()
@@ -41,22 +57,26 @@ public class SimpleReferenceHolder<T extends ReferenceTrackable> implements Refe
     //---------------------------//
 
     @Override
-    public void referencedObjectSoftDeleted(final T reference)
+    public void referencedObjectSoftDeleted(final ReferenceHandle referenceHandle)
     {
         this.reference = null;
-        referenceSoftDeleted = reference;
     }
 
     @Override
-    public void restoreSoftDeletedObject(final T reference)
+    public void restoreSoftDeletedObject(final ReferenceHandle referenceHandle)
     {
-        this.reference = referenceSoftDeleted;
-        referenceSoftDeleted = null;
+        this.reference = handleToObject(referenceHandle);
     }
 
     @Override
-    public void referencedObjectDeleted(final T reference)
+    public void referencedObjectDeleted(final ReferenceHandle referenceHandle)
     {
         this.reference = null;
+    }
+
+    @Override
+    public T handleToObject(final ReferenceHandle referenceHandle)
+    {
+        return referenceHandle.cast();
     }
 }

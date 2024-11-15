@@ -1,6 +1,7 @@
 
 package com.github.bubb13.infinityareas.misc;
 
+import java.util.EmptyStackException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
@@ -183,9 +184,99 @@ public class SimpleLinkedList<T> implements Iterable<T>
         };
     }
 
+    public Iterator<Node> reverseNodeIterator()
+    {
+        return new Iterator<>()
+        {
+            ////////////////////
+            // Private Fields //
+            ////////////////////
+
+            private Node current = tail;
+
+            ////////////////////
+            // Public Methods //
+            ////////////////////
+
+            //--------------------//
+            // Iterator Overrides //
+            //--------------------//
+
+            @Override
+            public boolean hasNext()
+            {
+                return getPrevious(current) != null;
+            }
+
+            @Override
+            public Node next()
+            {
+                final Node previous = getPrevious(current);
+                if (previous == null) throw new NoSuchElementException();
+                current = previous;
+                return current;
+            }
+
+            @Override
+            public void remove()
+            {
+                if (current == tail) throw new NoSuchElementException();
+                current.remove();
+            }
+        };
+    }
+
+    public Iterator<T> reverseIterator()
+    {
+        return new Iterator<>()
+        {
+            ////////////////////
+            // Private Fields //
+            ////////////////////
+
+            private final Iterator<Node> nodeItr = reverseNodeIterator();
+
+            ////////////////////
+            // Public Methods //
+            ////////////////////
+
+            //--------------------//
+            // Iterator Overrides //
+            //--------------------//
+
+            @Override
+            public boolean hasNext()
+            {
+                return nodeItr.hasNext();
+            }
+
+            @Override
+            public T next()
+            {
+                return nodeItr.next().value;
+            }
+
+            @Override
+            public void remove()
+            {
+                nodeItr.remove();
+            }
+        };
+    }
+
     public Iterable<Node> nodes()
     {
         return this::nodeIterator;
+    }
+
+    public Iterable<Node> reverseNodes()
+    {
+        return this::reverseNodeIterator;
+    }
+
+    public Iterable<T> reversed()
+    {
+        return this::reverseIterator;
     }
 
     //--------------------//
@@ -229,6 +320,36 @@ public class SimpleLinkedList<T> implements Iterable<T>
                 nodeItr.remove();
             }
         };
+    }
+
+    //-----------------//
+    // Stack Emulation //
+    //-----------------//
+
+    public boolean isEmpty()
+    {
+        return size() == 0;
+    }
+
+    public T peek()
+    {
+        final Node node = getLastNode();
+        if (node == head || node == null) throw new EmptyStackException();
+        return node.value();
+    }
+
+    public T pop()
+    {
+        final Node node = getLastNode();
+        if (node == head || node == null) throw new EmptyStackException();
+        node.remove();
+        return node.value();
+    }
+
+    public T push(final T value)
+    {
+        addTail(value);
+        return value;
     }
 
     ///////////////////////

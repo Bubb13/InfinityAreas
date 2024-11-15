@@ -17,8 +17,8 @@ import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.stage.ReplaceOverlayTilesetStage;
 import com.github.bubb13.infinityareas.misc.DoubleCorners;
-import com.github.bubb13.infinityareas.misc.tasktracking.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.reference.Reference;
+import com.github.bubb13.infinityareas.misc.tasktracking.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
 import com.github.bubb13.infinityareas.util.FileUtil;
@@ -110,7 +110,7 @@ public class WEDPane extends StackPane
 
     private void reset()
     {
-        editor.enterEditMode(WEDPaneNormalEditMode.class);
+        editor.enterEditModeUndoable(WEDPaneNormalEditMode.class);
 
         for (final WED.Polygon polygon : wedRef.get().getPolygons())
         {
@@ -158,13 +158,13 @@ public class WEDPane extends StackPane
                     viewVisibleObjectsButton.setOnAction((ignored) -> this.onViewVisibleObjects());
 
                     final Button drawPolygonButton = new UnderlinedButton("Draw Wall Polygon");
-                    drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
+                    drawPolygonButton.setOnAction((ignored) -> editor.enterEditModeUndoable(DrawPolygonEditMode.class));
 
                     final Button bisectLine = new UnderlinedButton("Bisect Segment");
                     bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
 
                     final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
-                    quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
+                    quickSelect.setOnAction((ignored) -> editor.enterEditModeUndoable(QuickSelectEditMode.class));
 
                 toolbarFlowPane.getChildren().addAll(saveButton, viewVisibleObjectsButton,
                     drawPolygonButton, bisectLine, quickSelect);
@@ -387,12 +387,12 @@ public class WEDPane extends StackPane
                 case D ->
                 {
                     event.consume();
-                    editor.enterEditMode(DrawPolygonEditMode.class);
+                    editor.enterEditModeUndoable(DrawPolygonEditMode.class);
                 }
                 case Q ->
                 {
                     event.consume();
-                    editor.enterEditMode(QuickSelectEditMode.class);
+                    editor.enterEditModeUndoable(QuickSelectEditMode.class);
                 }
                 case DELETE ->
                 {
@@ -634,7 +634,7 @@ public class WEDPane extends StackPane
 
             final WED.Polygon polygon = getPolygon();
             polygon.softDelete();
-            editor.pushUndo(polygon::restore);
+            editor.pushUndo("WallPolygon::softDelete", polygon::restore);
         }
 
         @Override

@@ -2,6 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor.editmode;
 
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
+import com.github.bubb13.infinityareas.misc.undoredo.IUndoHandle;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -9,15 +10,41 @@ import javafx.scene.input.MouseEvent;
 
 public class AbstractEditMode implements EditMode
 {
-    @Override public void reset() {}
+    //////////////////////
+    // Protected Fields //
+    //////////////////////
 
-    @Override public void onModeStart() {}
+    protected IUndoHandle ownedUndo;
+
+    ////////////////////
+    // Public Methods //
+    ////////////////////
+
+    //--------------------//
+    // EditMode Overrides //
+    //--------------------//
+
+    @Override
+    public void reset()
+    {
+        ownedUndo = null;
+    }
+
+    @Override
+    public void onModeStart(final IUndoHandle ownedUndo)
+    {
+        this.ownedUndo = ownedUndo;
+    }
 
     @Override public void onModeResume() {}
 
     @Override public void onModeSuspend() {}
 
-    @Override public void onModeEnd() {}
+    @Override
+    public void onModeEnd()
+    {
+        ownedUndo = null;
+    }
 
     @Override public void onDraw(final GraphicsContext canvasContext) {}
 

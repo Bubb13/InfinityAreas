@@ -34,6 +34,7 @@ import com.github.bubb13.infinityareas.misc.ReadableDoublePoint;
 import com.github.bubb13.infinityareas.misc.tasktracking.LoadingStageTracker;
 import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
+import com.github.bubb13.infinityareas.misc.undoredo.IUndoHandle;
 import com.github.bubb13.infinityareas.util.FileUtil;
 import com.github.bubb13.infinityareas.util.ImageUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
@@ -311,16 +312,16 @@ public class AreaPane extends StackPane
                         viewVisibleObjectsButton.setOnAction((ignored) -> this.onViewVisibleObjects());
 
                         final Button drawPolygonButton = new UnderlinedButton("Draw Region Polygon");
-                        drawPolygonButton.setOnAction((ignored) -> editor.enterEditMode(DrawPolygonEditMode.class));
+                        drawPolygonButton.setOnAction((ignored) -> editor.enterEditModeUndoable(DrawPolygonEditMode.class));
 
                         final Button bisectLine = new UnderlinedButton("Bisect Segment");
                         bisectLine.setOnAction((ignored) -> EditorCommons.onBisectLine(editor));
 
                         final Button quickSelect = new UnderlinedButton("Quick Select Vertices");
-                        quickSelect.setOnAction((ignored) -> editor.enterEditMode(QuickSelectEditMode.class));
+                        quickSelect.setOnAction((ignored) -> editor.enterEditModeUndoable(QuickSelectEditMode.class));
 
                         final Button editSearchMap = new Button("Edit Search Map");
-                        editSearchMap.setOnAction((ignored) -> editor.enterEditMode(SearchMapEditMode.class));
+                        editSearchMap.setOnAction((ignored) -> editor.enterEditModeUndoable(SearchMapEditMode.class));
 
                     defaultToolbarFlowPane.getChildren().addAll(saveButton, viewVisibleObjectsButton,
                         drawPolygonButton, bisectLine, quickSelect, editSearchMap);
@@ -339,7 +340,7 @@ public class AreaPane extends StackPane
                     ////////////////
 
                     final Button searchMapEditModeEndButton = new Button("End");
-                    searchMapEditModeEndButton.setOnAction((ignored) -> editor.exitEditMode());
+                    searchMapEditModeEndButton.setOnAction((ignored) -> editor.exitEditModeUndoable());
                     searchMapEditModeToolbarButtonsFlow.getChildren().addAll(searchMapEditModeEndButton);
 
                     ///////////////////
@@ -681,12 +682,12 @@ public class AreaPane extends StackPane
                 case D ->
                 {
                     event.consume();
-                    editor.enterEditMode(DrawPolygonEditMode.class);
+                    editor.enterEditModeUndoable(DrawPolygonEditMode.class);
                 }
                 case Q ->
                 {
                     event.consume();
-                    editor.enterEditMode(QuickSelectEditMode.class);
+                    editor.enterEditModeUndoable(QuickSelectEditMode.class);
                 }
                 case DELETE ->
                 {
@@ -923,10 +924,10 @@ public class AreaPane extends StackPane
         }
 
         @Override
-        public void onModeStart()
+        public void onModeStart(final IUndoHandle ownedUndo)
         {
             pushPanes();
-            super.onModeStart(); // After pushPanes() so that it doesn't consume a draw request
+            super.onModeStart(ownedUndo); // After pushPanes() so that it doesn't consume a draw request
             searchMapImage.setOpacity(searchMapEditModeOpacitySlider.getValue() / 100);
             calculateOutlinePoints(brushOutlineState, searchMapImage);
         }
@@ -1018,7 +1019,7 @@ public class AreaPane extends StackPane
             if (code == KeyCode.ESCAPE)
             {
                 event.consume();
-                editor.exitEditMode();
+                editor.exitEditModeUndoable();
             }
         }
 
@@ -1526,7 +1527,7 @@ public class AreaPane extends StackPane
             {
                 super.softDelete();
                 region.softDelete();
-                editor.pushUndo(region::restore);
+                editor.pushUndo("RegionEditorObjectPolygon::softDelete", region::restore);
             }
 
             @Override

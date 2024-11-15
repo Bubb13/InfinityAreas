@@ -2,6 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor.editmode;
 
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
+import com.github.bubb13.infinityareas.misc.undoredo.IUndoHandle;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -11,9 +12,25 @@ public interface EditMode
 {
     void reset();
 
-    void onModeStart();
+    /**
+     * Called after the {@link EditMode} has been started.
+     */
+    void onModeStart(final IUndoHandle ownedUndo);
+
+    /**
+     * Called after the {@link EditMode} has been resumed - e.g. the {@link EditMode} was superseded
+     * by another {@link EditMode}, and that superseding {@link EditMode} has ended.
+     */
     void onModeResume();
+
+    /**
+     * Called before the {@link EditMode} has been superseded by another {@link EditMode}.
+     */
     void onModeSuspend();
+
+    /**
+     * Called after the {@link EditMode} has been ended.
+     */
     void onModeEnd();
 
     void onDraw(GraphicsContext canvasContext);

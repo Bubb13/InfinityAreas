@@ -10,8 +10,9 @@ import com.github.bubb13.infinityareas.misc.DoubleCorners;
 import com.github.bubb13.infinityareas.misc.DoubleQuadTree;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHandle;
 import com.github.bubb13.infinityareas.misc.referencetracking.TrackingOrderedInstanceSet;
-import com.github.bubb13.infinityareas.misc.undoredo.IUndo;
+import com.github.bubb13.infinityareas.misc.undoredo.IUndoHandle;
 import com.github.bubb13.infinityareas.misc.undoredo.UndoRedoBuffer;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 import javafx.collections.FXCollections;
@@ -58,10 +59,10 @@ public class Editor
         = new TrackingOrderedInstanceSet<>("Editor Selected Objects")
     {
         @Override
-        public void restoreSoftDeletedObject(final AbstractRenderable reference)
+        public void restoreSoftDeletedObject(final ReferenceHandle referenceHandle)
         {
-            doBeforeSelectedCalls(reference);
-            super.restoreSoftDeletedObject(reference);
+            doBeforeSelectedCalls(handleToObject(referenceHandle));
+            super.restoreSoftDeletedObject(referenceHandle);
         }
 
         @Override
@@ -470,24 +471,28 @@ public class Editor
         return (T)cachedEditModes.get(clazz);
     }
 
+    public void enterEditModeUndoable(final Class<? extends EditMode> nextEditModeClass)
+    {
+        enterEditModeInternal(cachedEditModes.get(nextEditModeClass));
+    }
+
     public void enterEditMode(final Class<? extends EditMode> nextEditModeClass)
     {
-        final EditMode nextEditMode = cachedEditModes.get(nextEditModeClass);
-        if (nextEditMode == null) throw new IllegalStateException();
-        if (editMode != null)
-        {
-            previousEditModesStack.push(editMode);
-            editMode.onModeSuspend();
-        }
-        editMode = nextEditMode;
-        editMode.onModeStart();
+        runWithUndoSuppressed(() -> enterEditModeUndoable(nextEditModeClass));
+    }
+
+    public void exitEditModeUndoable()
+    {
+        final EditMode endingEditMode = editMode;
+        endingEditMode.onModeEnd();
+        editMode = previousEditModesStack.pop();
+        editMode.onModeResume();
+        pushUndo("Editor::exitEditModeUndoable", () -> enterEditModeInternal(endingEditMode));
     }
 
     public void exitEditMode()
     {
-        editMode.onModeEnd();
-        editMode = previousEditModesStack.pop();
-        editMode.onModeResume();
+        runWithUndoSuppressed(this::exitEditModeUndoable);
     }
 
     public EditMode getCurrentEditMode()
@@ -551,14 +556,9 @@ public class Editor
     // Manual Undo-Redo Stack Management //
     //-----------------------------------//
 
-    public void pushUndo(final IUndo undo)
+    public IUndoHandle pushUndo(final String name, final Runnable undo)
     {
-        undoRedoBuffer.pushUndo(undo);
-    }
-
-    public void pushUndo(final String name, final Runnable undo)
-    {
-        undoRedoBuffer.pushUndo(name, undo);
+        return undoRedoBuffer.pushUndo(name, undo);
     }
 
     public void clearRedo()
@@ -569,6 +569,20 @@ public class Editor
     /////////////////////
     // Private Methods //
     /////////////////////
+
+    private void enterEditModeInternal(final EditMode nextEditMode)
+    {
+        if (nextEditMode == null) throw new IllegalStateException();
+        if (editMode != null)
+        {
+            previousEditModesStack.push(editMode);
+            editMode.onModeSuspend();
+        }
+        editMode = nextEditMode;
+
+        final IUndoHandle ownedUndo = pushUndo("Editor::enterEditModeInternal", this::exitEditModeUndoable);
+        editMode.onModeStart(ownedUndo);
+    }
 
     private void doBeforeSelectedCalls(final AbstractRenderable renderable)
     {

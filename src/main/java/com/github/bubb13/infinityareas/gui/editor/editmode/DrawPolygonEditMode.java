@@ -8,6 +8,8 @@ import com.github.bubb13.infinityareas.gui.editor.GenericPolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.AbstractRenderable;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderablePolygon;
 import com.github.bubb13.infinityareas.gui.editor.renderable.RenderableVertex;
+import com.github.bubb13.infinityareas.misc.referencetracking.AbstractReferenceHolder;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHandle;
 import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHolder;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -21,22 +23,11 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     ////////////////////
 
     private RenderablePolygon<BackingPolygonType> drawingPolygon;
-    private final ReferenceHolder<RenderablePolygon<BackingPolygonType>> drawingPolygonRef = new ReferenceHolder<>()
+    private final ReferenceHolder<RenderablePolygon<BackingPolygonType>> drawingPolygonRef
+        = new AbstractReferenceHolder<>()
     {
         @Override
-        public void referencedObjectSoftDeleted(final RenderablePolygon<BackingPolygonType> reference)
-        {
-            // TODO
-        }
-
-        @Override
-        public void restoreSoftDeletedObject(final RenderablePolygon<BackingPolygonType> reference)
-        {
-            // TODO
-        }
-
-        @Override
-        public void referencedObjectDeleted(final RenderablePolygon<BackingPolygonType> reference)
+        public void referencedObjectDeleted(final ReferenceHandle referenceHandle)
         {
             drawingPolygon = null;
         }
@@ -54,6 +45,10 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     ////////////////////
     // Public Methods //
     ////////////////////
+
+    //---------------------------//
+    // LabeledEditMode Overrides //
+    //---------------------------//
 
     @Override
     public EditModeForceEnableState forceObjectEnableState(final AbstractRenderable renderable)
@@ -86,7 +81,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
             polygon.setBoundingBoxBottom(sourcePressYInt + 1);
 
             drawingPolygon = createRenderablePolygon(polygon);
-            drawingPolygon.addedTo(drawingPolygonRef);
+            drawingPolygon.addedTo(drawingPolygonRef, ReferenceHandle.create(drawingPolygon));
             drawingPolygon.setRenderImpliedFinalLine(false);
             drawingPolygon.setDrawing(true);
         }
@@ -155,7 +150,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
             case Q ->
             {
                 event.consume();
-                editor.enterEditMode(QuickSelectEditMode.class);
+                editor.enterEditModeUndoable(QuickSelectEditMode.class);
             }
         }
     }
@@ -163,12 +158,13 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     @Override
     public void reset()
     {
+        super.reset();
         drawingPolygon = null;
     }
 
-    ////////////////////////////////
-    // Protected Abstract Methods //
-    ////////////////////////////////
+    ///////////////////////
+    // Protected Methods //
+    ///////////////////////
 
     protected abstract BackingPolygonType createBackingPolygon();
     protected abstract RenderablePolygon<BackingPolygonType> createRenderablePolygon(BackingPolygonType backingPolygon);
@@ -194,7 +190,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
     {
         cleanUpPolygonDrawingModeRenderObjects();
         drawingPolygon = null;
-        editor.exitEditMode();
+        editor.exitEditModeUndoable();
     }
 
     private void endDrawPolygonMode()
@@ -238,7 +234,7 @@ public abstract class DrawPolygonEditMode<BackingPolygonType extends GenericPoly
 
         if (endMode)
         {
-            editor.exitEditMode();
+            editor.exitEditModeUndoable();
         }
     }
 }

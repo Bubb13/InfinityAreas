@@ -8,14 +8,15 @@ import com.github.bubb13.infinityareas.misc.ImageAndGraphics;
 import com.github.bubb13.infinityareas.misc.IntPoint;
 import com.github.bubb13.infinityareas.misc.IntPointImpl;
 import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
+import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
+import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHandle;
 import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceHolder;
 import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTrackable;
 import com.github.bubb13.infinityareas.misc.referencetracking.ReferenceTracker;
-import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
+import com.github.bubb13.infinityareas.misc.referencetracking.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.tasktracking.TaskTracker;
 import com.github.bubb13.infinityareas.misc.tasktracking.TaskTrackerI;
 import com.github.bubb13.infinityareas.misc.tasktracking.TrackedTask;
-import com.github.bubb13.infinityareas.misc.referencetracking.TrackingOrderedInstanceSet;
 import com.github.bubb13.infinityareas.util.BufferUtil;
 import com.github.bubb13.infinityareas.util.MiscUtil;
 
@@ -879,7 +880,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private String name;
         private short x;
@@ -1023,9 +1024,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1061,7 +1062,7 @@ public class Area
         ////////////////////
 
         // Extra
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         // Mirrors in-file data
         private String name;
@@ -1305,9 +1306,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1342,7 +1343,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
 
@@ -1365,9 +1366,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1402,7 +1403,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
 
@@ -1425,9 +1426,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1462,7 +1463,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented1;
         private TrackingOrderedInstanceSet<Item> items;
@@ -1529,9 +1530,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1566,7 +1567,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
 
@@ -1589,9 +1590,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1626,7 +1627,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
 
@@ -1649,9 +1650,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1686,7 +1687,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
 
@@ -1709,9 +1710,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1770,7 +1771,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented1;
         private GenericPolygon openOutlinePolygon;
@@ -1848,9 +1849,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1885,7 +1886,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
 
@@ -1908,9 +1909,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -1945,7 +1946,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
 
@@ -1968,9 +1969,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -2005,7 +2006,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
         // TODO: Has offsets (search map squares)
@@ -2029,9 +2030,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override
@@ -2066,7 +2067,7 @@ public class Area
         // Private Fields //
         ////////////////////
 
-        private final ReferenceTracker referenceTracker = new ReferenceTracker(this);
+        private final ReferenceTracker referenceTracker = new ReferenceTracker();
 
         private byte[] unimplemented;
         // TODO: Has offsets (effects)
@@ -2090,9 +2091,9 @@ public class Area
         //------------------------------//
 
         @Override
-        public void addedTo(final ReferenceHolder<?> referenceHolder)
+        public void addedTo(final ReferenceHolder<?> referenceHolder, final ReferenceHandle referenceHandle)
         {
-            referenceTracker.addedTo(referenceHolder);
+            referenceTracker.addedTo(referenceHolder, referenceHandle);
         }
 
         @Override

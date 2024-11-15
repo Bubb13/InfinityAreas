@@ -1,15 +1,14 @@
 
 package com.github.bubb13.infinityareas.misc.referencetracking;
 
-import com.github.bubb13.infinityareas.misc.OrderedInstanceSet;
 import com.github.bubb13.infinityareas.misc.SimpleLinkedList;
 
 /**
- * Simple set implementation using a backing linked list for order, and a backing hashmap for duplicate lookups.
+ * A simple linked list implementation that exposes its internal node objects to facilitate mid-list manipulation.
+ * Also implements the ability to hide nodes from users to facilitate soft-deletion.
  * Implements the {@link ReferenceHolder} interface to facilitate the automatic removal of deleted held objects.
  */
-public class TrackingOrderedInstanceSet<T extends ReferenceTrackable>
-    extends OrderedInstanceSet<T> implements ReferenceHolder<T>
+public class TrackingLinkedList<T extends ReferenceTrackable> extends SimpleLinkedList<T> implements ReferenceHolder<T>
 {
     ////////////////////
     // Private Fields //
@@ -21,7 +20,7 @@ public class TrackingOrderedInstanceSet<T extends ReferenceTrackable>
     // Public Constructors //
     /////////////////////////
 
-    public TrackingOrderedInstanceSet(final String name)
+    public TrackingLinkedList(final String name)
     {
         this.name = name;
     }
@@ -76,9 +75,9 @@ public class TrackingOrderedInstanceSet<T extends ReferenceTrackable>
     // Protected Methods //
     ///////////////////////
 
-    //------------------------------//
-    // OrderedInstanceSet Overrides //
-    //------------------------------//
+    //----------------------------//
+    // SimpleLinkedList Overrides //
+    //----------------------------//
 
     @Override
     protected void onAdd(final Node node, final boolean fromHide)

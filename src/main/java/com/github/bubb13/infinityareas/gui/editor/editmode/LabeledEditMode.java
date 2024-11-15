@@ -2,6 +2,7 @@
 package com.github.bubb13.infinityareas.gui.editor.editmode;
 
 import com.github.bubb13.infinityareas.gui.editor.Editor;
+import com.github.bubb13.infinityareas.misc.undoredo.IUndoHandle;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -47,8 +48,9 @@ public class LabeledEditMode extends AbstractEditMode
     ////////////////////
 
     @Override
-    public void onModeStart()
+    public void onModeStart(final IUndoHandle ownedUndo)
     {
+        super.onModeStart(ownedUndo);
         editor.requestDraw();
     }
 
@@ -67,6 +69,7 @@ public class LabeledEditMode extends AbstractEditMode
     @Override
     public void onModeEnd()
     {
+        super.onModeEnd();
         editor.requestDraw();
     }
 

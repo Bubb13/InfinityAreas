@@ -16,7 +16,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Spliterators;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public final class MiscUtil
 {
@@ -44,6 +47,16 @@ public final class MiscUtil
     public static <T> Iterable<T> readOnlyIterable(final Iterable<? extends T> iterable)
     {
         return readOnlyIterable(iterable.iterator());
+    }
+
+    public static <T> Stream<T> iteratorStream(final Iterator<T> iterator)
+    {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 0), false);
+    }
+
+    public static <T> Stream<T> iterableStream(final Iterable<T> iterable)
+    {
+        return iteratorStream(iterable.iterator());
     }
 
     public static String formatStackTrace(final Throwable e)

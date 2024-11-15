@@ -40,6 +40,7 @@ public class QuickSelectEditMode extends LabeledEditMode
     @Override
     public void reset()
     {
+        super.reset();
         quickSelectRectangle = new QuickSelectRectangle();
         quickSelectRender = false;
     }
@@ -140,6 +141,13 @@ public class QuickSelectEditMode extends LabeledEditMode
             event.consume();
             editor.exitEditMode();
         }
+    }
+
+    @Override
+    public void onModeEnd()
+    {
+        ownedUndo.delete();
+        super.onModeEnd();
     }
 
     /////////////////////
